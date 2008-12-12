@@ -220,29 +220,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
     public void onChange(EndPoint endpoint, EndPointState epState)
     {
         logger_.debug("CHANGE IN STATE FOR @ StorageLoadBalancer " + endpoint);
-        // load information for this specified endpoint for load balancing 
-        ApplicationState loadInfoState = epState.getApplicationState(RequestCountSampler.loadInfo_);
-        if ( loadInfoState != null )
-        {
-            String lInfoState = loadInfoState.getState();
-            LoadInfo lInfo = new LoadInfo(lInfoState);
-            loadInfo_.put(endpoint, lInfo);
-            
-            /*
-            int currentLoad = Integer.parseInt(loadInfoState.getState());
-            // update load information for this endpoint
-            loadInfo_.put(endpoint, currentLoad);
-
-            // clone load information to perform calculations
-            loadInfo2_.putAll(loadInfo_);
-            // Perform the analysis for load balance operations
-            if ( isHeavyNode() )
-            {
-                logger_.debug(StorageService.getLocalStorageEndPoint() + " is a heavy node with load " + localLoad());
-                // lb_.schedule( new LoadBalancer(), StorageLoadBalancer.delay_, TimeUnit.MINUTES );
-            }
-            */
-        }       
+        // load information for this specified endpoint for load balancing
     }
 
     /*

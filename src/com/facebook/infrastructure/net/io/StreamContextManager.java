@@ -34,7 +34,6 @@ import com.facebook.infrastructure.io.ICompactSerializer;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.service.RequestCountSampler;
 import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.*;
 /**
@@ -68,31 +67,16 @@ public class StreamContextManager
                 
         private String targetFile_;        
         private long expectedBytes_;             
-        private RequestCountSampler.Cardinality cardinality_;
-        
+
         public StreamContext(String targetFile, long expectedBytes)
         {
             targetFile_ = targetFile;
             expectedBytes_ = expectedBytes;         
         }
-        
-        public StreamContext(String targetFile, long expectedBytes, RequestCountSampler.Cardinality cardinality)
-        {
-            targetFile_ = targetFile;
-            expectedBytes_ = expectedBytes;
-            cardinality_ = cardinality;
-        }
-        
+
         public StreamContext cloneMe()
         {
-            if ( cardinality_ != null )
-            {
-                return new StreamContext(targetFile_, expectedBytes_, cardinality_);
-            }
-            else
-            {
-                return new StreamContext(targetFile_, expectedBytes_);
-            }
+            return new StreamContext(targetFile_, expectedBytes_);
         }
         
         public String getTargetFile()
@@ -108,11 +92,6 @@ public class StreamContextManager
         public long getExpectedBytes()
         {
             return expectedBytes_;
-        }
-        
-        public RequestCountSampler.Cardinality getCardinality()
-        {            
-            return cardinality_;
         }
         
         public boolean equals(Object o)
@@ -141,27 +120,14 @@ public class StreamContextManager
         {
             dos.writeUTF(sc.targetFile_);
             dos.writeLong(sc.expectedBytes_);
-            if ( sc.cardinality_ == null )
-            {
-                dos.writeBoolean(false);
-            }
-            else
-            {
-                dos.writeBoolean(true);
-                RequestCountSampler.Cardinality.serializer().serialize(sc.cardinality_, dos);
-            }
         }
         
         public StreamContextManager.StreamContext deserialize(DataInputStream dis) throws IOException
         {
             String targetFile = dis.readUTF();
             long expectedBytes = dis.readLong();
-            boolean bVal = dis.readBoolean();
-            
-            RequestCountSampler.Cardinality cardinality = null;
-            if ( bVal )
-                cardinality = RequestCountSampler.Cardinality.serializer().deserialize(dis);
-            return new StreamContext(targetFile, expectedBytes, cardinality);
+
+            return new StreamContext(targetFile, expectedBytes);
         }
     }
     

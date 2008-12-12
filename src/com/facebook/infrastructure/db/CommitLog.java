@@ -452,8 +452,6 @@ class CommitLog
             updateHeader(row);
             logWriter_.append(table_, cfBuffer);
             fileSize = logWriter_.getFileSize();
-            /* Count this key if necessary */
-            StorageService.instance().sample(row.key());  
             checkThresholdAndRollLog(fileSize);            
         }
         catch (IOException e)

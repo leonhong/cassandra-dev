@@ -1341,7 +1341,6 @@ public class ColumnFamilyStore
                                 if ( target != null && StorageService.instance().isPrimary(lastkey, target) )
                                 {
                                     rangeCountingBloomFilter.add(lastkey);
-                                    StorageService.instance().delete(lastkey);
                                 }
 	                        }
 	                        catch(Exception ex)

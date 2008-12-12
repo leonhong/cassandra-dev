@@ -31,7 +31,6 @@ import com.facebook.infrastructure.net.IVerbHandler;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.net.io.StreamContextManager;
-import com.facebook.infrastructure.service.RequestCountSampler;
 import com.facebook.infrastructure.service.StreamManager;
 import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
@@ -140,15 +139,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
         int i = 0;
         for ( File file : files )
         {
-            if ( file.getName().indexOf("-Data.db") != -1 )
-            {
-                RequestCountSampler.Cardinality cardinality = new RequestCountSampler.Cardinality(cbf, cbf.count());
-                streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length(), cardinality);
-            }
-            else
-            {
-                streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length());
-            }
+            streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length());
             logger_.debug("Stream context metadata " + streamContexts[i]);
             ++i;
         }

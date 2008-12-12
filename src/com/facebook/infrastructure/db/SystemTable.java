@@ -40,7 +40,6 @@ import org.apache.log4j.Logger;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.service.RequestCountSampler;
 import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.*;
 

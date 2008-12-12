@@ -54,7 +54,6 @@ public class BinaryVerbHandler implements IVerbHandler
             RowMutationMessage rmMsg = RowMutationMessage.serializer().deserialize(rowMutationCtx.buffer_);
             RowMutation rm = rmMsg.getRowMutation();
             	    
-            StorageService.instance().sample(rm.key());  
             rowMutationCtx.row_.key(rm.key());
             rm.load(rowMutationCtx.row_);
 	

@@ -240,9 +240,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     /* This thread pool does consistency checks when the client doesn't care about consistency */
     private ExecutorService consistencyManager_;
 
-    /* Helps determine number of keys processed in a time interval */
-    private RequestCountSampler sampler_;
-
     /* This is the entity that tracks load information of all nodes in the cluster */
     private StorageLoadBalancer storageLoadBalancer_;
     /* We use this interface to determine where replicas need to be placed */
@@ -431,8 +428,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
          * table
          */
         Gossiper.instance().start(udpAddr_, storageMetadata_.getGeneration());
-        /* Set up the request sampler */        
-        sampler_ = new RequestCountSampler();
         /* Make sure this token gets gossiped around. */
         tokenMetadata_.update(storageMetadata_.getStorageId(), StorageService.tcpAddr_);
         Gossiper.instance().addApplicationState(StorageService.nodeId_, new ApplicationState(storageMetadata_.getStorageId().toString()));
@@ -472,8 +467,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         MessagingService.shutdown();
         /* shut down all memtables */
         Memtable.shutdown();
-        /* shut down the request count sampler */
-        RequestCountSampler.shutdown();
         /* shut down the cleaner thread in FileUtils */
         FileUtils.shutdown();
 
@@ -793,24 +786,12 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     }
 
     /**
-     * This method is called by the Load Balancing module and
-     * the Bootstrap module. Here we receive a Counting Bloom Filter
-     * which we merge into the counter.
-    */
-    public void sample(RequestCountSampler.Cardinality cardinality)
-    {
-        if ( cardinality == null )
-            return;
-        sampler_.add(cardinality);
-    }
-
-    /**
      * Get the count of primary keys from the sampler.
     */
     public String getLoadInfo()
     {
         long diskSpace = FileUtils.getUsedDiskSpace();
-        LoadInfo li = new LoadInfo(sampler_.count(), diskSpace);
+        LoadInfo li = new LoadInfo(0, diskSpace);
     	return li.toString();
     }
 
@@ -854,30 +835,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         
         Collections.sort(lInfos, new LoadInfo.PrimaryCountComparator());
         return loadInfoToEndPointMap.get( lInfos.get(lInfos.size() - 1) );
-    }
-
-    /**
-     * This method will sample the key into the
-     * request count sampler.
-     */
-    public void sample(String key)
-    {
-    	if(isPrimary(key))
-    	{
-    		sampler_.sample(key);
-    	}
-    }
-
-    /**
-     * This method will delete the key from the
-     * request count sampler.
-    */
-    public void delete(String key)
-    {
-        if ( isPrimary(key) )
-        {
-            sampler_.delete(key);
-        }
     }
 
     /*
@@ -1024,7 +981,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
     public long getRequestHandled()
     {
-        return sampler_.count();
+        return 0;
     }
 
     public String getToken(EndPoint ep)

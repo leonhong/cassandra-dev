@@ -286,11 +286,6 @@ public class Table
                 SSTable ssTable = new SSTable(streamContext.getTargetFile() );
                 ssTable.close();
                 logger_.debug("Merging the counting bloom filter in the sampler ...");
-                if ( streamContext.getCardinality() != null )
-                {
-                    StorageService.instance().sample(streamContext.getCardinality());                
-                    logger_.debug("Done merging " + streamContext.getCardinality().count() + " keys in the sampler ...");
-                }
                 String[] peices = FBUtilities.strip(fileName, "-");
                 Table.open(peices[0]).getColumnFamilyStore(peices[1]).addToList(streamContext.getTargetFile());                
             }
