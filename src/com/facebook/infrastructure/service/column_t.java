@@ -18,8 +18,11 @@ import com.facebook.thrift.transport.*;
 
 public class column_t implements TBase, java.io.Serializable {
   public String columnName;
+  public static final int COLUMNNAME = 1;
   public String value;
+  public static final int VALUE = 2;
   public long timestamp;
+  public static final int TIMESTAMP = 3;
 
   public final Isset __isset = new Isset();
   public static final class Isset implements java.io.Serializable {
@@ -38,9 +41,9 @@ public class column_t implements TBase, java.io.Serializable {
   {
     this();
     this.columnName = columnName;
-    this.__isset.columnName = true;
+    this.__isset.columnName = (columnName != null);
     this.value = value;
-    this.__isset.value = true;
+    this.__isset.value = (value != null);
     this.timestamp = timestamp;
     this.__isset.timestamp = true;
   }
@@ -102,7 +105,7 @@ public class column_t implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case 1:
+        case COLUMNNAME:
           if (field.type == TType.STRING) {
             this.columnName = iprot.readString();
             this.__isset.columnName = true;
@@ -110,7 +113,7 @@ public class column_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2:
+        case VALUE:
           if (field.type == TType.STRING) {
             this.value = iprot.readString();
             this.__isset.value = true;
@@ -118,7 +121,7 @@ public class column_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3:
+        case TIMESTAMP:
           if (field.type == TType.I64) {
             this.timestamp = iprot.readI64();
             this.__isset.timestamp = true;
@@ -142,7 +145,7 @@ public class column_t implements TBase, java.io.Serializable {
     if (this.columnName != null) {
       field.name = "columnName";
       field.type = TType.STRING;
-      field.id = 1;
+      field.id = COLUMNNAME;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.columnName);
       oprot.writeFieldEnd();
@@ -150,14 +153,14 @@ public class column_t implements TBase, java.io.Serializable {
     if (this.value != null) {
       field.name = "value";
       field.type = TType.STRING;
-      field.id = 2;
+      field.id = VALUE;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.value);
       oprot.writeFieldEnd();
     }
     field.name = "timestamp";
     field.type = TType.I64;
-    field.id = 3;
+    field.id = TIMESTAMP;
     oprot.writeFieldBegin(field);
     oprot.writeI64(this.timestamp);
     oprot.writeFieldEnd();
@@ -167,12 +170,20 @@ public class column_t implements TBase, java.io.Serializable {
 
   public String toString() {
     StringBuilder sb = new StringBuilder("column_t(");
+    boolean first = true;
+
+    if (!first) sb.append(", ");
     sb.append("columnName:");
     sb.append(this.columnName);
-    sb.append(",value:");
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("value:");
     sb.append(this.value);
-    sb.append(",timestamp:");
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("timestamp:");
     sb.append(this.timestamp);
+    first = false;
     sb.append(")");
     return sb.toString();
   }

@@ -18,8 +18,11 @@ import com.facebook.thrift.transport.*;
 
 public class batch_mutation_super_t implements TBase, java.io.Serializable {
   public String table;
+  public static final int TABLE = 1;
   public String key;
+  public static final int KEY = 2;
   public Map<String,List<superColumn_t>> cfmap;
+  public static final int CFMAP = 3;
 
   public final Isset __isset = new Isset();
   public static final class Isset implements java.io.Serializable {
@@ -38,11 +41,11 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
   {
     this();
     this.table = table;
-    this.__isset.table = true;
+    this.__isset.table = (table != null);
     this.key = key;
-    this.__isset.key = true;
+    this.__isset.key = (key != null);
     this.cfmap = cfmap;
-    this.__isset.cfmap = true;
+    this.__isset.cfmap = (cfmap != null);
   }
 
   public boolean equals(Object that) {
@@ -102,7 +105,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case 1:
+        case TABLE:
           if (field.type == TType.STRING) {
             this.table = iprot.readString();
             this.__isset.table = true;
@@ -110,7 +113,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2:
+        case KEY:
           if (field.type == TType.STRING) {
             this.key = iprot.readString();
             this.__isset.key = true;
@@ -118,7 +121,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 3:
+        case CFMAP:
           if (field.type == TType.MAP) {
             {
               TMap _map13 = iprot.readMapBegin();
@@ -165,7 +168,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
     if (this.table != null) {
       field.name = "table";
       field.type = TType.STRING;
-      field.id = 1;
+      field.id = TABLE;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.table);
       oprot.writeFieldEnd();
@@ -173,7 +176,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
     if (this.key != null) {
       field.name = "key";
       field.type = TType.STRING;
-      field.id = 2;
+      field.id = KEY;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.key);
       oprot.writeFieldEnd();
@@ -181,7 +184,7 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
     if (this.cfmap != null) {
       field.name = "cfmap";
       field.type = TType.MAP;
-      field.id = 3;
+      field.id = CFMAP;
       oprot.writeFieldBegin(field);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmap.size()));
@@ -205,12 +208,20 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
 
   public String toString() {
     StringBuilder sb = new StringBuilder("batch_mutation_super_t(");
+    boolean first = true;
+
+    if (!first) sb.append(", ");
     sb.append("table:");
     sb.append(this.table);
-    sb.append(",key:");
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("key:");
     sb.append(this.key);
-    sb.append(",cfmap:");
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("cfmap:");
     sb.append(this.cfmap);
+    first = false;
     sb.append(")");
     return sb.toString();
   }

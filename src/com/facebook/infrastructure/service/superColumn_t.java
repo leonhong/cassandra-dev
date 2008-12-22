@@ -18,7 +18,9 @@ import com.facebook.thrift.transport.*;
 
 public class superColumn_t implements TBase, java.io.Serializable {
   public String name;
+  public static final int NAME = 1;
   public List<column_t> columns;
+  public static final int COLUMNS = 2;
 
   public final Isset __isset = new Isset();
   public static final class Isset implements java.io.Serializable {
@@ -35,9 +37,9 @@ public class superColumn_t implements TBase, java.io.Serializable {
   {
     this();
     this.name = name;
-    this.__isset.name = true;
+    this.__isset.name = (name != null);
     this.columns = columns;
-    this.__isset.columns = true;
+    this.__isset.columns = (columns != null);
   }
 
   public boolean equals(Object that) {
@@ -88,7 +90,7 @@ public class superColumn_t implements TBase, java.io.Serializable {
       }
       switch (field.id)
       {
-        case 1:
+        case NAME:
           if (field.type == TType.STRING) {
             this.name = iprot.readString();
             this.__isset.name = true;
@@ -96,7 +98,7 @@ public class superColumn_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
-        case 2:
+        case COLUMNS:
           if (field.type == TType.LIST) {
             {
               TList _list9 = iprot.readListBegin();
@@ -131,7 +133,7 @@ public class superColumn_t implements TBase, java.io.Serializable {
     if (this.name != null) {
       field.name = "name";
       field.type = TType.STRING;
-      field.id = 1;
+      field.id = NAME;
       oprot.writeFieldBegin(field);
       oprot.writeString(this.name);
       oprot.writeFieldEnd();
@@ -139,7 +141,7 @@ public class superColumn_t implements TBase, java.io.Serializable {
     if (this.columns != null) {
       field.name = "columns";
       field.type = TType.LIST;
-      field.id = 2;
+      field.id = COLUMNS;
       oprot.writeFieldBegin(field);
       {
         oprot.writeListBegin(new TList(TType.STRUCT, this.columns.size()));
@@ -156,10 +158,16 @@ public class superColumn_t implements TBase, java.io.Serializable {
 
   public String toString() {
     StringBuilder sb = new StringBuilder("superColumn_t(");
+    boolean first = true;
+
+    if (!first) sb.append(", ");
     sb.append("name:");
     sb.append(this.name);
-    sb.append(",columns:");
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("columns:");
     sb.append(this.columns);
+    first = false;
     sb.append(")");
     return sb.toString();
   }

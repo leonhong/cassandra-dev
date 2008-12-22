@@ -55,7 +55,7 @@ service Cassandra extends fb303.FacebookService
 
   bool           	batch_insert_blocking(batch_mutation_t batchMutation),
 
-  async void     	remove(string tablename,string key,string columnFamily_column),
+  async void     	remove(string tablename,string key,string columnFamily_column,i64 timestamp),
 
   list<superColumn_t> 	get_slice_super(string tablename, string key, string columnFamily_superColumnName, i32 start = -1 , i32 count = -1),
 

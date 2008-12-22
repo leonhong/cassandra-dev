@@ -32,13 +32,11 @@ public class Cassandra {
 
     public boolean batch_insert_blocking(batch_mutation_t batchMutation) throws TException;
 
-    public void remove(String tablename, String key, String columnFamily_column) throws TException;
-
-    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException;
+    public void remove(String tablename, String key, String columnFamily_column, long timestamp) throws TException;
 
     public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws TException;
 
-    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws TException;
+    public superColumn_t get_superColumn(String tablename, String key, String columnFamily_superColumnName) throws TException;
 
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper) throws TException;
 
@@ -231,57 +229,22 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "batch_insert_blocking failed: unknown result");
     }
 
-    public void remove(String tablename, String key, String columnFamily_column) throws TException
+    public void remove(String tablename, String key, String columnFamily_column, long timestamp) throws TException
     {
-      send_remove(tablename, key, columnFamily_column);
+      send_remove(tablename, key, columnFamily_column, timestamp);
     }
 
-    public void send_remove(String tablename, String key, String columnFamily_column) throws TException
+    public void send_remove(String tablename, String key, String columnFamily_column, long timestamp) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("remove", TMessageType.CALL, seqid_));
       remove_args args = new remove_args();
       args.tablename = tablename;
       args.key = key;
       args.columnFamily_column = columnFamily_column;
+      args.timestamp = timestamp;
       args.write(oprot_);
       oprot_.writeMessageEnd();
       oprot_.getTransport().flush();
-    }
-
-    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException
-    {
-      send_get_columns_since(tablename, key, columnFamily_column, timeStamp);
-      return recv_get_columns_since();
-    }
-
-    public void send_get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException
-    {
-      oprot_.writeMessageBegin(new TMessage("get_columns_since", TMessageType.CALL, seqid_));
-      get_columns_since_args args = new get_columns_since_args();
-      args.tablename = tablename;
-      args.key = key;
-      args.columnFamily_column = columnFamily_column;
-      args.timeStamp = timeStamp;
-      args.write(oprot_);
-      oprot_.writeMessageEnd();
-      oprot_.getTransport().flush();
-    }
-
-    public List<column_t> recv_get_columns_since() throws TException
-    {
-      TMessage msg = iprot_.readMessageBegin();
-      if (msg.type == TMessageType.EXCEPTION) {
-        TApplicationException x = TApplicationException.read(iprot_);
-        iprot_.readMessageEnd();
-        throw x;
-      }
-      get_columns_since_result result = new get_columns_since_result();
-      result.read(iprot_);
-      iprot_.readMessageEnd();
-      if (result.__isset.success) {
-        return result.success;
-      }
-      throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_columns_since failed: unknown result");
     }
 
     public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws TException
@@ -321,19 +284,19 @@ public class Cassandra {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice_super failed: unknown result");
     }
 
-    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws TException
+    public superColumn_t get_superColumn(String tablename, String key, String columnFamily_superColumnName) throws TException
     {
-      send_get_superColumn(tablename, key, columnFamily);
+      send_get_superColumn(tablename, key, columnFamily_superColumnName);
       return recv_get_superColumn();
     }
 
-    public void send_get_superColumn(String tablename, String key, String columnFamily) throws TException
+    public void send_get_superColumn(String tablename, String key, String columnFamily_superColumnName) throws TException
     {
       oprot_.writeMessageBegin(new TMessage("get_superColumn", TMessageType.CALL, seqid_));
       get_superColumn_args args = new get_superColumn_args();
       args.tablename = tablename;
       args.key = key;
-      args.columnFamily = columnFamily;
+      args.columnFamily_superColumnName = columnFamily_superColumnName;
       args.write(oprot_);
       oprot_.writeMessageEnd();
       oprot_.getTransport().flush();
@@ -417,7 +380,6 @@ public class Cassandra {
       processMap_.put("batch_insert", new batch_insert());
       processMap_.put("batch_insert_blocking", new batch_insert_blocking());
       processMap_.put("remove", new remove());
-      processMap_.put("get_columns_since", new get_columns_since());
       processMap_.put("get_slice_super", new get_slice_super());
       processMap_.put("get_superColumn", new get_superColumn());
       processMap_.put("batch_insert_superColumn", new batch_insert_superColumn());
@@ -540,26 +502,9 @@ public class Cassandra {
         remove_args args = new remove_args();
         args.read(iprot);
         iprot.readMessageEnd();
-        iface_.remove(args.tablename, args.key, args.columnFamily_column);
+        iface_.remove(args.tablename, args.key, args.columnFamily_column, args.timestamp);
         return;
       }
-    }
-
-    private class get_columns_since implements ProcessFunction {
-      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
-      {
-        get_columns_since_args args = new get_columns_since_args();
-        args.read(iprot);
-        iprot.readMessageEnd();
-        get_columns_since_result result = new get_columns_since_result();
-        result.success = iface_.get_columns_since(args.tablename, args.key, args.columnFamily_column, args.timeStamp);
-        result.__isset.success = true;
-        oprot.writeMessageBegin(new TMessage("get_columns_since", TMessageType.REPLY, seqid));
-        result.write(oprot);
-        oprot.writeMessageEnd();
-        oprot.getTransport().flush();
-      }
-
     }
 
     private class get_slice_super implements ProcessFunction {
@@ -586,7 +531,7 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_superColumn_result result = new get_superColumn_result();
-        result.success = iface_.get_superColumn(args.tablename, args.key, args.columnFamily);
+        result.success = iface_.get_superColumn(args.tablename, args.key, args.columnFamily_superColumnName);
         result.__isset.success = true;
         oprot.writeMessageBegin(new TMessage("get_superColumn", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -628,10 +573,15 @@ public class Cassandra {
 
   public static class get_slice_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_column;
+    public static final int COLUMNFAMILY_COLUMN = -3;
     public int start;
+    public static final int START = -4;
     public int count;
+    public static final int COUNT = -5;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -658,11 +608,11 @@ public class Cassandra {
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
       this.start = start;
       this.__isset.start = true;
       this.count = count;
@@ -744,7 +694,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -752,7 +702,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -760,7 +710,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_COLUMN:
             if (field.type == TType.STRING) {
               this.columnFamily_column = iprot.readString();
               this.__isset.columnFamily_column = true;
@@ -768,7 +718,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -4:
+          case START:
             if (field.type == TType.I32) {
               this.start = iprot.readI32();
               this.__isset.start = true;
@@ -776,7 +726,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -5:
+          case COUNT:
             if (field.type == TType.I32) {
               this.count = iprot.readI32();
               this.__isset.count = true;
@@ -800,7 +750,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -808,7 +758,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -816,20 +766,20 @@ public class Cassandra {
       if (this.columnFamily_column != null) {
         field.name = "columnFamily_column";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_COLUMN;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
       field.name = "start";
       field.type = TType.I32;
-      field.id = -4;
+      field.id = START;
       oprot.writeFieldBegin(field);
       oprot.writeI32(this.start);
       oprot.writeFieldEnd();
       field.name = "count";
       field.type = TType.I32;
-      field.id = -5;
+      field.id = COUNT;
       oprot.writeFieldBegin(field);
       oprot.writeI32(this.count);
       oprot.writeFieldEnd();
@@ -839,16 +789,28 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_column:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_column:");
       sb.append(this.columnFamily_column);
-      sb.append(",start:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("start:");
       sb.append(this.start);
-      sb.append(",count:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("count:");
       sb.append(this.count);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -857,6 +819,7 @@ public class Cassandra {
 
   public static class get_slice_result implements TBase, java.io.Serializable   {
     public List<column_t> success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -871,7 +834,7 @@ public class Cassandra {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      this.__isset.success = (success != null);
     }
 
     public boolean equals(Object that) {
@@ -913,7 +876,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.LIST) {
               {
                 TList _list22 = iprot.readListBegin();
@@ -950,7 +913,7 @@ public class Cassandra {
         if (this.success != null) {
           field.name = "success";
           field.type = TType.LIST;
-          field.id = 0;
+          field.id = SUCCESS;
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
@@ -968,8 +931,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -978,8 +945,11 @@ public class Cassandra {
 
   public static class get_column_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_column;
+    public static final int COLUMNFAMILY_COLUMN = -3;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -998,11 +968,11 @@ public class Cassandra {
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
     }
 
     public boolean equals(Object that) {
@@ -1062,7 +1032,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -1070,7 +1040,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -1078,7 +1048,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_COLUMN:
             if (field.type == TType.STRING) {
               this.columnFamily_column = iprot.readString();
               this.__isset.columnFamily_column = true;
@@ -1102,7 +1072,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -1110,7 +1080,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -1118,7 +1088,7 @@ public class Cassandra {
       if (this.columnFamily_column != null) {
         field.name = "columnFamily_column";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_COLUMN;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
@@ -1129,12 +1099,20 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_column:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_column:");
       sb.append(this.columnFamily_column);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1143,6 +1121,7 @@ public class Cassandra {
 
   public static class get_column_result implements TBase, java.io.Serializable   {
     public column_t success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1157,7 +1136,7 @@ public class Cassandra {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      this.__isset.success = (success != null);
     }
 
     public boolean equals(Object that) {
@@ -1199,7 +1178,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.STRUCT) {
               this.success = new column_t();
               this.success.read(iprot);
@@ -1226,7 +1205,7 @@ public class Cassandra {
         if (this.success != null) {
           field.name = "success";
           field.type = TType.STRUCT;
-          field.id = 0;
+          field.id = SUCCESS;
           oprot.writeFieldBegin(field);
           this.success.write(oprot);
           oprot.writeFieldEnd();
@@ -1238,8 +1217,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1248,8 +1231,11 @@ public class Cassandra {
 
   public static class get_column_count_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_column;
+    public static final int COLUMNFAMILY_COLUMN = -3;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1268,11 +1254,11 @@ public class Cassandra {
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
     }
 
     public boolean equals(Object that) {
@@ -1332,7 +1318,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -1340,7 +1326,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -1348,7 +1334,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_COLUMN:
             if (field.type == TType.STRING) {
               this.columnFamily_column = iprot.readString();
               this.__isset.columnFamily_column = true;
@@ -1372,7 +1358,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -1380,7 +1366,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -1388,7 +1374,7 @@ public class Cassandra {
       if (this.columnFamily_column != null) {
         field.name = "columnFamily_column";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_COLUMN;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
@@ -1399,12 +1385,20 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_count_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_column:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_column:");
       sb.append(this.columnFamily_column);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1413,6 +1407,7 @@ public class Cassandra {
 
   public static class get_column_count_result implements TBase, java.io.Serializable   {
     public int success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1469,7 +1464,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.I32) {
               this.success = iprot.readI32();
               this.__isset.success = true;
@@ -1494,7 +1489,7 @@ public class Cassandra {
       if (this.__isset.success) {
         field.name = "success";
         field.type = TType.I32;
-        field.id = 0;
+        field.id = SUCCESS;
         oprot.writeFieldBegin(field);
         oprot.writeI32(this.success);
         oprot.writeFieldEnd();
@@ -1505,8 +1500,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_count_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1515,10 +1514,15 @@ public class Cassandra {
 
   public static class insert_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_column;
+    public static final int COLUMNFAMILY_COLUMN = -3;
     public String cellData;
+    public static final int CELLDATA = -4;
     public long timestamp;
+    public static final int TIMESTAMP = -5;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1541,13 +1545,13 @@ public class Cassandra {
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
       this.cellData = cellData;
-      this.__isset.cellData = true;
+      this.__isset.cellData = (cellData != null);
       this.timestamp = timestamp;
       this.__isset.timestamp = true;
     }
@@ -1627,7 +1631,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -1635,7 +1639,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -1643,7 +1647,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_COLUMN:
             if (field.type == TType.STRING) {
               this.columnFamily_column = iprot.readString();
               this.__isset.columnFamily_column = true;
@@ -1651,7 +1655,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -4:
+          case CELLDATA:
             if (field.type == TType.STRING) {
               this.cellData = iprot.readString();
               this.__isset.cellData = true;
@@ -1659,7 +1663,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -5:
+          case TIMESTAMP:
             if (field.type == TType.I64) {
               this.timestamp = iprot.readI64();
               this.__isset.timestamp = true;
@@ -1683,7 +1687,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -1691,7 +1695,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -1699,7 +1703,7 @@ public class Cassandra {
       if (this.columnFamily_column != null) {
         field.name = "columnFamily_column";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_COLUMN;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
@@ -1707,14 +1711,14 @@ public class Cassandra {
       if (this.cellData != null) {
         field.name = "cellData";
         field.type = TType.STRING;
-        field.id = -4;
+        field.id = CELLDATA;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.cellData);
         oprot.writeFieldEnd();
       }
       field.name = "timestamp";
       field.type = TType.I64;
-      field.id = -5;
+      field.id = TIMESTAMP;
       oprot.writeFieldBegin(field);
       oprot.writeI64(this.timestamp);
       oprot.writeFieldEnd();
@@ -1724,16 +1728,28 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("insert_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_column:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_column:");
       sb.append(this.columnFamily_column);
-      sb.append(",cellData:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("cellData:");
       sb.append(this.cellData);
-      sb.append(",timestamp:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1742,6 +1758,7 @@ public class Cassandra {
 
   public static class batch_insert_args implements TBase, java.io.Serializable   {
     public batch_mutation_t batchMutation;
+    public static final int BATCHMUTATION = -1;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1756,7 +1773,7 @@ public class Cassandra {
     {
       this();
       this.batchMutation = batchMutation;
-      this.__isset.batchMutation = true;
+      this.__isset.batchMutation = (batchMutation != null);
     }
 
     public boolean equals(Object that) {
@@ -1798,7 +1815,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case BATCHMUTATION:
             if (field.type == TType.STRUCT) {
               this.batchMutation = new batch_mutation_t();
               this.batchMutation.read(iprot);
@@ -1823,7 +1840,7 @@ public class Cassandra {
       if (this.batchMutation != null) {
         field.name = "batchMutation";
         field.type = TType.STRUCT;
-        field.id = -1;
+        field.id = BATCHMUTATION;
         oprot.writeFieldBegin(field);
         this.batchMutation.write(oprot);
         oprot.writeFieldEnd();
@@ -1834,8 +1851,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("batchMutation:");
       sb.append(this.batchMutation);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1844,6 +1865,7 @@ public class Cassandra {
 
   public static class batch_insert_blocking_args implements TBase, java.io.Serializable   {
     public batch_mutation_t batchMutation;
+    public static final int BATCHMUTATION = -1;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -1858,7 +1880,7 @@ public class Cassandra {
     {
       this();
       this.batchMutation = batchMutation;
-      this.__isset.batchMutation = true;
+      this.__isset.batchMutation = (batchMutation != null);
     }
 
     public boolean equals(Object that) {
@@ -1900,7 +1922,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case BATCHMUTATION:
             if (field.type == TType.STRUCT) {
               this.batchMutation = new batch_mutation_t();
               this.batchMutation.read(iprot);
@@ -1925,7 +1947,7 @@ public class Cassandra {
       if (this.batchMutation != null) {
         field.name = "batchMutation";
         field.type = TType.STRUCT;
-        field.id = -1;
+        field.id = BATCHMUTATION;
         oprot.writeFieldBegin(field);
         this.batchMutation.write(oprot);
         oprot.writeFieldEnd();
@@ -1936,8 +1958,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_blocking_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("batchMutation:");
       sb.append(this.batchMutation);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -1946,6 +1972,7 @@ public class Cassandra {
 
   public static class batch_insert_blocking_result implements TBase, java.io.Serializable   {
     public boolean success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -2002,7 +2029,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.BOOL) {
               this.success = iprot.readBool();
               this.__isset.success = true;
@@ -2027,7 +2054,7 @@ public class Cassandra {
       if (this.__isset.success) {
         field.name = "success";
         field.type = TType.BOOL;
-        field.id = 0;
+        field.id = SUCCESS;
         oprot.writeFieldBegin(field);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
@@ -2038,8 +2065,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_blocking_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2048,14 +2079,20 @@ public class Cassandra {
 
   public static class remove_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_column;
+    public static final int COLUMNFAMILY_COLUMN = -3;
+    public long timestamp;
+    public static final int TIMESTAMP = -4;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
+      public boolean timestamp = false;
     }
 
     public remove_args() {
@@ -2064,15 +2101,18 @@ public class Cassandra {
     public remove_args(
       String tablename,
       String key,
-      String columnFamily_column)
+      String columnFamily_column,
+      long timestamp)
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+      this.timestamp = timestamp;
+      this.__isset.timestamp = true;
     }
 
     public boolean equals(Object that) {
@@ -2114,6 +2154,15 @@ public class Cassandra {
           return false;
       }
 
+      boolean this_present_timestamp = true;
+      boolean that_present_timestamp = true;
+      if (this_present_timestamp || that_present_timestamp) {
+        if (!(this_present_timestamp && that_present_timestamp))
+          return false;
+        if (this.timestamp != that.timestamp)
+          return false;
+      }
+
       return true;
     }
 
@@ -2132,7 +2181,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -2140,7 +2189,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -2148,10 +2197,18 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_COLUMN:
             if (field.type == TType.STRING) {
               this.columnFamily_column = iprot.readString();
               this.__isset.columnFamily_column = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case TIMESTAMP:
+            if (field.type == TType.I64) {
+              this.timestamp = iprot.readI64();
+              this.__isset.timestamp = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -2172,7 +2229,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -2180,7 +2237,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -2188,339 +2245,41 @@ public class Cassandra {
       if (this.columnFamily_column != null) {
         field.name = "columnFamily_column";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_COLUMN;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    public String toString() {
-      StringBuilder sb = new StringBuilder("remove_args(");
-      sb.append("tablename:");
-      sb.append(this.tablename);
-      sb.append(",key:");
-      sb.append(this.key);
-      sb.append(",columnFamily_column:");
-      sb.append(this.columnFamily_column);
-      sb.append(")");
-      return sb.toString();
-    }
-
-  }
-
-  public static class get_columns_since_args implements TBase, java.io.Serializable   {
-    public String tablename;
-    public String key;
-    public String columnFamily_column;
-    public long timeStamp;
-
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
-      public boolean tablename = false;
-      public boolean key = false;
-      public boolean columnFamily_column = false;
-      public boolean timeStamp = false;
-    }
-
-    public get_columns_since_args() {
-    }
-
-    public get_columns_since_args(
-      String tablename,
-      String key,
-      String columnFamily_column,
-      long timeStamp)
-    {
-      this();
-      this.tablename = tablename;
-      this.__isset.tablename = true;
-      this.key = key;
-      this.__isset.key = true;
-      this.columnFamily_column = columnFamily_column;
-      this.__isset.columnFamily_column = true;
-      this.timeStamp = timeStamp;
-      this.__isset.timeStamp = true;
-    }
-
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof get_columns_since_args)
-        return this.equals((get_columns_since_args)that);
-      return false;
-    }
-
-    public boolean equals(get_columns_since_args that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_tablename = true && (this.tablename != null);
-      boolean that_present_tablename = true && (that.tablename != null);
-      if (this_present_tablename || that_present_tablename) {
-        if (!(this_present_tablename && that_present_tablename))
-          return false;
-        if (!this.tablename.equals(that.tablename))
-          return false;
-      }
-
-      boolean this_present_key = true && (this.key != null);
-      boolean that_present_key = true && (that.key != null);
-      if (this_present_key || that_present_key) {
-        if (!(this_present_key && that_present_key))
-          return false;
-        if (!this.key.equals(that.key))
-          return false;
-      }
-
-      boolean this_present_columnFamily_column = true && (this.columnFamily_column != null);
-      boolean that_present_columnFamily_column = true && (that.columnFamily_column != null);
-      if (this_present_columnFamily_column || that_present_columnFamily_column) {
-        if (!(this_present_columnFamily_column && that_present_columnFamily_column))
-          return false;
-        if (!this.columnFamily_column.equals(that.columnFamily_column))
-          return false;
-      }
-
-      boolean this_present_timeStamp = true;
-      boolean that_present_timeStamp = true;
-      if (this_present_timeStamp || that_present_timeStamp) {
-        if (!(this_present_timeStamp && that_present_timeStamp))
-          return false;
-        if (this.timeStamp != that.timeStamp)
-          return false;
-      }
-
-      return true;
-    }
-
-    public int hashCode() {
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id)
-        {
-          case -1:
-            if (field.type == TType.STRING) {
-              this.tablename = iprot.readString();
-              this.__isset.tablename = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case -2:
-            if (field.type == TType.STRING) {
-              this.key = iprot.readString();
-              this.__isset.key = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case -3:
-            if (field.type == TType.STRING) {
-              this.columnFamily_column = iprot.readString();
-              this.__isset.columnFamily_column = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case -4:
-            if (field.type == TType.I64) {
-              this.timeStamp = iprot.readI64();
-              this.__isset.timeStamp = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_columns_since_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
-      if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = -1;
-        oprot.writeFieldBegin(field);
-        oprot.writeString(this.tablename);
-        oprot.writeFieldEnd();
-      }
-      if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = -2;
-        oprot.writeFieldBegin(field);
-        oprot.writeString(this.key);
-        oprot.writeFieldEnd();
-      }
-      if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = -3;
-        oprot.writeFieldBegin(field);
-        oprot.writeString(this.columnFamily_column);
-        oprot.writeFieldEnd();
-      }
-      field.name = "timeStamp";
+      field.name = "timestamp";
       field.type = TType.I64;
-      field.id = -4;
+      field.id = TIMESTAMP;
       oprot.writeFieldBegin(field);
-      oprot.writeI64(this.timeStamp);
+      oprot.writeI64(this.timestamp);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
     public String toString() {
-      StringBuilder sb = new StringBuilder("get_columns_since_args(");
+      StringBuilder sb = new StringBuilder("remove_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_column:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_column:");
       sb.append(this.columnFamily_column);
-      sb.append(",timeStamp:");
-      sb.append(this.timeStamp);
-      sb.append(")");
-      return sb.toString();
-    }
-
-  }
-
-  public static class get_columns_since_result implements TBase, java.io.Serializable   {
-    public List<column_t> success;
-
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
-      public boolean success = false;
-    }
-
-    public get_columns_since_result() {
-    }
-
-    public get_columns_since_result(
-      List<column_t> success)
-    {
-      this();
-      this.success = success;
-      this.__isset.success = true;
-    }
-
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof get_columns_since_result)
-        return this.equals((get_columns_since_result)that);
-      return false;
-    }
-
-    public boolean equals(get_columns_since_result that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_success = true && (this.success != null);
-      boolean that_present_success = true && (that.success != null);
-      if (this_present_success || that_present_success) {
-        if (!(this_present_success && that_present_success))
-          return false;
-        if (!this.success.equals(that.success))
-          return false;
-      }
-
-      return true;
-    }
-
-    public int hashCode() {
-      return 0;
-    }
-
-    public void read(TProtocol iprot) throws TException {
-      TField field;
-      iprot.readStructBegin();
-      while (true)
-      {
-        field = iprot.readFieldBegin();
-        if (field.type == TType.STOP) { 
-          break;
-        }
-        switch (field.id)
-        {
-          case 0:
-            if (field.type == TType.LIST) {
-              {
-                TList _list26 = iprot.readListBegin();
-                this.success = new ArrayList<column_t>(_list26.size);
-                for (int _i27 = 0; _i27 < _list26.size; ++_i27)
-                {
-                  column_t _elem28 = new column_t();
-                  _elem28 = new column_t();
-                  _elem28.read(iprot);
-                  this.success.add(_elem28);
-                }
-                iprot.readListEnd();
-              }
-              this.__isset.success = true;
-            } else { 
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          default:
-            TProtocolUtil.skip(iprot, field.type);
-            break;
-        }
-        iprot.readFieldEnd();
-      }
-      iprot.readStructEnd();
-    }
-
-    public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_columns_since_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
-
-      if (this.__isset.success) {
-        if (this.success != null) {
-          field.name = "success";
-          field.type = TType.LIST;
-          field.id = 0;
-          oprot.writeFieldBegin(field);
-          {
-            oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (column_t _iter29 : this.success)            {
-              _iter29.write(oprot);
-            }
-            oprot.writeListEnd();
-          }
-          oprot.writeFieldEnd();
-        }
-      }
-      oprot.writeFieldStop();
-      oprot.writeStructEnd();
-    }
-
-    public String toString() {
-      StringBuilder sb = new StringBuilder("get_columns_since_result(");
-      sb.append("success:");
-      sb.append(this.success);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("timestamp:");
+      sb.append(this.timestamp);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2529,10 +2288,15 @@ public class Cassandra {
 
   public static class get_slice_super_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
+    public static final int KEY = -2;
     public String columnFamily_superColumnName;
+    public static final int COLUMNFAMILY_SUPERCOLUMNNAME = -3;
     public int start;
+    public static final int START = -4;
     public int count;
+    public static final int COUNT = -5;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -2559,11 +2323,11 @@ public class Cassandra {
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
+      this.__isset.key = (key != null);
       this.columnFamily_superColumnName = columnFamily_superColumnName;
-      this.__isset.columnFamily_superColumnName = true;
+      this.__isset.columnFamily_superColumnName = (columnFamily_superColumnName != null);
       this.start = start;
       this.__isset.start = true;
       this.count = count;
@@ -2645,7 +2409,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -2653,7 +2417,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -2661,7 +2425,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_SUPERCOLUMNNAME:
             if (field.type == TType.STRING) {
               this.columnFamily_superColumnName = iprot.readString();
               this.__isset.columnFamily_superColumnName = true;
@@ -2669,7 +2433,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -4:
+          case START:
             if (field.type == TType.I32) {
               this.start = iprot.readI32();
               this.__isset.start = true;
@@ -2677,7 +2441,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -5:
+          case COUNT:
             if (field.type == TType.I32) {
               this.count = iprot.readI32();
               this.__isset.count = true;
@@ -2701,7 +2465,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -2709,7 +2473,7 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
@@ -2717,20 +2481,20 @@ public class Cassandra {
       if (this.columnFamily_superColumnName != null) {
         field.name = "columnFamily_superColumnName";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_SUPERCOLUMNNAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.columnFamily_superColumnName);
         oprot.writeFieldEnd();
       }
       field.name = "start";
       field.type = TType.I32;
-      field.id = -4;
+      field.id = START;
       oprot.writeFieldBegin(field);
       oprot.writeI32(this.start);
       oprot.writeFieldEnd();
       field.name = "count";
       field.type = TType.I32;
-      field.id = -5;
+      field.id = COUNT;
       oprot.writeFieldBegin(field);
       oprot.writeI32(this.count);
       oprot.writeFieldEnd();
@@ -2740,16 +2504,28 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_super_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily_superColumnName:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_superColumnName:");
       sb.append(this.columnFamily_superColumnName);
-      sb.append(",start:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("start:");
       sb.append(this.start);
-      sb.append(",count:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("count:");
       sb.append(this.count);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2758,6 +2534,7 @@ public class Cassandra {
 
   public static class get_slice_super_result implements TBase, java.io.Serializable   {
     public List<superColumn_t> success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -2772,7 +2549,7 @@ public class Cassandra {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      this.__isset.success = (success != null);
     }
 
     public boolean equals(Object that) {
@@ -2814,17 +2591,17 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.LIST) {
               {
-                TList _list30 = iprot.readListBegin();
-                this.success = new ArrayList<superColumn_t>(_list30.size);
-                for (int _i31 = 0; _i31 < _list30.size; ++_i31)
+                TList _list26 = iprot.readListBegin();
+                this.success = new ArrayList<superColumn_t>(_list26.size);
+                for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                 {
-                  superColumn_t _elem32 = new superColumn_t();
-                  _elem32 = new superColumn_t();
-                  _elem32.read(iprot);
-                  this.success.add(_elem32);
+                  superColumn_t _elem28 = new superColumn_t();
+                  _elem28 = new superColumn_t();
+                  _elem28.read(iprot);
+                  this.success.add(_elem28);
                 }
                 iprot.readListEnd();
               }
@@ -2851,12 +2628,12 @@ public class Cassandra {
         if (this.success != null) {
           field.name = "success";
           field.type = TType.LIST;
-          field.id = 0;
+          field.id = SUCCESS;
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (superColumn_t _iter33 : this.success)            {
-              _iter33.write(oprot);
+            for (superColumn_t _iter29 : this.success)            {
+              _iter29.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -2869,8 +2646,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_super_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -2879,14 +2660,17 @@ public class Cassandra {
 
   public static class get_superColumn_args implements TBase, java.io.Serializable   {
     public String tablename;
+    public static final int TABLENAME = -1;
     public String key;
-    public String columnFamily;
+    public static final int KEY = -2;
+    public String columnFamily_superColumnName;
+    public static final int COLUMNFAMILY_SUPERCOLUMNNAME = -3;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
-      public boolean columnFamily = false;
+      public boolean columnFamily_superColumnName = false;
     }
 
     public get_superColumn_args() {
@@ -2895,15 +2679,15 @@ public class Cassandra {
     public get_superColumn_args(
       String tablename,
       String key,
-      String columnFamily)
+      String columnFamily_superColumnName)
     {
       this();
       this.tablename = tablename;
-      this.__isset.tablename = true;
+      this.__isset.tablename = (tablename != null);
       this.key = key;
-      this.__isset.key = true;
-      this.columnFamily = columnFamily;
-      this.__isset.columnFamily = true;
+      this.__isset.key = (key != null);
+      this.columnFamily_superColumnName = columnFamily_superColumnName;
+      this.__isset.columnFamily_superColumnName = (columnFamily_superColumnName != null);
     }
 
     public boolean equals(Object that) {
@@ -2936,12 +2720,12 @@ public class Cassandra {
           return false;
       }
 
-      boolean this_present_columnFamily = true && (this.columnFamily != null);
-      boolean that_present_columnFamily = true && (that.columnFamily != null);
-      if (this_present_columnFamily || that_present_columnFamily) {
-        if (!(this_present_columnFamily && that_present_columnFamily))
+      boolean this_present_columnFamily_superColumnName = true && (this.columnFamily_superColumnName != null);
+      boolean that_present_columnFamily_superColumnName = true && (that.columnFamily_superColumnName != null);
+      if (this_present_columnFamily_superColumnName || that_present_columnFamily_superColumnName) {
+        if (!(this_present_columnFamily_superColumnName && that_present_columnFamily_superColumnName))
           return false;
-        if (!this.columnFamily.equals(that.columnFamily))
+        if (!this.columnFamily_superColumnName.equals(that.columnFamily_superColumnName))
           return false;
       }
 
@@ -2963,7 +2747,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case TABLENAME:
             if (field.type == TType.STRING) {
               this.tablename = iprot.readString();
               this.__isset.tablename = true;
@@ -2971,7 +2755,7 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -2:
+          case KEY:
             if (field.type == TType.STRING) {
               this.key = iprot.readString();
               this.__isset.key = true;
@@ -2979,10 +2763,10 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
-          case -3:
+          case COLUMNFAMILY_SUPERCOLUMNNAME:
             if (field.type == TType.STRING) {
-              this.columnFamily = iprot.readString();
-              this.__isset.columnFamily = true;
+              this.columnFamily_superColumnName = iprot.readString();
+              this.__isset.columnFamily_superColumnName = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -3003,7 +2787,7 @@ public class Cassandra {
       if (this.tablename != null) {
         field.name = "tablename";
         field.type = TType.STRING;
-        field.id = -1;
+        field.id = TABLENAME;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
@@ -3011,17 +2795,17 @@ public class Cassandra {
       if (this.key != null) {
         field.name = "key";
         field.type = TType.STRING;
-        field.id = -2;
+        field.id = KEY;
         oprot.writeFieldBegin(field);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
-      if (this.columnFamily != null) {
-        field.name = "columnFamily";
+      if (this.columnFamily_superColumnName != null) {
+        field.name = "columnFamily_superColumnName";
         field.type = TType.STRING;
-        field.id = -3;
+        field.id = COLUMNFAMILY_SUPERCOLUMNNAME;
         oprot.writeFieldBegin(field);
-        oprot.writeString(this.columnFamily);
+        oprot.writeString(this.columnFamily_superColumnName);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -3030,12 +2814,20 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_superColumn_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("tablename:");
       sb.append(this.tablename);
-      sb.append(",key:");
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("key:");
       sb.append(this.key);
-      sb.append(",columnFamily:");
-      sb.append(this.columnFamily);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("columnFamily_superColumnName:");
+      sb.append(this.columnFamily_superColumnName);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3044,6 +2836,7 @@ public class Cassandra {
 
   public static class get_superColumn_result implements TBase, java.io.Serializable   {
     public superColumn_t success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -3058,7 +2851,7 @@ public class Cassandra {
     {
       this();
       this.success = success;
-      this.__isset.success = true;
+      this.__isset.success = (success != null);
     }
 
     public boolean equals(Object that) {
@@ -3100,7 +2893,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.STRUCT) {
               this.success = new superColumn_t();
               this.success.read(iprot);
@@ -3127,7 +2920,7 @@ public class Cassandra {
         if (this.success != null) {
           field.name = "success";
           field.type = TType.STRUCT;
-          field.id = 0;
+          field.id = SUCCESS;
           oprot.writeFieldBegin(field);
           this.success.write(oprot);
           oprot.writeFieldEnd();
@@ -3139,8 +2932,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("get_superColumn_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3149,6 +2946,7 @@ public class Cassandra {
 
   public static class batch_insert_superColumn_args implements TBase, java.io.Serializable   {
     public batch_mutation_super_t batchMutationSuper;
+    public static final int BATCHMUTATIONSUPER = -1;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -3163,7 +2961,7 @@ public class Cassandra {
     {
       this();
       this.batchMutationSuper = batchMutationSuper;
-      this.__isset.batchMutationSuper = true;
+      this.__isset.batchMutationSuper = (batchMutationSuper != null);
     }
 
     public boolean equals(Object that) {
@@ -3205,7 +3003,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case BATCHMUTATIONSUPER:
             if (field.type == TType.STRUCT) {
               this.batchMutationSuper = new batch_mutation_super_t();
               this.batchMutationSuper.read(iprot);
@@ -3230,7 +3028,7 @@ public class Cassandra {
       if (this.batchMutationSuper != null) {
         field.name = "batchMutationSuper";
         field.type = TType.STRUCT;
-        field.id = -1;
+        field.id = BATCHMUTATIONSUPER;
         oprot.writeFieldBegin(field);
         this.batchMutationSuper.write(oprot);
         oprot.writeFieldEnd();
@@ -3241,8 +3039,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("batchMutationSuper:");
       sb.append(this.batchMutationSuper);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3251,6 +3053,7 @@ public class Cassandra {
 
   public static class batch_insert_superColumn_blocking_args implements TBase, java.io.Serializable   {
     public batch_mutation_super_t batchMutationSuper;
+    public static final int BATCHMUTATIONSUPER = -1;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -3265,7 +3068,7 @@ public class Cassandra {
     {
       this();
       this.batchMutationSuper = batchMutationSuper;
-      this.__isset.batchMutationSuper = true;
+      this.__isset.batchMutationSuper = (batchMutationSuper != null);
     }
 
     public boolean equals(Object that) {
@@ -3307,7 +3110,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case -1:
+          case BATCHMUTATIONSUPER:
             if (field.type == TType.STRUCT) {
               this.batchMutationSuper = new batch_mutation_super_t();
               this.batchMutationSuper.read(iprot);
@@ -3332,7 +3135,7 @@ public class Cassandra {
       if (this.batchMutationSuper != null) {
         field.name = "batchMutationSuper";
         field.type = TType.STRUCT;
-        field.id = -1;
+        field.id = BATCHMUTATIONSUPER;
         oprot.writeFieldBegin(field);
         this.batchMutationSuper.write(oprot);
         oprot.writeFieldEnd();
@@ -3343,8 +3146,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_blocking_args(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("batchMutationSuper:");
       sb.append(this.batchMutationSuper);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -3353,6 +3160,7 @@ public class Cassandra {
 
   public static class batch_insert_superColumn_blocking_result implements TBase, java.io.Serializable   {
     public boolean success;
+    public static final int SUCCESS = 0;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
@@ -3409,7 +3217,7 @@ public class Cassandra {
         }
         switch (field.id)
         {
-          case 0:
+          case SUCCESS:
             if (field.type == TType.BOOL) {
               this.success = iprot.readBool();
               this.__isset.success = true;
@@ -3434,7 +3242,7 @@ public class Cassandra {
       if (this.__isset.success) {
         field.name = "success";
         field.type = TType.BOOL;
-        field.id = 0;
+        field.id = SUCCESS;
         oprot.writeFieldBegin(field);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
@@ -3445,8 +3253,12 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_blocking_result(");
+      boolean first = true;
+
+      if (!first) sb.append(", ");
       sb.append("success:");
       sb.append(this.success);
+      first = false;
       sb.append(")");
       return sb.toString();
     }
