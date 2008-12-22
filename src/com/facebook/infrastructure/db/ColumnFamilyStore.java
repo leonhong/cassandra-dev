@@ -455,31 +455,19 @@ public class ColumnFamilyStore
     public ColumnFamily getColumnFamily(String key, String cf, IFilter filter) throws IOException
     {
     	List<ColumnFamily> columnFamilies = new ArrayList<ColumnFamily>();
-    	ColumnFamily columnFamily = null;
-    	long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         /* Get the ColumnFamily from Memtable */
     	getColumnFamilyFromCurrentMemtable(key, cf, filter, columnFamilies);
-        if(columnFamilies.size() != 0)
-        {
-	        if(filter.isDone())
-	        	return columnFamilies.get(0);
+        if (columnFamilies.size() == 0 || !filter.isDone()) {
+            /* Check if MemtableManager has any historical information */
+            MemtableManager.instance().getColumnFamily(key, columnFamily_, cf, filter, columnFamilies);
         }
-        /* Check if MemtableManager has any historical information */
-        MemtableManager.instance().getColumnFamily(key, columnFamily_, cf, filter, columnFamilies);
-        if(columnFamilies.size() != 0)
-        {
-        	columnFamily = resolve(columnFamilies);
-	        if(filter.isDone())
-	        	return columnFamily;
-	        columnFamilies.clear();
-	        columnFamilies.add(columnFamily);
+        if (columnFamilies.size() == 0 || !filter.isDone()) {
+            getColumnFamilyFromDisk(key, cf, columnFamilies, filter);
+            logger_.info("DISK TIME: " + (System.currentTimeMillis() - start)
+                    + " ms.");
         }
-        getColumnFamilyFromDisk(key, cf, columnFamilies, filter);
-        logger_.info("DISK TIME: " + (System.currentTimeMillis() - start)
-                + " ms.");
-        columnFamily = resolve(columnFamilies);
-       
-        return columnFamily;
+        return resolveAndRemoveDeleted(columnFamilies);
     }
 
     /**
@@ -514,21 +502,11 @@ public class ColumnFamilyStore
 	            {
 		            /*
 		             * TODO
-		             * By using the filter before removing deleted columns 
-		             * we have a efficient implementation of timefilter 
-		             * but for count filter this can return wrong results 
+		             * By using the filter before removing deleted columns (which is done by resolve())
+		             * we have a efficient implementation of timefilter
+		             * but for count filter this can return wrong results
 		             * we need to take care of that later.
 		             */
-	                /* suppress columns marked for delete */
-	                Map<String, IColumn> columns = columnFamily.getColumns();
-	                Set<String> cNames = columns.keySet();
-
-	                for (String cName : cNames)
-	                {
-	                    IColumn column = columns.get(cName);
-	                    if (column.isMarkedForDelete())
-	                        columns.remove(cName);
-	                }
 	                columnFamilies.add(columnFamily);
 	                if(filter.isDone())
 	                {
@@ -577,17 +555,50 @@ public class ColumnFamilyStore
                 columnFamilies.add(columnFamily);
         }
     }
-    
+
+    /** merge all columnFamilies into a single instance, with only the newest versions of columns preserved. */
     private ColumnFamily resolve(List<ColumnFamily> columnFamilies)
     {
         int size = columnFamilies.size();
         if (size == 0)
             return null;
-        // ColumnFamily cf = new ColumnFamily(columnFamily_);
-        ColumnFamily cf = columnFamilies.get(0);
-        for ( int i = 1; i < size ; ++i )
+
+        // start from nothing so that we don't include potential deleted columns from the first instance
+        String cfname = columnFamilies.get(0).name();
+        ColumnFamily cf = new ColumnFamily(cfname);
+
+        // merge
+        for (ColumnFamily cf2 : columnFamilies)
         {
-            cf.addColumns(columnFamilies.get(i));
+            assert cf.name().equals(cf2.name());
+            cf.addColumns(cf2);
+        }
+        return cf;
+    }
+
+    /** like resolve, but leaves the resolved CF as the only item in the list */
+    private void merge(List<ColumnFamily> columnFamilies)
+    {
+        ColumnFamily cf = resolve(columnFamilies);
+        columnFamilies.clear();
+        columnFamilies.add(cf);
+    }
+
+    private ColumnFamily resolveAndRemoveDeleted(List<ColumnFamily> columnFamilies) {
+        ColumnFamily cf = resolve(columnFamilies);
+        if (cf != null) {
+            for (String cname : new ArrayList<String>(cf.getColumns().keySet())) {
+                IColumn c = cf.getColumns().get(cname);
+                if (c.isMarkedForDelete()) {
+                    cf.remove(cname);
+                } else if (c.getObjectCount() > 1) {
+                    for (IColumn subColumn : new ArrayList<IColumn>(c.getSubColumns())) {
+                        if (subColumn.isMarkedForDelete()) {
+                            ((SuperColumn)c).remove(subColumn.name());
+                        }
+                    }
+                }
+            }
         }
         return cf;
     }
@@ -1244,15 +1255,7 @@ public class ColumnFamilyStore
 	                                // We want to add only 2 and resolve them right there in order to save on memory footprint
 	                                if(columnFamilies.size() > 1)
 	                                {
-	    		                        // Now merge the 2 column families
-	    			                    columnFamily = resolve(columnFamilies);
-	    			                    columnFamilies.clear();
-	    			                    if( columnFamily != null)
-	    			                    {
-		    			                    // add the merged columnfamily back to the list
-		    			                    columnFamilies.add(columnFamily);
-	    			                    }
-
+	    			                    merge(columnFamilies);
 	                                }
 			                        // deserialize into column families
 			                        columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.bufIn));
@@ -1264,7 +1267,7 @@ public class ColumnFamilyStore
 		                    	}
 		                    }
 		                    // Now after merging all crap append to the sstable
-		                    columnFamily = resolve(columnFamilies);
+		                    columnFamily = resolveAndRemoveDeleted(columnFamilies);
 		                    columnFamilies.clear();
 		                    if( columnFamily != null )
 		                    {
@@ -1482,15 +1485,7 @@ public class ColumnFamilyStore
 	                                // We want to add only 2 and resolve them right there in order to save on memory footprint
 	                                if(columnFamilies.size() > 1)
 	                                {
-	    		                        // Now merge the 2 column families
-	    			                    columnFamily = resolve(columnFamilies);
-	    			                    columnFamilies.clear();
-	    			                    if( columnFamily != null)
-	    			                    {
-		    			                    // add the merged columnfamily back to the list
-		    			                    columnFamilies.add(columnFamily);
-	    			                    }
-
+                                        merge(columnFamilies);
 	                                }
 			                        // deserialize into column families
 			                        columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.bufIn));
@@ -1502,7 +1497,7 @@ public class ColumnFamilyStore
 		                    	}
 		                    }
 		                    // Now after merging all crap append to the sstable
-		                    columnFamily = resolve(columnFamilies);
+		                    columnFamily = resolveAndRemoveDeleted(columnFamilies);
 		                    columnFamilies.clear();
 		                    if( columnFamily != null )
 		                    {

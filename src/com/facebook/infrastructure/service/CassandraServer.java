@@ -958,12 +958,12 @@ public class CassandraServer extends FacebookBase implements
 		return;
 	}
 
-    public void remove(String tablename, String key, String columnFamily_column)
+    public void remove(String tablename, String key, String columnFamily_column, long timestamp)
 	{
 		try
 		{
 			RowMutation rm = new RowMutation(tablename, key.trim());
-			rm.delete(columnFamily_column);
+			rm.delete(columnFamily_column, timestamp);
 			insert(rm);
 		}
 		catch (Exception e)

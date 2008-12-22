@@ -59,7 +59,7 @@ public final class Column implements IColumn, Serializable
     private byte[] value_ = new byte[0];
     private long timestamp_ = 0;
 
-    private transient AtomicBoolean isMarkedForDelete_;
+    private volatile boolean isMarkedForDelete_;
 
     /* CTOR for JAXB */
     Column()
@@ -125,7 +125,7 @@ public final class Column implements IColumn, Serializable
 
     public boolean isMarkedForDelete()
     {
-        return (isMarkedForDelete_ != null) ? isMarkedForDelete_.get() : false;
+        return isMarkedForDelete_;
     }
 
     public int size()
@@ -162,10 +162,7 @@ public final class Column implements IColumn, Serializable
 
     public void delete()
     {
-        if ( isMarkedForDelete_ == null )
-            isMarkedForDelete_ = new AtomicBoolean(true);
-        else
-            isMarkedForDelete_.set(true);
+        isMarkedForDelete_ = true;
     	value_ = new byte[0];
     }
 
@@ -203,6 +200,7 @@ public final class Column implements IColumn, Serializable
     	{
     		value_ = column.value();
     		timestamp_ = column.timestamp();
+            isMarkedForDelete_ = column.isMarkedForDelete();
             return true;
     	}
         return false;

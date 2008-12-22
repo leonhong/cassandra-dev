@@ -53,7 +53,7 @@ public final class SuperColumn implements IColumn, Serializable
 
 	private String name_;
     private EfficientBidiMap columns_ = new EfficientBidiMap(ColumnComparatorFactory.getComparator(ColumnComparatorFactory.ComparatorType.TIMESTAMP));
-	private AtomicBoolean isMarkedForDelete_ = new AtomicBoolean(false);
+	private volatile boolean isMarkedForDelete_;
     private AtomicInteger size_ = new AtomicInteger(0);
 
     SuperColumn()
@@ -67,7 +67,7 @@ public final class SuperColumn implements IColumn, Serializable
 
 	public boolean isMarkedForDelete()
 	{
-		return isMarkedForDelete_.get();
+		return isMarkedForDelete_;
 	}
 
     public String name()
@@ -152,7 +152,7 @@ public final class SuperColumn implements IColumn, Serializable
         return size;
     }
 
-    protected void remove(String columnName)
+    public void remove(String columnName)
     {
     	columns_.remove(columnName);
     }
@@ -246,7 +246,7 @@ public final class SuperColumn implements IColumn, Serializable
     public void delete()
     {
     	columns_.clear();
-    	isMarkedForDelete_.set(true);
+    	isMarkedForDelete_ = true;
     }
 
     int getColumnCount()

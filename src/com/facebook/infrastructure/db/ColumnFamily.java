@@ -181,12 +181,9 @@ public final class ColumnFamily implements Serializable
     */
     void addColumns(ColumnFamily cf)
     {
-        Map<String, IColumn> columns = cf.getColumns();
-        Set<String> cNames = columns.keySet();
-
-        for ( String cName : cNames )
+        for (IColumn column : cf.getColumns().values())
         {
-        	addColumn(cName, columns.get(cName));
+            addColumn(column.name(), column);
         }
     }
 
@@ -196,10 +193,11 @@ public final class ColumnFamily implements Serializable
     	return columnSerializer_;
     }
 
-    public void createColumn(String name)
+    public IColumn createColumn(String name)
     {
     	IColumn column = columnFactory_.createColumn(name);
     	addColumn(column.name(), column);
+        return column;
     }
 
 //    int getColumnCount()
@@ -238,17 +236,19 @@ public final class ColumnFamily implements Serializable
     	return count;
     }
 
-    public void createColumn(String name, byte[] value)
+    public IColumn createColumn(String name, byte[] value)
     {
     	IColumn column = columnFactory_.createColumn(name, value);
     	addColumn(column.name(), column);
+        return column;
     }
 
-	public void createColumn(String name, byte[] value, long timestamp)
+	public IColumn createColumn(String name, byte[] value, long timestamp)
 	{
 		IColumn column = columnFactory_.createColumn(name, value, timestamp);
 		addColumn(column.name(), column);
-	}
+        return column;
+    }
 
     void clear()
     {
@@ -261,24 +261,17 @@ public final class ColumnFamily implements Serializable
     */
     void addColumn(String name, IColumn column)
     {
-        int newSize = column.size();
         IColumn oldColumn = columns_.get(name);
         if ( oldColumn != null )
         {
-            int oldSize = oldColumn.size();
-            size_.addAndGet(newSize - oldSize);
-
-            /*
-             * TODO: This needs to re-examined again.
-            */
             if( oldColumn.putColumn(column))
             {
-                columns_.put(name, column);
+                size_.set(oldColumn.size());
             }
         }
         else
         {
-            size_.addAndGet(newSize);
+            size_.addAndGet(column.size());
             columns_.put(name, column);
         }
     }

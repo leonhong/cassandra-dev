@@ -110,14 +110,14 @@ public class HintedHandOffManager implements IComponentShutdown
         private void deleteEndPoint(String endpointAddress, String key) throws Exception
         {
         	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), key_);
-        	rm.delete(Table.hints_ + ":" + key + ":" + endpointAddress);
+        	rm.delete(Table.hints_ + ":" + key + ":" + endpointAddress, System.currentTimeMillis());
         	rm.apply();
         }
 
         private void deleteKey(String key) throws Exception
         {
         	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), key_);
-        	rm.delete(Table.hints_ + ":" + key);
+        	rm.delete(Table.hints_ + ":" + key, System.currentTimeMillis());
         	rm.apply();
         }
 

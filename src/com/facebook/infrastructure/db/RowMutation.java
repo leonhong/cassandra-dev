@@ -172,11 +172,9 @@ public class RowMutation implements Serializable
      * in a ColumnFamily associated with <column family> as
      * name and perhaps Column with <column> as name being
      * marked as deleted.
-     * TODO : Delete is NOT correct as we do not know 
-     * the CF type so we need to fix that.
      * param @ cf - column name as <column family>:<column>     
     */
-    public void delete(String cf)
+    public void delete(String cf, long timestamp)
     {        
         String[] values = RowMutation.getColumnAndColumnFamily(cf);
         
@@ -188,11 +186,17 @@ public class RowMutation implements Serializable
             columnFamily = new ColumnFamily(values[0]);
         if(values.length == 2 )
         {
-	        columnFamily.createColumn( values[1]);
+            IColumn c = columnFamily.createColumn(values[1], new byte[0], timestamp);
+            c.delete();
         }
-        if(values.length == 3 )
+        else if(values.length == 3 )
         {
-	        columnFamily.createColumn( values[1] + ":" + values[2]);
+	        IColumn c = columnFamily.createColumn(values[1] + ":" + values[2], new byte[0], timestamp);
+            c.getSubColumns().iterator().next().delete();
+        }
+        else {
+            assert values.length == 1;
+            columnFamily.delete();
         }
         deletions_.put(values[0], columnFamily);
     }

@@ -145,8 +145,11 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
 
         public void run()
         {
-        	columnFamily_.delete();
-            columnFamilies_.put(key_, columnFamily_);
+            if (columnFamily_.isMarkedForDelete()) {
+                columnFamilies_.put(key_, columnFamily_);
+            } else {
+                resolve(key_, columnFamily_);
+            }
         }
     }
 
