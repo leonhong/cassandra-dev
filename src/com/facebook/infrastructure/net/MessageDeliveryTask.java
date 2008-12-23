@@ -48,7 +48,7 @@ public class MessageDeliveryTask implements Runnable
         }
         catch (Throwable th)
         {
-            logger_.warn( LogUtil.throwableToString(th) );
+            logger_.error( LogUtil.throwableToString(th) );
         }
     }
 }

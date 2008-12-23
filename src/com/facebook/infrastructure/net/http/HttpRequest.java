@@ -66,7 +66,7 @@ public class HttpRequest
      * For example, if the URL is of the form:
      *  http://somedomain:PORT/some/path?param=value
      * this function will return
-     *  "/some/path"
+     *  "param=value"
      */
     public String getQuery()
     {

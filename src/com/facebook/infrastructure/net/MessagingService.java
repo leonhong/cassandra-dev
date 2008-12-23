@@ -486,7 +486,7 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
     
     public static void shutdown()
     {
-        logger_.info("Shutting down ...");
+        logger_.info("Shutting down MessagingService ...");
         synchronized ( MessagingService.class )
         {          
             /* Stop listening on any socket */            
@@ -513,7 +513,7 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
             verbHandlers_.clear();                                    
             bShutdown_ = true;
         }
-        logger_.debug("Shutdown invocation complete.");
+        logger_.info("... MessagingService shutdown complete.");
     }
 
     public static void receive(Message message)

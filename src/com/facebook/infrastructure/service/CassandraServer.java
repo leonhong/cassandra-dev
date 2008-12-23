@@ -136,7 +136,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return;
 	}
@@ -550,7 +550,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return cfamily;
 	}
@@ -624,7 +624,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		
         logger_.info("get_slice2: " + (System.currentTimeMillis() - startTime)
@@ -704,7 +704,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		
         logger_.info("get_slice2: " + (System.currentTimeMillis() - startTime)
@@ -777,7 +777,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return ret;
     	
@@ -842,7 +842,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return count;
 
@@ -859,7 +859,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.debug( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return;
 	}
@@ -916,7 +916,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return result;
     	
@@ -953,7 +953,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return;
 	}
@@ -968,7 +968,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.debug( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return;
 	}
@@ -1039,7 +1039,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return retlist;
     	
@@ -1111,7 +1111,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return ret;
     	
@@ -1152,7 +1152,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return result;
     	
@@ -1191,7 +1191,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		catch (Exception e)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			logger_.error( LogUtil.throwableToString(e) );
 		}
 		return;
     }
@@ -1232,10 +1232,9 @@ public class CassandraServer extends FacebookBase implements
 			serverEngine.serve();
 
 		}
-		catch (Exception x)
+		catch (Throwable x)
 		{
-			System.err.println("UNCAUGHT EXCEPTION IN main()");
-			x.printStackTrace();
+            logger_.error("Fatal error; exiting", x);
 			System.exit(1);
 		}
 
