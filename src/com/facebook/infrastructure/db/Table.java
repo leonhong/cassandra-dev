@@ -809,7 +809,6 @@ public class Table
             ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
             cfStore.apply( key, columnFamily, cLogCtx);            
         }
-        row.clear();
         long timeTaken = System.currentTimeMillis() - start;
         dbAnalyticsSource_.updateWriteStatistics(timeTaken);
     }
