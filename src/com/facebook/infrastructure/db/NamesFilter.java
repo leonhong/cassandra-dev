@@ -19,9 +19,7 @@ package com.facebook.infrastructure.db;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.io.DataInputBuffer;
@@ -31,11 +29,11 @@ import com.facebook.infrastructure.io.SSTable;
 public class NamesFilter implements IFilter
 {
     /* list of column names to filter against. */
-    private List<String> names_ = new ArrayList<String>();  
+    private ArrayList<String> names_ = new ArrayList<String>();
     
     NamesFilter(List<String> names)
     {
-        names_ = names;     
+        names_.addAll(names); 
     }
     
     public ColumnFamily filter(String cf, ColumnFamily columnFamily)
@@ -59,7 +57,7 @@ public class NamesFilter implements IFilter
 				}
 			}
 		}
-		else if ( values.length == 2 && DatabaseDescriptor.getColumnType(cfName).equals("Super") )
+		else if ( values.length == 2 && columnFamily.isSuper())
 		{
     		Collection<IColumn> columns = columnFamily.getAllColumns();
     		for(IColumn column : columns)

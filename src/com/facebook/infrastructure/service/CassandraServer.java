@@ -1033,8 +1033,8 @@ public class CassandraServer extends FacebookBase implements
 						thrift_column.timestamp = subColumn.timestamp();
 						thrift_superColumn.columns.add(thrift_column);
 					}
+                    retlist.add(thrift_superColumn);
 				}
-				retlist.add(thrift_superColumn);
 			}
 		}
 		catch (Exception e)

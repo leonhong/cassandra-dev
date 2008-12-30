@@ -36,7 +36,7 @@ import com.facebook.infrastructure.utils.HashingSchemes;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public final class ColumnFamily implements Serializable
+public final class ColumnFamily
 {
     private static ICompactSerializer2<ColumnFamily> serializer_;
     public static final short utfPrefix_ = 2;
@@ -90,9 +90,9 @@ public final class ColumnFamily implements Serializable
 
     private String name_;
 
-    private  transient ICompactSerializer2<IColumn> columnSerializer_;
-    private transient AtomicBoolean isMarkedForDelete_;
-    private  AtomicInteger size_ = new AtomicInteger(0);
+    private transient ICompactSerializer2<IColumn> columnSerializer_;
+    private long markedForDeleteAt = Long.MIN_VALUE;
+    private AtomicInteger size_ = new AtomicInteger(0);
     private EfficientBidiMap columns_;
 
     private Comparator<IColumn> columnComparator_;
@@ -165,7 +165,7 @@ public final class ColumnFamily implements Serializable
     ColumnFamily cloneMe()
     {
     	ColumnFamily cf = new ColumnFamily(name_);
-    	cf.isMarkedForDelete_ = isMarkedForDelete_;
+    	cf.markedForDeleteAt = markedForDeleteAt;
     	cf.columns_ = columns_.cloneMe();
     	return cf;
     }
@@ -220,7 +220,7 @@ public final class ColumnFamily implements Serializable
     	Map<String, IColumn> columns = columns_.getColumns();
     	if( columns != null )
     	{
-    		if(!DatabaseDescriptor.getColumnType(name_).equals("Super"))
+    		if(!isSuper())
     		{
     			count = columns.size();
     		}
@@ -234,6 +234,10 @@ public final class ColumnFamily implements Serializable
     		}
     	}
     	return count;
+    }
+
+    public boolean isSuper() {
+        return DatabaseDescriptor.getColumnType(name_).equals("Super");
     }
 
     public IColumn createColumn(String name, byte[] value)
@@ -296,17 +300,17 @@ public final class ColumnFamily implements Serializable
     	columns_.remove(columnName);
     }
 
-    void delete()
+    void delete(long timestamp)
     {
-        if ( isMarkedForDelete_ == null )
-            isMarkedForDelete_ = new AtomicBoolean(true);
-        else
-            isMarkedForDelete_.set(true);
+        markedForDeleteAt = timestamp;
     }
 
-    boolean isMarkedForDelete()
+    /* TODO this is tempting to misuse: the goal is to send a timestamp to the nodes w/ the data,
+       saying to delete all applicable columns.  other than that it has no meaning!
+       Thus, this should really be part of the RowMutation message. */
+    public boolean isMarkedForDelete()
     {
-        return ( ( isMarkedForDelete_ == null ) ? false : isMarkedForDelete_.get() );
+        return markedForDeleteAt > Long.MIN_VALUE;
     }
 
     /*
@@ -345,12 +349,12 @@ public final class ColumnFamily implements Serializable
 
         	if( columnInternal == null )
         	{
-        		if(DatabaseDescriptor.getColumnFamilyType(name_).equals(ColumnFamily.getColumnType("Super")))
+        		if(isSuper())
         		{
         			columnInternal = new SuperColumn(columnExternal.name());
         			columns_.put(cName, columnInternal);
         		}
-        		if(DatabaseDescriptor.getColumnFamilyType(name_).equals(ColumnFamily.getColumnType("Standard")))
+                else
         		{
         			columnInternal = columnExternal;
         			columns_.put(cName, columnInternal);
@@ -459,6 +463,10 @@ public final class ColumnFamily implements Serializable
     	}
     	return xorHash;
     }
+
+    public long getMarkedForDeleteAt() {
+        return markedForDeleteAt;
+    }
 }
 
 class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
@@ -494,14 +502,17 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
         /* write the column family id */
         dos.writeUTF(columnFamily.name());
         /* write if this cf is marked for delete */
-        dos.writeBoolean(columnFamily.isMarkedForDelete());
-    	/* write the size is the number of columns */
-        dos.writeInt(columns.size());
+        dos.writeLong(columnFamily.getMarkedForDeleteAt());
 
-        /* write the column data */
-    	for ( IColumn column : columns )
-        {
-            columnFamily.getColumnSerializer().serialize(column, dos);
+        if (!columnFamily.isMarkedForDelete()) {
+            /* write the size is the number of columns */
+            dos.writeInt(columns.size());
+
+            /* write the column data */
+            for ( IColumn column : columns )
+            {
+                columnFamily.getColumnSerializer().serialize(column, dos);
+            }
         }
     }
 
@@ -512,10 +523,8 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
     private ColumnFamily defreezeColumnFamily(DataInputStream dis) throws IOException
     {
         String name = dis.readUTF();
-        boolean delete = dis.readBoolean();
         ColumnFamily cf = new ColumnFamily(name);
-        if ( delete )
-            cf.delete();
+        cf.delete(dis.readLong());
         return cf;
     }
 

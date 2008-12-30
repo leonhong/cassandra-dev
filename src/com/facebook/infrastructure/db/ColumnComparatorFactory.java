@@ -105,6 +105,7 @@ class ColumnTimestampComparator extends AbstractColumnComparator
 	/* if the time-stamps are the same then sort by names */
     public int compare(IColumn column1, IColumn column2)
     {
+        assert column1.getClass() == column2.getClass();
     	/* inverse sort by time to get hte latest first */
     	long result = column2.timestamp() - column1.timestamp();
     	int finalResult = 0;
@@ -134,21 +135,22 @@ class ColumnNameComparator extends AbstractColumnComparator
     /* if the names are the same then sort by time-stamps */
     public int compare(IColumn column1, IColumn column2)
     {
+        assert column1.getClass() == column2.getClass();
     	long result = column1.name().compareTo(column2.name());
     	int finalResult = 0;
-    	if(result == 0)
+    	if(result == 0 && (column1 instanceof Column))
     	{
     		/* inverse sort by time to get hte latest first */
     		result = column2.timestamp() - column1.timestamp();
     	}
-    	if(result > 0)
-    	{
-    		finalResult = 1;
-    	}
-    	if( result < 0 )
-    	{
-    		finalResult = -1;
-    	}
+        if(result > 0)
+        {
+            finalResult = 1;
+        }
+        if( result < 0 )
+        {
+            finalResult = -1;
+        }
         return finalResult;
     }
 }

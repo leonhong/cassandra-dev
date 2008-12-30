@@ -53,7 +53,7 @@ public final class SuperColumn implements IColumn, Serializable
 
 	private String name_;
     private EfficientBidiMap columns_ = new EfficientBidiMap(ColumnComparatorFactory.getComparator(ColumnComparatorFactory.ComparatorType.TIMESTAMP));
-	private volatile boolean isMarkedForDelete_;
+	private long markedForDeleteAt = Long.MIN_VALUE;
     private AtomicInteger size_ = new AtomicInteger(0);
 
     SuperColumn()
@@ -67,7 +67,7 @@ public final class SuperColumn implements IColumn, Serializable
 
 	public boolean isMarkedForDelete()
 	{
-		return isMarkedForDelete_;
+		return markedForDeleteAt > Long.MIN_VALUE;
 	}
 
     public String name()
@@ -245,8 +245,11 @@ public final class SuperColumn implements IColumn, Serializable
 
     public void delete()
     {
-    	columns_.clear();
-    	isMarkedForDelete_ = true;
+        throw new UnsupportedOperationException("Cannot delete supercolumn directly; only simple columns may be deleted");
+    }
+
+    public long getMarkedForDeleteAt() {
+        return markedForDeleteAt;
     }
 
     int getColumnCount()
@@ -331,6 +334,10 @@ public final class SuperColumn implements IColumn, Serializable
         sb.append(":");
         return sb.toString();
     }
+
+    public void markForDeleteAt(long timestamp) {
+        this.markedForDeleteAt = timestamp;
+    }
 }
 
 class SuperColumnSerializer implements ICompactSerializer2<IColumn>
@@ -339,7 +346,7 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
     {
     	SuperColumn superColumn = (SuperColumn)column;
         dos.writeUTF(superColumn.name());
-        dos.writeBoolean(superColumn.isMarkedForDelete());
+        dos.writeLong(superColumn.getMarkedForDeleteAt());
 
         Collection<IColumn> columns  = column.getSubColumns();
         int size = columns.size();
@@ -366,10 +373,8 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
     private SuperColumn defreezeSuperColumn(DataInputStream dis) throws IOException
     {
         String name = dis.readUTF();
-        boolean delete = dis.readBoolean();
         SuperColumn superColumn = new SuperColumn(name);
-        if ( delete )
-            superColumn.delete();
+        superColumn.markForDeleteAt(dis.readLong());
         return superColumn;
     }
 

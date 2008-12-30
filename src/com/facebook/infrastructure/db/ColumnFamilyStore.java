@@ -535,12 +535,9 @@ public class ColumnFamilyStore
 		if (bufIn.getLength() == 0)
 			return null;
         start = System.currentTimeMillis();
-        ColumnFamily columnFamily = null;
-       	columnFamily = ColumnFamily.serializer().deserialize(bufIn, cf, filter);
+        ColumnFamily columnFamily = ColumnFamily.serializer().deserialize(bufIn, cf, filter);
 		logger_.info("DISK Deserialize TIME: " + (System.currentTimeMillis() - start) + " ms.");
-		if (columnFamily == null)
-			return columnFamily;
-		return (!columnFamily.isMarkedForDelete()) ? columnFamily : null;
+        return columnFamily;
 	}
 
 
@@ -551,8 +548,7 @@ public class ColumnFamilyStore
         ColumnFamily columnFamily = memtable_.get().get(key, cf, filter);
         if (columnFamily != null)
         {
-            if (!columnFamily.isMarkedForDelete())
-                columnFamilies.add(columnFamily);
+            columnFamilies.add(columnFamily);
         }
     }
 
@@ -584,6 +580,7 @@ public class ColumnFamilyStore
         columnFamilies.add(cf);
     }
 
+
     private ColumnFamily resolveAndRemoveDeleted(List<ColumnFamily> columnFamilies) {
         ColumnFamily cf = resolve(columnFamilies);
         if (cf != null) {
@@ -592,10 +589,17 @@ public class ColumnFamilyStore
                 if (c.isMarkedForDelete()) {
                     cf.remove(cname);
                 } else if (c.getObjectCount() > 1) {
-                    for (IColumn subColumn : new ArrayList<IColumn>(c.getSubColumns())) {
-                        if (subColumn.isMarkedForDelete()) {
-                            ((SuperColumn)c).remove(subColumn.name());
+                    // don't operate directly on the supercolumn, it could be the one in the memtable
+                    cf.remove(cname);
+                    IColumn sc = cf.createColumn(c.name());
+                    for (IColumn subColumn : c.getSubColumns()) {
+                        if (!subColumn.isMarkedForDelete()) {
+                            sc.addColumn(subColumn.name(), subColumn);
                         }
+                    }
+                    if (sc.getSubColumns().size() > 0) {
+                        cf.addColumn(cname, sc);
+                        logger_.debug("adding sc " + sc.name() + " to CF with " + sc.getSubColumns().size() + " columns: " + sc);
                     }
                 }
             }
@@ -612,18 +616,44 @@ public class ColumnFamilyStore
      */
     void applyNow(String key, ColumnFamily columnFamily) throws IOException
     {
-        if (!columnFamily.isMarkedForDelete())
-            memtable_.get().putOnRecovery(key, columnFamily);
+        memtable_.get().putOnRecovery(key, columnFamily);
     }
 
-    /*
-     * Delete doesn't mean we can blindly delete. We need to write this to disk
-     * as being marked for delete. This is to prevent a previous value from
-     * resuscitating a column family that has been deleted.
-     */
+    private void deleteSuperColumn(ColumnFamily columnFamily, SuperColumn c, long timestamp) {
+        for (IColumn subColumn : c.getSubColumns()) {
+            columnFamily.createColumn(c.name() + ":" + subColumn.name(), subColumn.value(), timestamp);
+        }
+        for (IColumn subColumn : columnFamily.getColumn(c.name()).getSubColumns()) {
+            subColumn.delete();
+        }
+    }
+
     void delete(String key, ColumnFamily columnFamily)
             throws IOException
     {
+        if (columnFamily.isMarkedForDelete()) {
+            // mark individual columns deleted
+            assert columnFamily.getAllColumns().size() == 0;
+            ColumnFamily cf = getColumnFamily(key, columnFamily.name(), new IdentityFilter());
+            for (IColumn c : cf.getAllColumns()) {
+                if (cf.isSuper()) {
+                    deleteSuperColumn(columnFamily, (SuperColumn)c, columnFamily.getMarkedForDeleteAt());
+                } else {
+                    columnFamily.createColumn(c.name(), c.value(), columnFamily.getMarkedForDeleteAt()).delete();
+                }
+            }
+        } else if (columnFamily.isSuper()) {
+            for (IColumn sc : columnFamily.getAllColumns()) {
+                if (sc.isMarkedForDelete()) {
+                    ColumnFamily cf = getColumnFamily(key, columnFamily.name(), new NamesFilter(Arrays.asList(new String[] { sc.name() })));
+                    for (IColumn c : cf.getAllColumns()) {
+                        deleteSuperColumn(columnFamily, (SuperColumn)c, sc.getMarkedForDeleteAt());
+                    }
+                }
+            }
+        }
+        logger_.debug("deleting " + columnFamily);
+
         memtable_.get().remove(key, columnFamily);
     }
 

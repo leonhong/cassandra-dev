@@ -186,17 +186,22 @@ public class RowMutation implements Serializable
             columnFamily = new ColumnFamily(values[0]);
         if(values.length == 2 )
         {
-            IColumn c = columnFamily.createColumn(values[1], new byte[0], timestamp);
-            c.delete();
+            if (columnFamily.isSuper()) {
+                IColumn c = columnFamily.createColumn(values[1]);
+                ((SuperColumn)c).markForDeleteAt(timestamp);
+            } else {
+                IColumn c = columnFamily.createColumn(values[1], new byte[0], timestamp);
+                c.delete();
+            }
         }
         else if(values.length == 3 )
         {
-	        IColumn c = columnFamily.createColumn(values[1] + ":" + values[2], new byte[0], timestamp);
+            IColumn c = columnFamily.createColumn(values[1] + ":" + values[2], new byte[0], timestamp);
             c.getSubColumns().iterator().next().delete();
         }
         else {
             assert values.length == 1;
-            columnFamily.delete();
+            columnFamily.delete(timestamp);
         }
         deletions_.put(values[0], columnFamily);
     }

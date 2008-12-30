@@ -55,6 +55,7 @@ public final class Column implements IColumn, Serializable
         return serializer_;
     }
 
+    // todo make all Column fields final
     private String name_;
     private byte[] value_ = new byte[0];
     private long timestamp_ = 0;
@@ -126,6 +127,13 @@ public final class Column implements IColumn, Serializable
     public boolean isMarkedForDelete()
     {
         return isMarkedForDelete_;
+    }
+
+    public long getMarkedForDeleteAt() {
+        if (!isMarkedForDelete()) {
+            throw new IllegalStateException("column is not marked for delete");
+        }
+        return timestamp_;
     }
 
     public int size()

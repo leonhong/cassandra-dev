@@ -67,7 +67,7 @@ public class CountFilter implements IFilter
     			}
     		}
 		}
-		else if(values.length == 2 && DatabaseDescriptor.getColumnType(cfName).equals("Super"))
+		else if(values.length == 2 && columnFamily.isSuper())
 		{
     		Collection<IColumn> columns = columnFamily.getAllColumns();
     		for(IColumn column : columns)

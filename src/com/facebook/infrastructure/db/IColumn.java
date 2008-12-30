@@ -29,6 +29,7 @@ public interface IColumn
 {
     public static short UtfPrefix_ = 2;
     public boolean isMarkedForDelete();
+    public long getMarkedForDeleteAt();
     public String name();
     public String name(String key);
     public int size();

@@ -127,7 +127,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
 
         public ColumnFamily call()
         {
-        	ColumnFamily cf = getLocalCopy(key_, columnFamilyName_, filter_);            
+            ColumnFamily cf = getLocalCopy(key_, columnFamilyName_, filter_);
             return cf;
         }
     }
@@ -145,11 +145,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
 
         public void run()
         {
-            if (columnFamily_.isMarkedForDelete()) {
-                columnFamilies_.put(key_, columnFamily_);
-            } else {
-                resolve(key_, columnFamily_);
-            }
+            resolve(key_, columnFamily_);
         }
     }
 
@@ -326,28 +322,28 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         	if(cFamily == null)
         		return null;
         	IColumn column = null;
-        	if(values.length == 2)
-        	{
-        		column = cFamily.getColumn(values[1]);
-        		if(column != null )
-        		{
-        			columnFamily = new ColumnFamily(cfName_);
-        			columnFamily.addColumn(column.name(), column);
-        		}
-        	}
-        	else
-        	{
-        		column = cFamily.getColumn(values[1]);
-        		if(column != null )
-        		{
-        			 
-        			IColumn subColumn = ((SuperColumn)column).getSubColumn(values[2]);
-        			if(subColumn != null)
-        			{
-	        			columnFamily = new ColumnFamily(cfName_);
-	            		columnFamily.createColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp());
-        			}
-        		}
+        	if (values.length == 2) {
+                column = cFamily.getColumn(values[1]);
+                if(column != null )
+                {
+                    columnFamily = new ColumnFamily(cfName_);
+                    columnFamily.addColumn(column.name(), column);
+                }
+        	} else {
+                assert values.length == 3;
+                column = cFamily.getColumn(values[1]); // supercolumn
+                if (column != null)
+                {
+                    IColumn subColumn = ((SuperColumn)column).getSubColumn(values[2]);
+                    if(subColumn != null)
+                    {
+                        columnFamily = new ColumnFamily(cfName_);
+                        SuperColumn sc = (SuperColumn)columnFamily.createColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp());
+                        if (subColumn.isMarkedForDelete()) {
+                            sc.getSubColumn(subColumn.name()).delete();
+                        }
+                    }
+                }
         	}
         }
         /* Filter unnecessary data from the column based on the provided filter */

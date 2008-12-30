@@ -48,7 +48,7 @@ class TimeFilter implements IFilter
     	String[] values = RowMutation.getColumnAndColumnFamily(cf);
 		String cfName = columnFamily.name();
 		ColumnFamily filteredCf = new ColumnFamily(cfName);
-		if( values.length == 1 && !DatabaseDescriptor.getColumnType(cfName).equals("Super"))
+		if( values.length == 1 && !columnFamily.isSuper())
 		{
     		Collection<IColumn> columns = columnFamily.getAllColumns();
     		int i =0; 
@@ -69,7 +69,7 @@ class TimeFilter implements IFilter
     			isDone_ = true;
     		}
 		}    	
-    	else if ( values.length == 2 && DatabaseDescriptor.getColumnType(cfName).equals("Super") )
+    	else if ( values.length == 2 && columnFamily.isSuper() )
     	{
     		/* 
     		 * TODO : For super columns we need to re-visit this issue.

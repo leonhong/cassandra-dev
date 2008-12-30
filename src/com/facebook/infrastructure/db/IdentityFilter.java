@@ -22,7 +22,7 @@ public class IdentityFilter implements IFilter
     	if( columnFamily == null )
     		return columnFamily;
 		String cfName = columnFamily.name();
-		if ( values.length == 2 && !DatabaseDescriptor.getColumnType(cfName).equals("Super") )
+		if ( values.length == 2 && !columnFamily.isSuper())
 		{
 			Collection<IColumn> columns = columnFamily.getAllColumns();
 			if(columns.size() >= 1)
