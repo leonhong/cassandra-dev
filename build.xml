@@ -35,6 +35,8 @@
   <property name="year" value="2008"/>
 
   <property name="src.dir" value="${basedir}/src"/>
+  <property name="test.dir" value="${basedir}/test"/>
+  <property name="gensrc.dir" value="${basedir}/interface/gen-java"/>
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
@@ -42,6 +44,7 @@
 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
+  <property name="test.classes" value="${test.dir}/classes"/>
   <property name="build.docs" value="${build.dir}/docs"/>
   <property name="build.javadoc" value="${build.docs}/api"/>
 
@@ -87,12 +90,14 @@
   <!-- =========================================== -->
 
   <target name="init" description="Create the directories needed to build Cassandra">
-    <mkdir dir="${build.classes}"/>
+      <mkdir dir="${build.classes}"/>
+      <mkdir dir="${test.classes}"/>
   </target>
 
   <target name="clean" description="Delete the build files and their directories">
     <delete file="${build.dir}/${final.name}.jar"/>
     <delete dir="${build.classes}"/>
+    <delete dir="${test.classes}"/>
   </target>
 
   <target name="javadoc" description="Generate javadoc">
@@ -215,6 +220,32 @@
         </tarfileset>
       </param.listofitems>
     </macro_tar>
+  </target>
+
+  <target name="compile-test" depends="compile" description="Build the Cassandra classes">
+    <javac
+     debug="${javac.debug}"
+     debuglevel="${javac.debuglevel}"
+     destdir="${test.classes}"
+    >
+      <classpath refid="classpath"/>
+      <src path="${test.dir}"/>
+    </javac>
+  </target>
+
+  <taskdef resource="testngtasks" classpath="lib/testng-5.8-jdk15.jar"/>
+  <target name="test" depends="compile-test">
+    <echo message="running tests"/>
+    <testng outputDir="${test.dir}/output"
+            haltOnFailure="true"
+            verbose="2">
+      <jvmarg value="-Dstorage-config=conf"/>
+      <classpath>
+        <path refid="classpath" />
+        <pathelement location="${test.classes}"/>
+      </classpath>
+      <classfileset dir="${test.classes}" includes="**/*.class" />
+    </testng>
   </target>
 
 </project>

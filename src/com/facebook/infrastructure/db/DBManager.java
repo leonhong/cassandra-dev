@@ -94,7 +94,7 @@ public class DBManager
     public DBManager() throws Throwable
     {
         /* Read the configuration file */
-        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.init();
+        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.getTableToColumnFamilyMap();
         storeMetadata(tableToColumnFamilyMap);
         Set<String> tables = tableToColumnFamilyMap.keySet();
         

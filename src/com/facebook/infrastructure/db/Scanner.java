@@ -86,7 +86,6 @@ public class Scanner
     
     public static void main(String[] args) throws Throwable
     {
-        DatabaseDescriptor.init();
         Table table = Table.open("Test");    
         Random random = new Random();
         byte[] bytes = new byte[1024];        

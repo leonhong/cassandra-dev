@@ -892,13 +892,4 @@ public class Table
         long timeTaken = System.currentTimeMillis() - start;
         dbAnalyticsSource_.updateWriteStatistics(timeTaken);
     }
-
-    public static void main(String[] args) throws Throwable
-    {
-        StorageService service = StorageService.instance();
-        service.start();
-        Table table = Table.open("Mailbox");
-        Row row = table.get("35300190:1");
-        System.out.println( row.key() );
-    }
 }

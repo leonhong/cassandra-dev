@@ -19,16 +19,16 @@
 package com.facebook.infrastructure.config;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.io.*;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 import com.facebook.infrastructure.db.ColumnFamily;
 import com.facebook.infrastructure.db.FileUtils;
-import com.facebook.infrastructure.db.Table;
-import com.facebook.infrastructure.db.Table.TableMetadata;
-import com.facebook.infrastructure.io.*;
 import com.facebook.infrastructure.utils.XMLUtils;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 
 
 /**
@@ -81,215 +81,213 @@ public class DatabaseDescriptor
      *  */
     
     private static boolean aggressiveCompaction_ = false;
+    public static Map<String, Set<String>> tableToColumnFamilyMap_;
 
-    public static Map<String, Set<String>> init(String filePath) throws Throwable
-    {
-        /* Read the configuration file to retrieve DB related properties. */
-        String file = filePath + System.getProperty("file.separator") + "storage-conf.xml";
-        return initInternal(file);
-    }
-    
-    public static Map<String, Set<String>> init() throws Throwable
-    {
-        /* Read the configuration file to retrieve DB related properties. */
-        String file = System.getProperty("storage-config") + System.getProperty("file.separator") + "storage-conf.xml";
-        return initInternal(file);
-    }
-    
-    public static Map<String, Set<String>> initInternal(String file) throws Throwable
-    {
-        String os = System.getProperty("os.name");
-        XMLUtils xmlUtils = new XMLUtils(file);
-        Node rootNode = xmlUtils.getRequestedNode("/Storage");
+    static {
+        try {
+            /* Read the configuration file to retrieve DB related properties. */
+            String file = System.getProperty("storage-config") + System.getProperty("file.separator") + "storage-conf.xml";
 
-        /* Cluster Name */
-        clusterName_ = xmlUtils.getNodeValue(rootNode, "ClusterName");
+            String os = System.getProperty("os.name");
+            XMLUtils xmlUtils = new XMLUtils(file);
+            Node rootNode = xmlUtils.getRequestedNode("/Storage");
 
-        /* Multicast channel */
-        multicastAddr_ = xmlUtils.getNodeValue(rootNode, "MulticastChannel");
+            /* Cluster Name */
+            clusterName_ = xmlUtils.getNodeValue(rootNode, "ClusterName");
 
-        /* Ganglia servers contact list */
-        gangliaServers_ = xmlUtils.getNodeValues(rootNode, "GangliaServers/GangliaServer");
-        
-        /* ZooKeeper's address */
-        zkAddress_ = xmlUtils.getNodeValue(rootNode, "ZookeeperAddress");
-        
-        /* Zookeeper's session timeout */
-        String zkSessionTimeout = xmlUtils.getNodeValue(rootNode, "ZookeeperSessionTimeout");
-        if ( zkSessionTimeout != null )
-            zkSessionTimeout_ = Integer.parseInt(zkSessionTimeout);
+            /* Multicast channel */
+            multicastAddr_ = xmlUtils.getNodeValue(rootNode, "MulticastChannel");
 
-        /* Data replication factor */
-        String replicationFactor = xmlUtils.getNodeValue(rootNode, "ReplicationFactor");
-        if ( replicationFactor != null )
-        	replicationFactor_ = Integer.parseInt(replicationFactor);
+            /* Ganglia servers contact list */
+            gangliaServers_ = xmlUtils.getNodeValues(rootNode, "GangliaServers/GangliaServer");
 
-        /* RPC Timeout */
-        String rpcTimeoutInMillis = xmlUtils.getNodeValue(rootNode, "RpcTimeoutInMillis");
-        if ( rpcTimeoutInMillis != null )
-        	rpcTimeoutInMillis_ = Integer.parseInt(rpcTimeoutInMillis);
+            /* ZooKeeper's address */
+            zkAddress_ = xmlUtils.getNodeValue(rootNode, "ZookeeperAddress");
 
-        /* Thread per pool */
-        String threadsPerPool = xmlUtils.getNodeValue(rootNode, "ThreadsPerPool");
-        if ( threadsPerPool != null )
-            threadsPerPool_ = Integer.parseInt(threadsPerPool);
+            /* Zookeeper's session timeout */
+            String zkSessionTimeout = xmlUtils.getNodeValue(rootNode, "ZookeeperSessionTimeout");
+            if ( zkSessionTimeout != null )
+                zkSessionTimeout_ = Integer.parseInt(zkSessionTimeout);
 
-        /* TCP port on which the storage system listens */
-        String port = xmlUtils.getNodeValue(rootNode, "StoragePort");
-        if ( port != null )
-            storagePort_ = Integer.parseInt(port);
+            /* Data replication factor */
+            String replicationFactor = xmlUtils.getNodeValue(rootNode, "ReplicationFactor");
+            if ( replicationFactor != null )
+                replicationFactor_ = Integer.parseInt(replicationFactor);
 
-        /* UDP port for control messages */
-        port = xmlUtils.getNodeValue(rootNode, "ControlPort");
-        if ( port != null )
-            controlPort_ = Integer.parseInt(port);
+            /* RPC Timeout */
+            String rpcTimeoutInMillis = xmlUtils.getNodeValue(rootNode, "RpcTimeoutInMillis");
+            if ( rpcTimeoutInMillis != null )
+                rpcTimeoutInMillis_ = Integer.parseInt(rpcTimeoutInMillis);
 
-        /* HTTP port for HTTP messages */
-        port = xmlUtils.getNodeValue(rootNode, "HttpPort");
-        if ( port != null )
-            httpPort_ = Integer.parseInt(port);
+            /* Thread per pool */
+            String threadsPerPool = xmlUtils.getNodeValue(rootNode, "ThreadsPerPool");
+            if ( threadsPerPool != null )
+                threadsPerPool_ = Integer.parseInt(threadsPerPool);
 
-        /* Touch Key Cache Size */
-        String touchKeyCacheSize = xmlUtils.getNodeValue(rootNode, "TouchKeyCacheSize");
-        if ( touchKeyCacheSize != null )
-            touchKeyCacheSize_ = Integer.parseInt(touchKeyCacheSize);
+            /* TCP port on which the storage system listens */
+            String port = xmlUtils.getNodeValue(rootNode, "StoragePort");
+            if ( port != null )
+                storagePort_ = Integer.parseInt(port);
 
-        /* Number of days to keep the memtable around w/o flushing */
-        String lifetime = xmlUtils.getNodeValue(rootNode, "MemtableLifetimeInDays");
-        if ( lifetime != null )
-            memtableLifetime_ = Integer.parseInt(lifetime);
+            /* UDP port for control messages */
+            port = xmlUtils.getNodeValue(rootNode, "ControlPort");
+            if ( port != null )
+                controlPort_ = Integer.parseInt(port);
+
+            /* HTTP port for HTTP messages */
+            port = xmlUtils.getNodeValue(rootNode, "HttpPort");
+            if ( port != null )
+                httpPort_ = Integer.parseInt(port);
+
+            /* Touch Key Cache Size */
+            String touchKeyCacheSize = xmlUtils.getNodeValue(rootNode, "TouchKeyCacheSize");
+            if ( touchKeyCacheSize != null )
+                touchKeyCacheSize_ = Integer.parseInt(touchKeyCacheSize);
+
+            /* Number of days to keep the memtable around w/o flushing */
+            String lifetime = xmlUtils.getNodeValue(rootNode, "MemtableLifetimeInDays");
+            if ( lifetime != null )
+                memtableLifetime_ = Integer.parseInt(lifetime);
 
 
-        /* read the size at which we should do column indexes */
-        String columnIndexSizeInKB = xmlUtils.getNodeValue(rootNode, "ColumnIndexSizeInKB");
-        if(columnIndexSizeInKB == null)
-        {
-        	columnIndexSizeInKB_ = 64;
-        }
-        else
-        {
-        	columnIndexSizeInKB_ = Integer.parseInt(columnIndexSizeInKB);
-        }
-
-        /* metadata directory */
-        metadataDirectory_ = xmlUtils.getNodeValue(rootNode, "MetadataDirectory");
-        if ( metadataDirectory_ != null )
-            FileUtils.createDirectory(metadataDirectory_);
-        else
-        {
-            if ( os.equals("Linux") )
+            /* read the size at which we should do column indexes */
+            String columnIndexSizeInKB = xmlUtils.getNodeValue(rootNode, "ColumnIndexSizeInKB");
+            if(columnIndexSizeInKB == null)
             {
-                metadataDirectory_ = "/var/storage/system";
+                columnIndexSizeInKB_ = 64;
             }
-        }
-
-        /* data file directory */
-        dataFileDirectories_ = xmlUtils.getNodeValues(rootNode, "DataFileDirectories/DataFileDirectory");
-        if ( dataFileDirectories_.length > 0 )
-        {
-        	for ( String dataFileDirectory : dataFileDirectories_ )
-        		FileUtils.createDirectory(dataFileDirectory);
-        }
-        else
-        {
-            if ( os.equals("Linux") )
+            else
             {
-                dataFileDirectories_ = new String[]{"/var/storage/data"};
+                columnIndexSizeInKB_ = Integer.parseInt(columnIndexSizeInKB);
             }
-        }
 
-        /* bootstrap file directory */
-        bootstrapFileDirectory_ = xmlUtils.getNodeValue(rootNode, "BootstrapFileDirectory");
-        if ( bootstrapFileDirectory_ != null )
-            FileUtils.createDirectory(bootstrapFileDirectory_);
-        else
-        {
-            if ( os.equals("Linux") )
+            /* metadata directory */
+            metadataDirectory_ = xmlUtils.getNodeValue(rootNode, "MetadataDirectory");
+            if ( metadataDirectory_ != null )
+                FileUtils.createDirectory(metadataDirectory_);
+            else
             {
-                bootstrapFileDirectory_ = "/var/storage/bootstrap";
+                if ( os.equals("Linux") )
+                {
+                    metadataDirectory_ = "/var/storage/system";
+                }
             }
-        }
 
-        /* bootstrap file directory */
-        stagingFileDirectory_ = xmlUtils.getNodeValue(rootNode, "StagingFileDirectory");
-        if ( stagingFileDirectory_ != null )
-            FileUtils.createDirectory(stagingFileDirectory_);
-        else
-        {
-            if ( os.equals("Linux") )
+            /* data file directory */
+            dataFileDirectories_ = xmlUtils.getNodeValues(rootNode, "DataFileDirectories/DataFileDirectory");
+            if ( dataFileDirectories_.length > 0 )
             {
-                stagingFileDirectory_ = "/var/storage/staging";
+                for ( String dataFileDirectory : dataFileDirectories_ )
+                    FileUtils.createDirectory(dataFileDirectory);
             }
-        }
-
-        /* commit log directory */
-        logFileDirectory_ = xmlUtils.getNodeValue(rootNode, "CommitLogDirectory");
-        if ( logFileDirectory_ != null )
-            FileUtils.createDirectory(logFileDirectory_);
-        else
-        {
-            if ( os.equals("Linux") )
+            else
             {
-                logFileDirectory_ = "/var/storage/commitlog";
+                if ( os.equals("Linux") )
+                {
+                    dataFileDirectories_ = new String[]{"/var/storage/data"};
+                }
             }
-        }
 
-        /* threshold after which commit log should be rotated. */
-        String value = xmlUtils.getNodeValue(rootNode, "CommitLogRotationThresholdInMB");
-        if ( value != null)
-            logRotationThreshold_ = Integer.parseInt(value) * 1024 * 1024;
-
-        /* fast sync option */
-        value = xmlUtils.getNodeValue(rootNode, "CommitLogFastSync");
-        if ( value != null )
-            fastSync_ = Boolean.parseBoolean(value);
-
-
-        /* Rack Aware option */
-        value = xmlUtils.getNodeValue(rootNode, "RackAware");
-        if ( value != null )
-            rackAware_ = Boolean.parseBoolean(value);
-
-        Map<String, Set<String>> tableToColumnFamilyMap = new HashMap<String, Set<String>>();
-        /* Read the table related stuff from config */
-        NodeList tables = xmlUtils.getRequestedNodeList(rootNode, "/Storage/Tables/Table");
-        int size = tables.getLength();
-        for ( int i = 0; i < size; ++i )
-        {
-            Node table = tables.item(i);
-            /* parsing out the table name */
-            String tName = xmlUtils.getAttributeValue(table, "Name");
-            tables_.add(tName);
-            tableToColumnFamilyMap.put(tName, new HashSet<String>());
-
-            NodeList columnFamilies = xmlUtils.getRequestedNodeList(table, "ColumnFamily");
-            int size2 = columnFamilies.getLength();
-
-            for ( int j = 0; j < size2; ++j )
+            /* bootstrap file directory */
+            bootstrapFileDirectory_ = xmlUtils.getNodeValue(rootNode, "BootstrapFileDirectory");
+            if ( bootstrapFileDirectory_ != null )
+                FileUtils.createDirectory(bootstrapFileDirectory_);
+            else
             {
-                Node columnFamily = columnFamilies.item(j);
-                String cName = columnFamily.getChildNodes().item(0).getNodeValue();
-                /* squirrel away the application column families */
-                applicationColumnFamilies_.add(cName);
-                /* Parse out the column type */
-                String columnType = xmlUtils.getAttributeValue(columnFamily, "ColumnType");
-                columnType = ColumnFamily.getColumnType(columnType);
-                cfToColumnTypeMap_.put(cName, columnType);
-                /* Parse out the column family index property */
-                String columnIndexProperty = xmlUtils.getAttributeValue(columnFamily, "Index");
-                String columnIndexType = ColumnFamily.getColumnIndexProperty(columnIndexProperty);
-                cfToIndexPropertyMap_.put(cName, columnIndexType);
-                tableToColumnFamilyMap.get(tName).add(cName);
+                if ( os.equals("Linux") )
+                {
+                    bootstrapFileDirectory_ = "/var/storage/bootstrap";
+                }
             }
-        }
 
-        /* Load the seeds for node contact points */
-        String[] seeds = xmlUtils.getNodeValues(rootNode, "Seeds/Seed");
-        for( int i = 0; i < seeds.length; ++i )
-        {
-            seeds_.add( seeds[i] );
+            /* bootstrap file directory */
+            stagingFileDirectory_ = xmlUtils.getNodeValue(rootNode, "StagingFileDirectory");
+            if ( stagingFileDirectory_ != null )
+                FileUtils.createDirectory(stagingFileDirectory_);
+            else
+            {
+                if ( os.equals("Linux") )
+                {
+                    stagingFileDirectory_ = "/var/storage/staging";
+                }
+            }
+
+            /* commit log directory */
+            logFileDirectory_ = xmlUtils.getNodeValue(rootNode, "CommitLogDirectory");
+            if ( logFileDirectory_ != null )
+                FileUtils.createDirectory(logFileDirectory_);
+            else
+            {
+                if ( os.equals("Linux") )
+                {
+                    logFileDirectory_ = "/var/storage/commitlog";
+                }
+            }
+
+            /* threshold after which commit log should be rotated. */
+            String value = xmlUtils.getNodeValue(rootNode, "CommitLogRotationThresholdInMB");
+            if ( value != null)
+                logRotationThreshold_ = Integer.parseInt(value) * 1024 * 1024;
+
+            /* fast sync option */
+            value = xmlUtils.getNodeValue(rootNode, "CommitLogFastSync");
+            if ( value != null )
+                fastSync_ = Boolean.parseBoolean(value);
+
+
+            /* Rack Aware option */
+            value = xmlUtils.getNodeValue(rootNode, "RackAware");
+            if ( value != null )
+                rackAware_ = Boolean.parseBoolean(value);
+
+            tableToColumnFamilyMap_ = new HashMap<String, Set<String>>();
+            /* Read the table related stuff from config */
+            NodeList tables = xmlUtils.getRequestedNodeList(rootNode, "/Storage/Tables/Table");
+            int size = tables.getLength();
+            for ( int i = 0; i < size; ++i )
+            {
+                Node table = tables.item(i);
+                /* parsing out the table name */
+                String tName = xmlUtils.getAttributeValue(table, "Name");
+                tables_.add(tName);
+                tableToColumnFamilyMap_.put(tName, new HashSet<String>());
+
+                NodeList columnFamilies = xmlUtils.getRequestedNodeList(table, "ColumnFamily");
+                int size2 = columnFamilies.getLength();
+
+                for ( int j = 0; j < size2; ++j )
+                {
+                    Node columnFamily = columnFamilies.item(j);
+                    String cName = columnFamily.getChildNodes().item(0).getNodeValue();
+                    /* squirrel away the application column families */
+                    applicationColumnFamilies_.add(cName);
+                    /* Parse out the column type */
+                    String columnType = xmlUtils.getAttributeValue(columnFamily, "ColumnType");
+                    columnType = ColumnFamily.getColumnType(columnType);
+                    cfToColumnTypeMap_.put(cName, columnType);
+                    /* Parse out the column family index property */
+                    String columnIndexProperty = xmlUtils.getAttributeValue(columnFamily, "Index");
+                    String columnIndexType = ColumnFamily.getColumnIndexProperty(columnIndexProperty);
+                    cfToIndexPropertyMap_.put(cName, columnIndexType);
+                    tableToColumnFamilyMap_.get(tName).add(cName);
+                }
+            }
+
+            /* Load the seeds for node contact points */
+            String[] seeds = xmlUtils.getNodeValues(rootNode, "Seeds/Seed");
+            for( int i = 0; i < seeds.length; ++i )
+            {
+                seeds_.add( seeds[i] );
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        } catch (SAXException e) {
+            throw new RuntimeException(e);
+        } catch (TransformerException e) {
+            throw new RuntimeException(e);
         }
-        return tableToColumnFamilyMap;
     }
     
     public static String getZkAddress()
@@ -490,13 +488,16 @@ public class DatabaseDescriptor
         return aggressiveCompaction_;
     }
 
-    
+    public static Map<String, Set<String>> getTableToColumnFamilyMap() {
+        return tableToColumnFamilyMap_;
+    }
+
     /*
-     * Loop through all the disks to see which disk has the max free space
-     * return the disk with max free space for compactions. If the size of the expected
-     * compacted file is greater than the max disk space available return null, we cannot
-     * do compaction in this case.
-     */
+    * Loop through all the disks to see which disk has the max free space
+    * return the disk with max free space for compactions. If the size of the expected
+    * compacted file is greater than the max disk space available return null, we cannot
+    * do compaction in this case.
+    */
     public static String getCompactionFileLocation(long expectedCompactedFileSize)
     {
       long maxFreeDisk = 0;

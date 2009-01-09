@@ -608,7 +608,7 @@ class CommitLog
     public static void main(String[] args) throws Throwable
     {
         LogUtil.init();
-        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.init();
+        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.getTableToColumnFamilyMap();
         
         File logDir = new File(DatabaseDescriptor.getLogFileLocation());
         File[] files = logDir.listFiles();
