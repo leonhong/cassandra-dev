@@ -81,7 +81,6 @@ public class CassandraServer extends FacebookBase implements
 	 */
 	public void start() throws Throwable
 	{
-		LogUtil.init();
 		//LogUtil.setLogLevel("com.facebook", "DEBUG");
 		// Start the storage service
 		storageService_.start();

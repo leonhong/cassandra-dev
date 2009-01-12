@@ -83,6 +83,8 @@ public class DatabaseDescriptor
     private static boolean aggressiveCompaction_ = false;
     public static Map<String, Set<String>> tableToColumnFamilyMap_;
 
+    private DatabaseDescriptor() {}
+
     static {
         try {
             /* Read the configuration file to retrieve DB related properties. */

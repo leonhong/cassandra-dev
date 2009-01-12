@@ -844,7 +844,6 @@ public class StressTest
 	 */
 	public static void main(String[] args) throws Throwable
 	{
-		LogUtil.init();
   		StressTest stressTest = new StressTest();
 		JSAPResult config = stressTest.ParseArguments( args );
 		if( config == null ) System.exit(-1);

@@ -346,7 +346,6 @@ public class Loader
 	 */
 	public static void main(String[] args) throws Throwable
 	{
-		LogUtil.init();
         StorageService s = StorageService.instance();
         s.start();
 		Loader loader = new Loader(s);

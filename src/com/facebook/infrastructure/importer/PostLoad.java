@@ -179,7 +179,6 @@ public class PostLoad
 	 */
 	public static void main(String[] args) throws Throwable
 	{
-		LogUtil.init();
 		PostLoad postLoad = null;
 		int operation = 1;
 		String columnFamilyName = null;

@@ -23,9 +23,13 @@
    <StagingFileDirectory>/var/cassandra/staging</StagingFileDirectory>
    <CommitLogFastSync>false</CommitLogFastSync>
    <Tables>
-      <Table Name = "Mytable">
-   	    <ColumnFamily Index="Name">Test</ColumnFamily>
-   	    <ColumnFamily ColumnType="Super" Index="Name">Test2</ColumnFamily>
+      <Table Name = "Table1">
+   	    <ColumnFamily Index="Name">Standard1</ColumnFamily>
+   	    <ColumnFamily Index="Name">Standard2</ColumnFamily>
+   	    <ColumnFamily Index="Time">StandardByTime1</ColumnFamily>
+   	    <ColumnFamily Index="Time">StandardByTime2</ColumnFamily>
+   	    <ColumnFamily ColumnType="Super" Index="Name">Super1</ColumnFamily>
+   	    <ColumnFamily ColumnType="Super" Index="Name">Super2</ColumnFamily>
       </Table>
    </Tables>
    <Seeds>

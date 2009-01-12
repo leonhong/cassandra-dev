@@ -605,33 +605,4 @@ class CommitLog
         }
     }
 
-    public static void main(String[] args) throws Throwable
-    {
-        LogUtil.init();
-        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.getTableToColumnFamilyMap();
-        
-        File logDir = new File(DatabaseDescriptor.getLogFileLocation());
-        File[] files = logDir.listFiles();
-        Arrays.sort( files, new FileUtils.FileComparator() );
-
-        byte[] bytes = new byte[CommitLogHeader.size(Integer.parseInt(args[0]))];
-        for ( File file : files )
-        {
-            CommitLog clog = new CommitLog( file );
-            clog.readCommitLogHeader(file.getAbsolutePath(), bytes);
-            DataInputBuffer bufIn = new DataInputBuffer();
-            bufIn.reset(bytes, 0, bytes.length);
-            CommitLogHeader clHeader = CommitLogHeader.serializer().deserialize(bufIn);
-            /*
-            StringBuilder sb = new StringBuilder("");
-            for ( byte b : bytes )
-            {
-                sb.append(b);
-                sb.append(" ");
-            }
-            */
-            System.out.println("FILE:" + file);
-            System.out.println(clHeader.toString());
-        }
-    }
 }

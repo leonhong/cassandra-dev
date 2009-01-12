@@ -41,7 +41,7 @@ class CommitLogHeader
         return serializer_;
     }
     
-    static int size(int size)
+    static int size(int columnFamilyCount)
     {
         /* 
          * We serialize the CommitLogHeader as a byte[] and write it
@@ -55,7 +55,7 @@ class CommitLogHeader
          *        + 
          *        size of position array 
          */
-        return 4 + size + (4 * size); 
+        return 4 + columnFamilyCount + (4 * columnFamilyCount);
     }
     
     static int getLowestPosition(CommitLogHeader clHeader)

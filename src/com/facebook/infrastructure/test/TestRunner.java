@@ -33,7 +33,6 @@ public class TestRunner
     
     public static void main(String[] args) throws Throwable
     {
-        LogUtil.init();
         MessagingService.getMessagingInstance().registerVerbHandlers("TEST", new TestVerbHandler());
         MessagingService.getMessagingInstance().listen(to_, false);
     }

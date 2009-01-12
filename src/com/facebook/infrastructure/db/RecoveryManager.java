@@ -77,12 +77,4 @@ public class RecoveryManager
             clog.recover(clogs);
         }
     }
-    
-    public static void main(String[] args) throws Throwable
-    {
-        long start = System.currentTimeMillis();
-        RecoveryManager rm = RecoveryManager.instance();
-        rm.doRecovery();  
-        logger_.debug( "Time taken : " + (System.currentTimeMillis() - start) + " ms.");
-    }
 }

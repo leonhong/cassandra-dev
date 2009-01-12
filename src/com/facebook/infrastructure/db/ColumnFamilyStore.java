@@ -441,8 +441,7 @@ public class ColumnFamilyStore
         }
         if (columnFamilies.size() == 0 || !filter.isDone()) {
             getColumnFamilyFromDisk(key, cf, columnFamilies, filter);
-            logger_.info("DISK TIME: " + (System.currentTimeMillis() - start)
-                    + " ms.");
+            logger_.debug("DISK TIME: " + (System.currentTimeMillis() - start) + " ms.");
         }
         return resolveAndRemoveDeleted(columnFamilies);
     }
@@ -987,58 +986,6 @@ public class ColumnFamilyStore
         }
         return totalBytesWritten;
     }
-
-    public static void main(String[] args) throws Throwable
-    {   
-        LogUtil.init();
-        StorageService s = StorageService.instance();
-        s.start();
-
-        Table table = Table.open("Mailbox");
-        Random random = new Random();
-        byte[] bytes = new byte[1024];
-        
-        for (int i = 100; i < 1000; ++i)
-        {
-            String key = Integer.toString(i);
-            RowMutation rm = new RowMutation("Mailbox", key);
-            for ( int j = 0; j < 16; ++j )
-            {
-                for ( int k = 0; k < 16; ++k )
-                {
-                    random.nextBytes(bytes);
-                    rm.add("MailboxUserList0:" + "SuperColumn-" + j + ":Column-" + k, bytes, k);
-                    rm.add("MailboxMailList0:" + "Column-" + k, bytes, k);
-                }
-            }
-            rm.apply();
-        }
-        System.out.println("Write done");
-
-    	while(true)
-    	{	    	
-	        for ( int i = 100; i < 1000; ++i )
-	        {
-	            String key = Integer.toString(i);
-	            ColumnFamily cf = table.get(key, "MailboxUserList0:SuperColumn-1");            
-	            if (cf == null)
-	                System.out.println("KEY " + key + " is missing");
-	            else
-	            {
-	                Collection<IColumn> superColumns = cf.getAllColumns();
-	                for ( IColumn superColumn : superColumns )
-	                {
-	                    Collection<IColumn> subColumns = superColumn.getSubColumns();
-	                    for ( IColumn subColumn : subColumns )
-	                    {
-	                        //System.out.println(subColumn);
-	                    }
-	                }
-	                //System.out.println("Success ...");
-	            }
-	        }
-	        System.out.println("Read done ...");
-    	}
-    }
+    
 }
 

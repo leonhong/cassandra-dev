@@ -354,47 +354,4 @@ public final class DataInputBuffer extends DataInputStream
     {
         return buffer.getLength();
     }
-    
-    public static void main(String[] args) throws Throwable
-    {
-        Random random = new Random();
-        byte[] bytes = new byte[64*1024*1024];
-        random.nextBytes(bytes);
-            
-        for ( int i = 0; i < 16; ++i )
-        {
-            int pos = 0;
-            int count = bytes.length;
-            long start2 = System.currentTimeMillis();
-            while ( true )
-            {
-                int value = (pos < count) ? (bytes[pos] & 0xff) : -1;
-                ++pos;
-                if ( value == -1 )
-                    break;
-            }
-            System.out.println("TIME TAKEN : " + (System.currentTimeMillis() - start2));
-            
-            FastByteArrayInputStream bis = new FastByteArrayInputStream(bytes);        
-            int read = 0;        
-            long start = System.currentTimeMillis();        
-            while ( true )
-            {
-                read = bis.read();
-                if ( read == -1 )
-                    break;            
-            }        
-            System.out.println("TIME TAKEN : " + (System.currentTimeMillis() - start));
-        }
-        
-        /*
-        DataOutputBuffer bufOut = new DataOutputBuffer();        
-        bufOut.writeUTF("Avinash");
-        bufOut.writeInt(41*1024*1024);
-        DataInputBuffer bufIn = new DataInputBuffer();
-        bufIn.reset(bufOut.getData(), bufOut.getLength());
-        System.out.println(bufIn.readUTF()); 
-        System.out.println(bufIn.readInt());
-        */
-    }
 }

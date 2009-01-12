@@ -11,8 +11,10 @@ import java.util.Arrays;
 import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.db.ColumnFamily;
 import com.facebook.infrastructure.db.IColumn;
+import com.facebook.infrastructure.ServerTest;
 
-public class SSTableTest {
+public class SSTableTest extends ServerTest {
+    // TODO test table/CFs that are actually in the storage conf.  this breaks the current test when Name indexing is on, meaning this is a crappy test.
     @Test
     public void testOne() throws IOException {
         File f = File.createTempFile("sstable", "");
@@ -21,7 +23,6 @@ public class SSTableTest {
 
         // write test data
         ssTable = new SSTable(f.getParent(), f.getName());
-        DataOutputBuffer bufOut = new DataOutputBuffer();
         BloomFilter bf = new BloomFilter(1000, 8);
         Random random = new Random();
         byte[] bytes = new byte[1024*1024];
@@ -29,8 +30,8 @@ public class SSTableTest {
 
         String key = Integer.toString(1);
         cf = new ColumnFamily("Test", "Standard");
-        bufOut.reset();
         cf.createColumn("C", bytes, 1);
+        DataOutputBuffer bufOut = new DataOutputBuffer();
         ColumnFamily.serializer2().serialize(cf, bufOut);
         ssTable.append(key, bufOut);
         bf.fill(key);
@@ -57,8 +58,6 @@ public class SSTableTest {
         ssTable = new SSTable(f.getParent(), f.getName());
         DataOutputBuffer bufOut = new DataOutputBuffer();
         BloomFilter bf = new BloomFilter(1000, 8);
-        byte[] bytes = new byte[64*1024];
-        Random random = new Random();
         for ( int i = 100; i < 1000; ++i )
         {
             String key = Integer.toString(i);

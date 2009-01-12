@@ -131,8 +131,6 @@ public class PreLoad
 		{
 			System.out.println("Usage: PreLoad <Fully qualified path of the file containing user names>");
 		}
-		// TODO Auto-generated method stub
-		LogUtil.init();
         StorageService s = StorageService.instance();
         s.start();
         PreLoad preLoad = new PreLoad(s);

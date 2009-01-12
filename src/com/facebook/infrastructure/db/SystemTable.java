@@ -186,21 +186,4 @@ public class SystemTable
         throw new UnsupportedOperationException("This operation is not supported for System tables");
     }
 
-    public static void main(String[] args) throws Throwable
-    {
-        LogUtil.init();
-        StorageService.instance().start();
-        SystemTable.openSystemTable(SystemTable.cfName_).updateToken( StorageService.hash("503545744:0") );
-        System.out.println("Done");
-
-        /*
-        BigInteger hash = StorageService.hash("304700067:0");
-        List<Range> ranges = new ArrayList<Range>();
-        ranges.add( new Range(new BigInteger("1218069462158869448693347920504606362273788442553"), new BigInteger("1092770595533781724218060956188429069")) );
-        if ( Range.isKeyInRanges(ranges, "304700067:0") )
-        {
-            System.out.println("Done");
-        }
-        */
-    }
 }

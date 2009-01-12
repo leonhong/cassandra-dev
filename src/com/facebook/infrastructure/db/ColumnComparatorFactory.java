@@ -72,12 +72,6 @@ public class ColumnComparatorFactory
 		return getComparator(comparatorType);
 	}
 
-	public static void main(String[] args)
-	{
-		IColumn col1 = new Column("Column-9");
-		IColumn col2 = new Column("Column-10");
-		System.out.println("Result of compare: " + getComparator(ComparatorType.NAME).compare(col1, col2));
-	}
 }
 
 abstract class AbstractColumnComparator implements Comparator<IColumn>, Serializable

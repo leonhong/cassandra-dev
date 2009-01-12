@@ -18,24 +18,17 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.InetAddress;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.io.DataOutputBuffer;
-import com.facebook.infrastructure.io.IFileWriter;
-import com.facebook.infrastructure.io.SequenceFile;
 import com.facebook.infrastructure.utils.BasicUtilities;
 import com.facebook.infrastructure.utils.FBUtilities;
-import com.facebook.infrastructure.utils.HashingSchemes;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -95,7 +88,6 @@ public class DBManager
     {
         /* Read the configuration file */
         Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.getTableToColumnFamilyMap();
-        storeMetadata(tableToColumnFamilyMap);
         Set<String> tables = tableToColumnFamilyMap.keySet();
         
         for (String table : tables)
@@ -106,46 +98,6 @@ public class DBManager
         /* Do recovery if need be. */
         RecoveryManager recoveryMgr = RecoveryManager.instance();
         recoveryMgr.doRecovery();
-    }
-
-    /*
-     * Create the metadata tables. This table has information about
-     * the table name and the column families that make up the table.
-     * Each column family also has an associated ID which is an int.
-    */
-    private static void storeMetadata(Map<String, Set<String>> tableToColumnFamilyMap) throws Throwable
-    {
-        AtomicInteger idGenerator = new AtomicInteger(0);
-        Set<String> tables = tableToColumnFamilyMap.keySet();
-
-        for ( String table : tables )
-        {
-            Table.TableMetadata tmetadata = Table.TableMetadata.instance();
-            if ( tmetadata.isEmpty() )
-            {
-                tmetadata = Table.TableMetadata.instance();
-                /* Column families associated with this table */
-                Set<String> columnFamilies = tableToColumnFamilyMap.get(table);
-                for ( String columnFamily : columnFamilies )
-                {
-                    tmetadata.add(columnFamily, idGenerator.getAndIncrement(), DatabaseDescriptor.getColumnType(columnFamily));
-                }
-
-                /*
-                 * Here we add all the system related column families. 
-                */
-                /* Add the TableMetadata column family to this map. */
-                tmetadata.add(Table.TableMetadata.cfName_, idGenerator.getAndIncrement());
-                /* Add the LocationInfo column family to this map. */
-                tmetadata.add(SystemTable.cfName_, idGenerator.getAndIncrement());
-                /* Add the recycle column family to this map. */
-                tmetadata.add(Table.recycleBin_, idGenerator.getAndIncrement());
-                /* Add the Hints column family to this map. */
-                tmetadata.add(Table.hints_, idGenerator.getAndIncrement(), ColumnFamily.getColumnType("Super"));
-                tmetadata.apply();
-                idGenerator.set(0);
-            }
-        }
     }
 
     /*
@@ -205,10 +157,5 @@ public class DBManager
             sysTable.reset(row);
         }
         return storageMetadata;
-    }
-
-    public static void main(String[] args) throws Throwable
-    {
-        DBManager.instance().start();
     }
 }

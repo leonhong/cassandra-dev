@@ -57,7 +57,6 @@ public class KeyChecker
             System.exit(1);
         }
         
-        LogUtil.init();
         StorageService s = StorageService.instance();
         s.start();
         

@@ -25,7 +25,6 @@ public class testStorage
     {
     	try
     	{
-	        LogUtil.init();
 	        StorageService s = StorageService.instance();
 	        s.start();
 

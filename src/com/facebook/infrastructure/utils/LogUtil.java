@@ -27,18 +27,7 @@ import org.apache.log4j.xml.DOMConfigurator;
 
 public class LogUtil
 {
-
-    public LogUtil()
-    {
-    }
-
-    public static void init()
-    {
-        //BasicConfigurator.configure();
-        String file = System.getProperty("storage-config");
-        file += System.getProperty("file.separator") + "logging.props";
-        PropertyConfigurator.configure(file);
-    }
+    private LogUtil() {}
 
     public static Logger getLogger(String name)
     {

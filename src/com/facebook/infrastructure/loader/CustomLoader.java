@@ -192,7 +192,6 @@ public class CustomLoader
 		{
 			System.out.println("Usage: CustomLoader <root path to the data files>");
 		}
-		LogUtil.init();
         StorageService s = StorageService.instance();
         s.start();
         CustomLoader loader = new CustomLoader(s, args[0]);
