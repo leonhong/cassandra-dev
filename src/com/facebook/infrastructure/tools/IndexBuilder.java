@@ -116,7 +116,7 @@ public class IndexBuilder
                     for ( int i = 0; i < blockSize; ++i )
                     {
                         String currentKey = bufIn.readUTF();
-                        bf.fill(currentKey);
+                        bf.add(currentKey);
                         if ( largestKey == null )
                         {
                             largestKey = currentKey;

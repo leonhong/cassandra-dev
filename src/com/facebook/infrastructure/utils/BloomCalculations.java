@@ -24,31 +24,31 @@ package com.facebook.infrastructure.utils;
  * "Bloom Filters - the math"
  *
  * This class's static methods are meant to facilitate the use of the Bloom
- * Filter class by helping to choose correct values of 'bits per element' and
+ * Filter class by helping to choose correct values of 'buckets per element' and
  * 'number of hash functions, k'.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 public class BloomCalculations {
 
-    private static final int maxBits = 15;
-    private static final int minBits = 2;
+    private static final int maxBuckets = 15;
+    private static final int minBuckets = 2;
     private static final int minK = 1;
     private static final int maxK = 8;
-    private static final int[] optKPerBits =
-            new int[]{1, // dummy K for 0 bits per element
-                      1, // dummy K for 1 bits per element
+    private static final int[] optKPerBuckets =
+            new int[]{1, // dummy K for 0 buckets per element
+                      1, // dummy K for 1 buckets per element
                       1, 2, 3, 3, 4, 5, 5, 6, 7, 8, 8, 8, 8, 8};
 
     /**
-     * In the following table, the row 'i' shows false positive rates if i bits
+     * In the following table, the row 'i' shows false positive rates if i buckets
      * per element are used.  Column 'j' shows false positive rates if j hash
      * functions are used.  The first row is 'i=0', the first column is 'j=0'.
-     * Each cell (i,j) the false positive rate determined by using i bits per
+     * Each cell (i,j) the false positive rate determined by using i buckets per
      * element and j hash functions.
      */
     private static final double[][] probs = new double[][]{
-        {1.0}, // dummy row representing 0 bits per element
-        {1.0, 1.0}, // dummy row representing 1 bits per element
+        {1.0}, // dummy row representing 0 buckets per element
+        {1.0, 1.0}, // dummy row representing 1 buckets per element
         {1.0, 0.393,  0.400},
         {1.0, 0.283,  0.237,  0.253},
         {1.0, 0.221,  0.155,  0.147,   0.160},
@@ -65,69 +65,68 @@ public class BloomCalculations {
         {1.0, 0.0645, 0.0156, 0.00596, 0.003,   0.00183, 0.00128, 0.001,   0.000852}
     };  // the first column is a dummy column representing K=0.
 
-    public static double getFailureRate(int bitsPerElement){
-        int k = computeBestK(bitsPerElement);
-        if(bitsPerElement >= probs.length) bitsPerElement = probs.length-1;
-        return probs[bitsPerElement][k];
+    public static double getFailureRate(int bucketsPerElement){
+        int k = computeBestK(bucketsPerElement);
+        if(bucketsPerElement >= probs.length) bucketsPerElement = probs.length-1;
+        return probs[bucketsPerElement][k];
     }
     
     /**
-     * Given the number of bits that can be used per element, return the optimal
+     * Given the number of buckets that can be used per element, return the optimal
      * number of hash functions in order to minimize the false positive rate.
      *
-     * @param bitsPerElement
+     * @param bucketsPerElement
      * @return The number of hash functions that minimize the false positive rate.
      */
-    public static int computeBestK(int bitsPerElement){
-        if(bitsPerElement < 0)
-            return optKPerBits[0];
-        if(bitsPerElement >= optKPerBits.length)
-            return optKPerBits[optKPerBits.length-1];
-        return optKPerBits[bitsPerElement];
+    public static int computeBestK(int bucketsPerElement){
+        assert bucketsPerElement >= 0;
+        if(bucketsPerElement >= optKPerBuckets.length)
+            return optKPerBuckets[optKPerBuckets.length-1];
+        return optKPerBuckets[bucketsPerElement];
     }
 
     /**
      * A wrapper class that holds two key parameters for a Bloom Filter: the
-     * number of hash functions used, and the number of bits per element used.
+     * number of hash functions used, and the number of buckets per element used.
      */
     public static class BloomSpecification {
         int K; // number of hash functions.
-        int bitsPerElement;
+        int bucketsPerElement;
     }
 
     /**
      * Given a maximum tolerable false positive probability, compute a Bloom
      * specification which will give less than the specified false positive rate,
-     * but minimize the number of bits per element and the number of hash
+     * but minimize the number of buckets per element and the number of hash
      * functions used.  Because bandwidth (and therefore total bitvector size)
      * is considered more expensive than computing power, preference is given
-     * to minimizing bits per element rather than number of hash funtions.
+     * to minimizing buckets per element rather than number of hash funtions.
      *
      * @param maxFalsePosProb The maximum tolerable false positive rate.
      * @return A Bloom Specification which would result in a false positive rate
      * less than specified by the function call.
      */
-    public static BloomSpecification computeBitsAndK(double maxFalsePosProb){
+    public static BloomSpecification computeBucketsAndK(double maxFalsePosProb){
         BloomSpecification spec = new BloomSpecification();
-        spec.bitsPerElement = 2;
-        spec.K = optKPerBits[spec.bitsPerElement];
+        spec.bucketsPerElement = 2;
+        spec.K = optKPerBuckets[spec.bucketsPerElement];
 
         // Handle the trivial cases:
-        if(maxFalsePosProb >= probs[minBits][minK]) return spec;
-        if(maxFalsePosProb < probs[maxBits][maxK]) {
-            spec.bitsPerElement = maxBits;
+        if(maxFalsePosProb >= probs[minBuckets][minK]) return spec;
+        if(maxFalsePosProb < probs[maxBuckets][maxK]) {
+            spec.bucketsPerElement = maxBuckets;
             spec.K = maxK;
             return spec;
         }
 
-        // First find the minimal required number of bits:
-        while(probs[spec.bitsPerElement][spec.K] > maxFalsePosProb){
-            spec.bitsPerElement++;
-            spec.K = optKPerBits[spec.bitsPerElement];
+        // First find the minimal required number of buckets:
+        while(probs[spec.bucketsPerElement][spec.K] > maxFalsePosProb){
+            spec.bucketsPerElement++;
+            spec.K = optKPerBuckets[spec.bucketsPerElement];
         }
-        // Now that the number of bits is sufficient, see if we can relax K
+        // Now that the number of buckets is sufficient, see if we can relax K
         // without losing too much precision.
-        while(probs[spec.bitsPerElement][spec.K-1] <= maxFalsePosProb){
+        while(probs[spec.bucketsPerElement][spec.K-1] <= maxFalsePosProb){
             spec.K--;
         }
         return spec;

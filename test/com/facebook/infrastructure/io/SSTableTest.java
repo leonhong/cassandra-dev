@@ -5,12 +5,10 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-import java.util.Collection;
 import java.util.Arrays;
 
 import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.db.ColumnFamily;
-import com.facebook.infrastructure.db.IColumn;
 import com.facebook.infrastructure.ServerTest;
 
 public class SSTableTest extends ServerTest {
@@ -34,7 +32,7 @@ public class SSTableTest extends ServerTest {
         DataOutputBuffer bufOut = new DataOutputBuffer();
         ColumnFamily.serializer2().serialize(cf, bufOut);
         ssTable.append(key, bufOut);
-        bf.fill(key);
+        bf.add(key);
 
         ssTable.close(bf);
 
@@ -66,7 +64,7 @@ public class SSTableTest extends ServerTest {
             cf.createColumn("C", ("Avinash Lakshman is a good man: " + i).getBytes(), i);
             ColumnFamily.serializer2().serialize(cf, bufOut);
             ssTable.append(key, bufOut);
-            bf.fill(key);
+            bf.add(key);
         }
         ssTable.close(bf);
 

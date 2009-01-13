@@ -2,6 +2,7 @@ package com.facebook.infrastructure.db;
 
 import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
 import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.io.*;
@@ -30,9 +31,9 @@ public class ColumnFamilyCompactor {
      * @return
      * @throws java.io.IOException
      */
-    static BloomFilter.CountingBloomFilter doRangeOnlyAntiCompaction(
+    static CountingBloomFilter doRangeOnlyAntiCompaction(
             ColumnFamilyStore cfs, List<String> files, List<Range> ranges, EndPoint target, int minBufferSize, List<String> fileList, List<BloomFilter> compactedBloomFilters) throws IOException {
-        BloomFilter.CountingBloomFilter rangeCountingBloomFilter = null;
+        CountingBloomFilter rangeCountingBloomFilter = null;
         long startTime = System.currentTimeMillis();
         long totalBytesRead = 0;
         long totalBytesWritten = 0;
@@ -132,11 +133,11 @@ public class ColumnFamilyCompactor {
                                 ssTableRange = new SSTable(rangeFileLocation, mergedFileName);
                             }
                             if (rangeCountingBloomFilter == null) {
-                                rangeCountingBloomFilter = new BloomFilter.CountingBloomFilter(expectedBloomFilterSize, 8);
+                                rangeCountingBloomFilter = new CountingBloomFilter(expectedBloomFilterSize, 8);
                             }
                             try {
                                 ssTableRange.append(lastkey, bufOut);
-                                compactedRangeBloomFilter.fill(lastkey);
+                                compactedRangeBloomFilter.add(lastkey);
                                 if (target != null && StorageService.instance().isPrimary(lastkey, target)) {
                                     rangeCountingBloomFilter.add(lastkey);
                                 }
@@ -219,8 +220,8 @@ public class ColumnFamilyCompactor {
      *
      */
 
-    static BloomFilter.CountingBloomFilter doRangeCompaction(ColumnFamilyStore cfs, List<String> files, List<Range> ranges, int minBufferSize) throws IOException {
-        BloomFilter.CountingBloomFilter rangeCountingBloomFilter = null;
+    static CountingBloomFilter doRangeCompaction(ColumnFamilyStore cfs, List<String> files, List<Range> ranges, int minBufferSize) throws IOException {
+        CountingBloomFilter rangeCountingBloomFilter = null;
         String newfile = null;
         long startTime = System.currentTimeMillis();
         long totalBytesRead = 0;
@@ -320,10 +321,10 @@ public class ColumnFamilyCompactor {
                             ssTableRange = new SSTable(DatabaseDescriptor.getBootstrapFileLocation(), mergedRangeFileName);
                         }
                         if (rangeCountingBloomFilter == null) {
-                            rangeCountingBloomFilter = new BloomFilter.CountingBloomFilter(expectedBloomFilterSize, 8);
+                            rangeCountingBloomFilter = new CountingBloomFilter(expectedBloomFilterSize, 8);
                         }
                         ssTableRange.append(lastkey, bufOut);
-                        compactedRangeBloomFilter.fill(lastkey);
+                        compactedRangeBloomFilter.add(lastkey);
                         rangeCountingBloomFilter.add(lastkey);
                     } else {
                         if (ssTable == null) {
@@ -337,7 +338,7 @@ public class ColumnFamilyCompactor {
                         }
 
                         /* Fill the bloom filter  with the   key */
-                        compactedBloomFilter.fill(lastkey);
+                        compactedBloomFilter.add(lastkey);
                     }
                     totalkeysWritten++;
                     for (FileStruct filestruct : mergeNeeded) {

@@ -32,10 +32,10 @@ import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.net.io.StreamContextManager;
 import com.facebook.infrastructure.service.StreamManager;
-import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
 
-/**
+ /**
  * This verb handler handles the BootstrapMetadataMessage that is sent
  * by the leader to the nodes that are responsible for handing off data. 
 */
@@ -118,7 +118,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
             logger_.debug("Forcing compaction ...");
             /* Get the counting bloom filter for each endpoint and the list of files that need to be streamed */
             List<String> fileList = new ArrayList<String>();
-            BloomFilter.CountingBloomFilter cbf = table.forceCompaction(ranges, target, fileList);                
+            CountingBloomFilter cbf = table.forceCompaction(ranges, target, fileList);
             doHandoff(cbf, target, fileList);
         }
     }
@@ -127,7 +127,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
      * Stream the files in the bootstrap directory over to the
      * node being bootstrapped.
     */
-    private void doHandoff(BloomFilter.CountingBloomFilter cbf, EndPoint target, List<String> fileList) throws IOException
+    private void doHandoff(CountingBloomFilter cbf, EndPoint target, List<String> fileList) throws IOException
     {
         List<File> filesList = new ArrayList<File>();
         for(String file : fileList)

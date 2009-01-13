@@ -19,7 +19,6 @@
 package com.facebook.infrastructure.db;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -266,10 +265,10 @@ public class ColumnFamilyStore
      * This method forces a compaction of the SSTables on disk. We wait
      * for the process to complete by waiting on a future pointer.
     */
-    BloomFilter.CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, long skip, List<String> fileList)
+    CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, long skip, List<String> fileList)
     {
-        BloomFilter.CountingBloomFilter cbf = null;
-    	Future<BloomFilter.CountingBloomFilter> futurePtr = null;
+        CountingBloomFilter cbf = null;
+    	Future<CountingBloomFilter> futurePtr = null;
     	if( ranges != null)
     		futurePtr = MinorCompactionManager.instance().submit(ColumnFamilyStore.this, ranges, target, fileList);
     	else
@@ -758,11 +757,11 @@ public class ColumnFamilyStore
     /*
      * Break the files into buckets and then compact.
      */
-    BloomFilter.CountingBloomFilter doCompaction(List<Range> ranges)  throws IOException
+    CountingBloomFilter doCompaction(List<Range> ranges)  throws IOException
     {
         isCompacting_.set(true);
         List<String> files = new ArrayList<String>(ssTables_);
-        BloomFilter.CountingBloomFilter result = null;
+        CountingBloomFilter result = null;
         try
         {
 	        int count = 0;
@@ -771,7 +770,7 @@ public class ColumnFamilyStore
 	    	for(Integer key : keySet)
 	    	{
 	    		List<String> fileList = buckets.get(key);
-	            BloomFilter.CountingBloomFilter tempResult = null;
+	            CountingBloomFilter tempResult = null;
 	    		// If ranges != null we should split the files irrespective of the threshold.
 	    		if(fileList.size() >= threshHold_ || ranges != null)
 	    		{
@@ -816,12 +815,12 @@ public class ColumnFamilyStore
         return result;
     }
 
-    BloomFilter.CountingBloomFilter doMajorCompaction(long skip)  throws IOException
+    CountingBloomFilter doMajorCompaction(long skip)  throws IOException
     {
     	return doMajorCompactionInternal( skip );
     }
 
-    BloomFilter.CountingBloomFilter doMajorCompaction()  throws IOException
+    CountingBloomFilter doMajorCompaction()  throws IOException
     {
     	return doMajorCompactionInternal( 0 );
     }
@@ -831,12 +830,12 @@ public class ColumnFamilyStore
      * all files greater than skip GB are skipped for this compaction.
      * Except if skip is 0 , in that case this is ignored and all files are taken.
      */
-    BloomFilter.CountingBloomFilter doMajorCompactionInternal(long skip)  throws IOException
+    CountingBloomFilter doMajorCompactionInternal(long skip)  throws IOException
     {
         isCompacting_.set(true);
         List<String> filesInternal = new ArrayList<String>(ssTables_);
         List<String> files = null;
-        BloomFilter.CountingBloomFilter result = null;
+        CountingBloomFilter result = null;
         try
         {
         	 if( skip > 0L )
@@ -868,11 +867,11 @@ public class ColumnFamilyStore
         return result;
     }
 
-    BloomFilter.CountingBloomFilter doRangeAntiCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
+    CountingBloomFilter doRangeAntiCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
     {
         isCompacting_.set(true);
         List<String> files = new ArrayList<String>(ssTables_);
-        BloomFilter.CountingBloomFilter result = null;
+        CountingBloomFilter result = null;
         try
         {
         	 result = ColumnFamilyCompactor.doRangeOnlyAntiCompaction(this, files, ranges, target, bufSize_, fileList, null);

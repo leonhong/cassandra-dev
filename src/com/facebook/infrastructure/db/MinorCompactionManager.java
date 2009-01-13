@@ -21,9 +21,7 @@ package com.facebook.infrastructure.db;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -32,13 +30,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.log4j.Logger;
 
 import com.facebook.infrastructure.concurrent.*;
-import com.facebook.infrastructure.db.HintedHandOffManager.HintedHandOff;
 import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.service.IComponentShutdown;
 import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -97,7 +94,7 @@ class MinorCompactionManager implements IComponentShutdown
         }
     }
 
-    class FileCompactor2 implements Callable<BloomFilter.CountingBloomFilter>
+    class FileCompactor2 implements Callable<CountingBloomFilter>
     {
         private ColumnFamilyStore columnFamilyStore_;
         private List<Range> ranges_;
@@ -118,9 +115,9 @@ class MinorCompactionManager implements IComponentShutdown
             fileList_ = fileList;
         }
 
-        public BloomFilter.CountingBloomFilter call()
+        public CountingBloomFilter call()
         {
-        	BloomFilter.CountingBloomFilter result = null;
+        	CountingBloomFilter result = null;
             try
             {
                 logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
@@ -135,7 +132,7 @@ class MinorCompactionManager implements IComponentShutdown
         }
     }
 
-    class OnDemandCompactor implements Callable<BloomFilter.CountingBloomFilter>
+    class OnDemandCompactor implements Callable<CountingBloomFilter>
     {
         private ColumnFamilyStore columnFamilyStore_;
         private long skip_ = 0L;
@@ -146,9 +143,9 @@ class MinorCompactionManager implements IComponentShutdown
             skip_ = skip;
         }
 
-        public BloomFilter.CountingBloomFilter call()
+        public CountingBloomFilter call()
         {
-        	BloomFilter.CountingBloomFilter result = null;
+        	CountingBloomFilter result = null;
             try
             {
                 logger_.debug("Started  Major compaction ..."+columnFamilyStore_.columnFamily_);
@@ -220,17 +217,17 @@ class MinorCompactionManager implements IComponentShutdown
         compactor_.submit(new CleanupCompactor(columnFamilyStore));
     }
 
-    public Future<BloomFilter.CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges, EndPoint target, List<String> fileList)
+    public Future<CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges, EndPoint target, List<String> fileList)
     {
         return compactor_.submit( new FileCompactor2(columnFamilyStore, ranges, target, fileList) );
     } 
 
-    public Future<BloomFilter.CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges)
+    public Future<CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges)
     {
         return compactor_.submit( new FileCompactor2(columnFamilyStore, ranges) );
     }
 
-    public Future<BloomFilter.CountingBloomFilter> submitMajor(ColumnFamilyStore columnFamilyStore, List<Range> ranges, long skip)
+    public Future<CountingBloomFilter> submitMajor(ColumnFamilyStore columnFamilyStore, List<Range> ranges, long skip)
     {
         return compactor_.submit( new OnDemandCompactor(columnFamilyStore, skip) );
     }

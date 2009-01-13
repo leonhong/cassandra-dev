@@ -154,7 +154,7 @@ public class BinaryMemtable implements MemtableMBean
             {            	
                 /* Now write the key and value to disk */
                 ssTable.append(key, bytes);
-                bf.fill(key);
+                bf.add(key);
             }
         }
         ssTable.close(bf);

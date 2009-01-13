@@ -2,8 +2,8 @@ package com.facebook.infrastructure.db;
 
 import com.facebook.infrastructure.io.*;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
 
 import java.io.IOException;
 import java.io.File;
@@ -155,7 +155,7 @@ class TableMetadata
         return cfIdMap_.containsKey(cfName);
     }
 
-    BloomFilter.CountingBloomFilter cardinality()
+    CountingBloomFilter cardinality()
     {
         return null;
     }

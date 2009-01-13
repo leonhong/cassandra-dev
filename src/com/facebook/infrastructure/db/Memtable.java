@@ -34,7 +34,6 @@ import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.service.IComponentShutdown;
 import com.facebook.infrastructure.utils.*;
 
 /**
@@ -441,7 +440,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             	ColumnFamily.serializer2().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(key, buffer);
-                bf.fill(key);
+                bf.add(key);
                 columnFamily.clear();
             }
         }

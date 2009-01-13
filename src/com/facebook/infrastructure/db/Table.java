@@ -19,8 +19,6 @@
 package com.facebook.infrastructure.db;
 
 import java.util.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.File;
 import java.util.concurrent.locks.Lock;
@@ -386,10 +384,10 @@ public class Table
      * do a complete compaction since we can figure out based on the ranges
      * whether the files need to be split.
     */
-    public BloomFilter.CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
+    public CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
     {
         /* Counting Bloom Filter for the entire table */
-        BloomFilter.CountingBloomFilter cbf = null;
+        CountingBloomFilter cbf = null;
         Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
         for ( String columnFamily : columnFamilies )
         {
@@ -400,12 +398,13 @@ public class Table
             if ( cfStore != null )
             {
                 /* Counting Bloom Filter for the Column Family */
-                BloomFilter.CountingBloomFilter cbf2 = cfStore.forceCompaction(ranges, target, 0, fileList);
-                if ( cbf2 == null )
-                {
-                    logger_.debug("CBF is NULL for " + cfStore.getColumnFamilyName());
+                CountingBloomFilter cbf2 = cfStore.forceCompaction(ranges, target, 0, fileList);
+                assert cbf2 != null;
+                if (cbf == null) {
+                    cbf = cbf2;
+                } else {
+                    cbf.merge(cbf2);
                 }
-                cbf = (cbf == null ) ? cbf2 : cbf.merge(cbf2);
             }
         }
         return cbf;
@@ -486,7 +485,7 @@ public class Table
         return tableMetadata_.getColumnFamilyName(id);
     }
     
-    public BloomFilter.CountingBloomFilter cardinality()
+    public CountingBloomFilter cardinality()
     {
         return tableMetadata_.cardinality();
     }
