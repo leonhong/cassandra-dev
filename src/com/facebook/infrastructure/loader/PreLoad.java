@@ -19,7 +19,6 @@
 package com.facebook.infrastructure.loader;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.List;
@@ -31,7 +30,7 @@ import com.facebook.infrastructure.db.RowMutation;
 import com.facebook.infrastructure.db.Table;
 import com.facebook.infrastructure.io.SSTable;
 import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.LogUtil;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -102,7 +101,7 @@ public class PreLoad
         	ssTable.close();
         }
         /* We should have only one file since we just compacted. */        
-        List<String> indexedKeys = SSTable.getIndexedKeys();        
+        List<String> indexedKeys = SSTable.getSortedKeys();
         storageService_.relocate(indexedKeys.toArray( new String[0]) );
         
         /*

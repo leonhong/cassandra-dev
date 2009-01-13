@@ -23,11 +23,9 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.FileUtils;
 import com.facebook.infrastructure.db.RowMutation;
 import com.facebook.infrastructure.db.Table;
 import com.facebook.infrastructure.io.SSTable;
-import com.facebook.infrastructure.locator.EndPointSnitch;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.*;
@@ -301,7 +299,7 @@ public class Loader
         	ssTable.close();
         }
         /* We should have only one file since we just compacted. */        
-        List<String> indexedKeys = SSTable.getIndexedKeys();        
+        List<String> indexedKeys = SSTable.getSortedKeys();
         storageService_.relocate(indexedKeys.toArray( new String[0]) );
         
         /*

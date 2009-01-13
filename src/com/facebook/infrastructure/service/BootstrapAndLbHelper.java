@@ -29,7 +29,7 @@ public final class BootstrapAndLbHelper
     private static final Logger logger_ = Logger.getLogger(BootstrapAndLbHelper.class);
     private static List<String> getIndexedPrimaryKeys()
     {
-        List<String> indexedPrimaryKeys = SSTable.getIndexedKeys();
+        List<String> indexedPrimaryKeys = SSTable.getSortedKeys();
         Iterator<String> it = indexedPrimaryKeys.iterator();
         
         while ( it.hasNext() )

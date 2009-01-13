@@ -18,16 +18,16 @@
 
 package com.facebook.infrastructure.io;
 
-import java.io.*;
-import java.nio.channels.FileChannel;
-import java.util.*;
-
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.utils.BasicUtilities;
+import com.facebook.infrastructure.utils.BloomFilter;
+import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
 
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.ColumnFamily;
-import com.facebook.infrastructure.db.IColumn;
-import com.facebook.infrastructure.utils.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * This class is built on top of the SequenceFile. It stores
@@ -87,14 +87,14 @@ public class SSTable
     private static Map<String, BloomFilter> bfs_ = new Hashtable<String, BloomFilter>();
     /* Maintains a touched set of keys */
     private static LinkedHashMap<String, Long> touchCache_ = new TouchedKeyCache(DatabaseDescriptor.getTouchKeyCacheSize());
-    
+
     /**
      * This class holds the position of a key in a block
      * and the size of the data associated with this key. 
     */
-    protected static class BlockMetadata
+    static class BlockMetadata
     {
-        protected static final BlockMetadata NULL = new BlockMetadata(-1L, -1L);
+        static final BlockMetadata NULL = new BlockMetadata(-1L, -1L);
         
         long position_;
         long size_;
@@ -127,36 +127,7 @@ public class SSTable
             return ( size() > capacity_ );
         }
     }
-  
-    /**
-     * This class is a simple container for the file name
-     * and the offset within the file we are interested in.
-     * 
-     * @author alakshman
-     *
-     */
-    private static class FilePositionInfo 
-    {
-        private String file_;
-        private long position_;
-        
-        FilePositionInfo(String file, long position)
-        {
-            file_ = file;
-            position_ = position;
-        }
-        
-        String file()
-        {
-            return file_;
-        }
-        
-        long position()
-        {
-            return position_;
-        }
-    }
-    
+
     /**
      * This is a simple container for the index Key and its corresponding position
      * in the data file. Binary search is performed on a list of these objects
@@ -164,98 +135,28 @@ public class SSTable
     */
     public static class KeyPositionInfo implements Comparable<KeyPositionInfo>
     {
-        private String key_;
-        private long position_;
+        public final String key;
+        public final long position;
 
         public KeyPositionInfo(String key)
         {
-            key_ = key;
+            this(key, 0);
         }
 
         public KeyPositionInfo(String key, long position)
         {
-            this(key);
-            position_ = position;
-        }
-
-        public String key()
-        {
-            return key_;
-        }
-
-        public long position()
-        {
-            return position_;
+            this.key = key;
+            this.position = position;
         }
 
         public int compareTo(KeyPositionInfo kPosInfo)
         {
-            return key_.compareTo(kPosInfo.key_);
+            return key.compareTo(kPosInfo.key);
         }
 
         public String toString()
         {
-        	return key_ + ":" + position_;
-        }
-    }
-    
-    /**
-     * Abstraction that maintains the information
-     * about the position of the first block index
-     * after the start offset, the position of the 
-     * first key after the block index, position of
-     * the block index before end offset and the position
-     * of the subsequent key.
-     * 
-     * @author alakshman
-     *
-     */
-    private static class PunchInfo 
-    {
-        /* Position of first block index after start offset */
-        private long preBlockIndexPosition_ = -1L;
-        /* Position of first key after above block index */
-        private long preSubsequentKeyPosition_ = -1L;        
-        /* Position of first block index after end offset */
-        private long postBlockIndexPosition_ = -1L;
-        /* Position of first key in the block containing end offset */
-        private long postSubsequentKeyPosition_ = -1L;
-        
-        PunchInfo(long preBlockIndexPosition, long preSubsequentKeyPosition, long postBlockIndexPosition, long postSubsequentKeyPosition)
-        {
-            preBlockIndexPosition_ = preBlockIndexPosition;
-            preSubsequentKeyPosition_ = preSubsequentKeyPosition; 
-            postBlockIndexPosition_ = postBlockIndexPosition;
-            postSubsequentKeyPosition_ = postSubsequentKeyPosition;
-        }
-        
-        
-        long getPreBlockIndexPosition()
-        {
-            return preBlockIndexPosition_;
-        }
-        
-        long getPreSubsequentKeyPosition()
-        {
-            return preSubsequentKeyPosition_;
-        }
-        
-        long getPostBlockIndexPosition()
-        {
-            return postBlockIndexPosition_;
-        }
-        
-        long getPostSubsequentKeyPosition()
-        {
-            return postSubsequentKeyPosition_;
-        }
-        
-        boolean isValid()
-        {
-            if ( preBlockIndexPosition_ == -1L || postBlockIndexPosition_ == -1L )
-                return false;
-            else
-                return true;
+        	return key + ":" + position;
         }
     }
     
@@ -304,19 +205,17 @@ public class SSTable
     		List<KeyPositionInfo> index = indexMetadataMap_.get(dataFile);
     		if (index != null )
     		{
-    			int indexKeyCount = index.size();
-    			count = count + (indexKeyCount+1) * indexInterval_ ;
-    	        logger_.debug("index size for bloom filter calc for file  : " + dataFile + "   : " + count);
+                count += index.size() + 1;
     		}
     	}
 
-    	return count;
+    	return count * indexInterval_;
     }
 
     /**
      * Get all indexed keys in the SSTable.
     */
-    public static List<String> getIndexedKeys()
+    public static List<String> getSortedKeys()
     {
         Set<String> indexFiles = indexMetadataMap_.keySet();
         List<KeyPositionInfo> keyPositionInfos = new ArrayList<KeyPositionInfo>();
@@ -329,7 +228,7 @@ public class SSTable
         List<String> indexedKeys = new ArrayList<String>();
         for ( KeyPositionInfo keyPositionInfo : keyPositionInfos )
         {
-            indexedKeys.add(keyPositionInfo.key_);
+            indexedKeys.add(keyPositionInfo.key);
         }
 
         Collections.sort(indexedKeys);
@@ -403,133 +302,6 @@ public class SSTable
         }
         return position;
     }
-    
-    /**
-     * Given a file and an offset within the file this method will 
-     * return the position of a key immediately after the closest
-     * block index after the offset in the file
-     * @param file file of interest.
-     * @param offset within the file.
-     * @return punch info for region. 
-     * offset.
-     * @throws IOException
-     */
-    private static PunchInfo getPunchInfoForRegion(String file, long startOffset, long endOffset) throws IOException
-    {                
-        DataOutputBuffer bufOut = new DataOutputBuffer();
-        DataInputBuffer bufIn = new DataInputBuffer();
-        IFileReader dataReader = SequenceFile.bufferedReader(file, 1024*1024);
-        dataReader.seek(startOffset);
-        
-        /* these are the results that are published as part of PunchInfo */
-        long preBlockIndexPosition = -1L;
-        long preSubsequentKeyPosition = -1L;
-        long postBlockIndexPosition = -1L;
-        long postSubsequentKeyPosition = -1L;
-        
-        boolean isNewBlock = false;
-        long firstPostBlockKeyPosition = -1L;
-        long currentPosition = startOffset;        
-        while ( currentPosition <= endOffset )
-        {                
-            bufOut.reset();         
-            currentPosition = dataReader.getCurrentPosition();
-            dataReader.next(bufOut);            
-            bufIn.reset(bufOut.getData(), bufOut.getLength());
-            /* Key just read */
-            String key = bufIn.readUTF();                
-            if ( key.equals(SSTable.blockIndexKey_) )
-            {
-                /* record the first position after the start offset */
-                if ( preBlockIndexPosition == -1L )
-                    preBlockIndexPosition = currentPosition;
-                postBlockIndexPosition = currentPosition; 
-                isNewBlock = true;
-            }
-            else if ( key.equals(SequenceFile.marker_) )
-            {
-                break;
-            }   
-            else
-            {
-                /* record the position of the first key after the first block index after the start offset */
-                if ( preBlockIndexPosition > 0L && preSubsequentKeyPosition == -1L )
-                {
-                    preSubsequentKeyPosition = currentPosition;
-                }
-                /* we just got out of a block so record the position of the first key */ 
-                if ( isNewBlock )
-                {
-                    firstPostBlockKeyPosition = currentPosition;
-                    isNewBlock = false;
-                }
-            }            
-        }
-           
-        postSubsequentKeyPosition = firstPostBlockKeyPosition;
-        return new SSTable.PunchInfo(preBlockIndexPosition, preSubsequentKeyPosition, postBlockIndexPosition, postSubsequentKeyPosition);
-    }
-    
-    /**
-     * Fix the block indicies in the region beyond the area of 
-     * the file which needs to be expunged.
-     * @param file in which a hole needs to be punched
-     * @param offset starting point for block index fix up
-     * @param delta amount that needs to deleted.
-     * @return map from key to new position to fix up the index file.
-     * @throws IOException
-     */
-    private static void doBlockFixUp(SSTable.PunchInfo punchInfo, String file) throws IOException
-    {                           
-        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-        /* seek to the last block index in the region being punched. */ 
-        raf.seek(punchInfo.getPostBlockIndexPosition());
-        
-        /* read the block index key */
-        String key = raf.readUTF();
-        if ( key.equals(SSTable.blockIndexKey_) )
-        {                                
-            /* read the size of the block index */
-            raf.readInt();             
-            /* read the number of keys in the block index */
-            int keys = raf.readInt();
-            /* fix the blocks over here */
-            for ( int i = 0; i < keys; ++i )
-            {
-                String keyInBlock = raf.readUTF();
-                /* read the offset of key within the block */
-                raf.readLong();
-                /* read the size of key data */
-                raf.readLong();                    
-            }
-            /*
-             * We are now at a point where we have a pointer
-             * to the previous block index in the SSTable. This
-             * needs to be fixed to point to the location indicated
-             * in the PunchInfo. 
-            */
-            raf.writeLong( punchInfo.getPostBlockIndexPosition() - punchInfo.getPreBlockIndexPosition() );
-        }        
-    }
-    
-    /**
-     * Fix up the index file with the new pointers after the hole has been punched.
-     * @param file in which the hole was punched.
-     * @param keyToBlockIndexPtr key to new position pointer in the data file.
-     * @throws IOException
-     */
-    private static void doIndexFixUp(String file, long startOffset, long endOffset) throws IOException
-    {                        
-        List<KeyPositionInfo> keyPositionInfos = indexMetadataMap_.get(file);
-        /* remove the entries in the range passed in. */
-        Iterator<KeyPositionInfo> it = keyPositionInfos.iterator();
-        while ( it.hasNext() )
-        {
-            KeyPositionInfo keyPositionInfo = it.next();
-            if ( keyPositionInfo.position_ >= startOffset && keyPositionInfo.position_ <= endOffset )
-                it.remove();
-        }
-    }
 
     private String dataFile_;    
     private IFileWriter dataWriter_;
@@ -547,7 +319,16 @@ public class SSTable
     public SSTable(String dataFileName) throws FileNotFoundException, IOException
     {        
         dataFile_ = dataFileName;
-        init();
+        // prevent multiple threads from loading the same index files multiple times
+        synchronized( indexLoadLock_ )
+        {
+            if ( indexMetadataMap_.get(dataFile_) == null )
+            {
+                long start = System.currentTimeMillis();
+                loadIndexFile();
+                logger_.debug("INDEX LOAD TIME: " + (System.currentTimeMillis() - start) + " ms.");
+            }
+        }
     }
 
     /*
@@ -557,18 +338,13 @@ public class SSTable
     public SSTable(String directory, String filename) throws IOException
     {        
         dataFile_ = directory + System.getProperty("file.separator") + filename + "-Data.db";
-        initWriters();
-    }
-
-    private void initWriters() throws IOException
-    {        
         dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 32*1024*1024);
         // dataWriter_ = SequenceFile.checksumWriter(dataFile_);
         /* Write the block index first. This is an empty one */
         dataWriter_.append(SSTable.blockIndexKey_, new byte[0]);
-        SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition(); 
+        SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition();
     }
-    
+
     private void loadBloomFilter(IFileReader indexReader, long size) throws IOException
     {        
         /* read the position of the bloom filter */
@@ -601,7 +377,7 @@ public class SSTable
     }
     
 
-    private void loadIndexFile() throws FileNotFoundException, IOException
+    private void loadIndexFile() throws IOException
     {
         IFileReader indexReader = SequenceFile.reader(dataFile_);
         File file = new File(dataFile_);
@@ -681,24 +457,6 @@ public class SSTable
         finally
         {
             indexReader.close();
-        }
-    }
-
-    private void init() throws FileNotFoundException, IOException
-    {        
-        /*
-         * this is to prevent multiple threads from
-         * loading the same index files multiple times
-         * into memory.
-        */
-        synchronized( indexLoadLock_ )
-        {
-            if ( indexMetadataMap_.get(dataFile_) == null )
-            {
-                long start = System.currentTimeMillis();
-                loadIndexFile();
-                logger_.debug("INDEX LOAD TIME: " + (System.currentTimeMillis() - start) + " ms.");
-            }
         }
     }
 
@@ -857,10 +615,10 @@ public class SSTable
                  * This means key is not present at all. Hence
                  * a scan is in order.
                 */
-                start = (index == 0) ? 0 : indexInfo.get(index - 1).position();
+                start = (index == 0) ? 0 : indexInfo.get(index - 1).position;
                 if ( index < size )
                 {
-                    end = indexInfo.get(index).position();
+                    end = indexInfo.get(index).position;
                 }
                 else
                 {
@@ -876,7 +634,7 @@ public class SSTable
                  * like to have a retreive(key, fromPosition) but for now
                  * we use scan(start, start + 1) - a hack.
                 */
-                start = indexInfo.get(index).position();                
+                start = indexInfo.get(index).position;
                 end = start;
             }
         }
@@ -997,46 +755,6 @@ public class SSTable
             logger_.warn(LogUtil.throwableToString(ex));
         }
         return bufIn;
-    }
-    
-    /*
-     * Given a key we are interested in this method gets the
-     * closest index before the key on disk.
-     *
-     *  param @ key - key we are interested in.
-     *  return position of the closest index before the key
-     *  on disk or -1 if this key is not on disk.
-    */
-    private long getClosestIndexPositionToKeyOnDisk(String key)
-    {
-        long position = -1L;
-        List<KeyPositionInfo> indexInfo = indexMetadataMap_.get(dataFile_);
-        int size = indexInfo.size();
-        int index = Collections.binarySearch(indexInfo, new KeyPositionInfo(key));
-        if ( index < 0 )
-        {
-            /*
-             * We are here which means that the requested
-             * key is not an index.
-            */
-            index = (++index)*(-1);
-            /* this means key is not present at all */
-            if ( index >= size )
-                return position;
-            /* a scan is in order. */
-            position = (index == 0) ? 0 : indexInfo.get(index - 1).position();
-        }
-        else
-        {
-            /*
-             * If we are here that means the key is in the index file
-             * and we can retrieve it w/o a scan. In reality we would
-             * like to have a retreive(key, fromPosition) but for now
-             * we use scan(start, start + 1) - a hack.
-            */
-            position = indexInfo.get(index).position();
-        }
-        return position;
     }
 
     public void close() throws IOException

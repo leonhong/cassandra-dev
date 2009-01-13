@@ -62,9 +62,9 @@ public class IndexHelper
 	        for( ColumnPositionInfo colPosInfo : columnIndexList )
 	        {
 	        	/* write the column name */
-	            dos.writeUTF(colPosInfo.key());
+                dos.writeUTF(colPosInfo.key);
 	            /* write the relative offset */
-	            dos.writeInt((int)colPosInfo.position());
+                dos.writeInt((int) colPosInfo.position);
 	            /* write the number of columns in this bucket */
 	            dos.writeInt((int)colPosInfo.numColumns());
 	        }
@@ -228,11 +228,11 @@ public class IndexHelper
         }
 
         /* calculate the starting offset from which we have to read */
-        start = (index == 0) ? 0 : columnIndexList.get(index - 1).position();
+        start = (index == 0) ? 0 : columnIndexList.get(index - 1).position;
 
         if( index < size )
         {
-        	end = columnIndexList.get(index).position();
+            end = columnIndexList.get(index).position;
             numColumns = columnIndexList.get(index).numColumns();
         }
         else

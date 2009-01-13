@@ -26,7 +26,6 @@ import java.util.List;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.io.IndexHelper;
-import com.facebook.infrastructure.io.SSTable.KeyPositionInfo;
 import com.facebook.infrastructure.utils.FBUtilities;
 
 /**
@@ -81,7 +80,7 @@ public class ColumnIndexer
 	        		 * as UTF-8 encoded, so when we calculate the length, it should be
 	            	 * converted to UTF-8.
 	            	 */
-	        		indexSizeInBytes += FBUtilities.getUTF8Length(columnPositionInfo.key()) + IColumn.UtfPrefix_ + 4 + 4;
+                    indexSizeInBytes += FBUtilities.getUTF8Length(columnPositionInfo.key) + IColumn.UtfPrefix_ + 4 + 4;
 	        		sizeSummarized = position;
 	        		numColumns = 0;
 	        	}
