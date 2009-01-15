@@ -18,9 +18,7 @@
 
 package com.facebook.infrastructure.io;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.security.MessageDigest;
 import java.util.List;
 
 /**
@@ -93,7 +91,7 @@ public interface IFileReader
      * @throws IOException
      * @return the number of bytes read.
     */
-    public long next(String key, DataOutputBuffer bufOut, Coordinate section) throws IOException;
+    public long next(String key, DataOutputBuffer bufOut, SSTable.Range section) throws IOException;
 
     /**
      * This method dumps the next key/value into the DataOuputStream
@@ -106,7 +104,7 @@ public interface IFileReader
      * @throws IOException
      * @return number of bytes that were read.
     */
-    public long next(String key, DataOutputBuffer bufOut, String column, Coordinate section) throws IOException;
+    public long next(String key, DataOutputBuffer bufOut, String column, SSTable.Range section) throws IOException;
 
     /**
      * This method dumps the next key/value into the DataOuputStream
@@ -123,7 +121,7 @@ public interface IFileReader
      * @return number of bytes read.
      *
     */
-    public long next(String key, DataOutputBuffer bufOut, String columnFamilyName, List<String> columnNames, Coordinate section) throws IOException;
+    public long next(String key, DataOutputBuffer bufOut, String columnFamilyName, List<String> columnNames, SSTable.Range section) throws IOException;
 
     /**
      * Close the file after reading.

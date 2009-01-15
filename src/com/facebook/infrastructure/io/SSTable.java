@@ -333,22 +333,8 @@ public class SSTable
         }
     }
 
-    /*
-     * This ctor is used for writing data into the SSTable. Use this
-     * version to write to the SSTable.
-    */
-    public SSTable(String directory, String filename) throws IOException
-    {        
-        dataFile_ = directory + System.getProperty("file.separator") + filename + "-Data.db";
-        dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 32*1024*1024);
-        // dataWriter_ = SequenceFile.checksumWriter(dataFile_);
-        /* Write the block index first. This is an empty one */
-        dataWriter_.append(SSTable.blockIndexKey_, new byte[0]);
-        SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition();
-    }
-
     private static void loadBloomFilter(IFileReader reader, long size) throws IOException
-    {        
+    {
         /* read the position of the bloom filter */
         reader.seek(size - 8);
         byte[] bytes = new byte[8];
@@ -392,11 +378,11 @@ public class SSTable
         /* the beginning of the last block index */
         long currentPosition = indexReader.getCurrentPosition();
         indexReader.readDirect(bytes);
-        long lastBlockIndexPosition = BasicUtilities.byteArrayToLong(bytes);  
+        long lastBlockIndexPosition = BasicUtilities.byteArrayToLong(bytes);
         List<KeyPositionInfo> keyPositionInfos = new ArrayList<KeyPositionInfo>();
         indexMetadataMap_.put(filename, keyPositionInfos);
         DataOutputBuffer bufOut = new DataOutputBuffer();
-        DataInputBuffer bufIn = new DataInputBuffer();        
+        DataInputBuffer bufIn = new DataInputBuffer();
         /* Read all block indexes to maintain an index in memory */
         try
         {
@@ -417,7 +403,7 @@ public class SSTable
                     if ( !blockIndexKey.equals(SSTable.blockIndexKey_) )
                         throw new IOException("Unexpected position to be reading the block index from.");
                     /* read the size of the block index */
-                    int sizeOfBlockIndex = bufIn.readInt();                    
+                    int sizeOfBlockIndex = bufIn.readInt();
                     /* Number of keys in the block. */
                     int keys = bufIn.readInt();
                     String largestKeyInBlock = null;
@@ -445,7 +431,7 @@ public class SSTable
                             bufIn.readLong();
                         }
                     }
-                    lastBlockIndexPosition = bufIn.readLong();  
+                    lastBlockIndexPosition = bufIn.readLong();
                     nextPosition = currentPosition - lastBlockIndexPosition;
                 }
             }
@@ -461,17 +447,32 @@ public class SSTable
         }
     }
 
-    private String getFile(String name) throws IOException
-    {
-        File file = new File(name);
-        if ( file.exists() )
-            return file.getAbsolutePath();
-        throw new IOException("File " + name + " was not found on disk.");
+  //
+//
+// BEGIN ACTUAL SSTABLE CODE
+//
+ //
+
+    /*
+     * This ctor is used for writing data into the SSTable. Use this
+     * version to write to the SSTable.
+    */
+    public SSTable(String directory, String filename) throws IOException
+    {        
+        dataFile_ = directory + System.getProperty("file.separator") + filename + "-Data.db";
+        dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 32*1024*1024);
+        // dataWriter_ = SequenceFile.checksumWriter(dataFile_);
+        /* Write the block index first. This is an empty one */
+        dataWriter_.append(SSTable.blockIndexKey_, new byte[0]);
+        SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition();
     }
 
     public String getDataFileLocation() throws IOException
     {
-        return getFile(dataFile_);
+        File file = new File(dataFile_);
+        if ( file.exists() )
+            return file.getAbsolutePath();
+        throw new IOException("File " + dataFile_ + " was not found on disk.");
     }
 
     public long lastModified()
@@ -490,9 +491,9 @@ public class SSTable
         IFileReader dataReader = SequenceFile.reader(dataFile_); 
         try
         {
-            Coordinate fileCoordinate = getCoordinates(key, dataReader);
+            Range fileCoordinate = getRange(key, dataReader);
             /* Get offset of key from block Index */
-            dataReader.seek(fileCoordinate.end_);
+            dataReader.seek(fileCoordinate.end);
             BlockMetadata blockMetadata = dataReader.getBlockMetadata(key);
             if ( blockMetadata.position_ != -1L )
             {
@@ -596,7 +597,7 @@ public class SSTable
         afterAppend(key, currentPosition, value.length );
     }
 
-    private Coordinate getCoordinates(String key, IFileReader dataReader) throws IOException
+    private Range getRange(String key, IFileReader dataReader) throws IOException
     {
     	List<KeyPositionInfo> indexInfo = indexMetadataMap_.get(dataFile_);
     	int size = (indexInfo == null) ? 0 : indexInfo.size();
@@ -604,22 +605,15 @@ public class SSTable
     	long end = dataReader.getEOF();
         if ( size > 0 )
         {
-            int index = Collections.binarySearch(indexInfo, new KeyPositionInfo(key));
+            final int index = Collections.binarySearch(indexInfo, new KeyPositionInfo(key));
             if ( index < 0 )
             {
-                /*
-                 * We are here which means that the requested
-                 * key is not an index.
-                */
-                index = (++index)*(-1);
-                /*
-                 * This means key is not present at all. Hence
-                 * a scan is in order.
-                */
-                start = (index == 0) ? 0 : indexInfo.get(index - 1).position;
-                if ( index < size )
+                // key is not present at all; scan is required
+                int insertIndex = (index + 1) * -1;
+                start = (insertIndex == 0) ? 0 : indexInfo.get(insertIndex - 1).position;
+                if ( insertIndex < size )
                 {
-                    end = indexInfo.get(index).position;
+                    end = indexInfo.get(insertIndex).position;
                 }
                 else
                 {
@@ -629,12 +623,11 @@ public class SSTable
             }
             else
             {
-                /*
-                 * If we are here that means the key is in the index file
-                 * and we can retrieve it w/o a scan. In reality we would
+                /* If we are here that means the key is in the index file
+                 * and we can retrieve it w/o a scan.
+                 * TODO we would
                  * like to have a retreive(key, fromPosition) but for now
-                 * we use scan(start, start + 1) - a hack.
-                */
+                 * we use scan(start, start + 1) - a hack. */
                 start = indexInfo.get(index).position;
                 end = start;
             }
@@ -651,7 +644,7 @@ public class SSTable
             end = dataReader.getEOF();
         }  
         
-        return new Coordinate(start, end);
+        return new Range(start, end);
     }
     
     public DataInputBuffer next(String key, String cf, List<String> cNames) throws IOException
@@ -660,7 +653,7 @@ public class SSTable
         IFileReader dataReader = SequenceFile.reader(dataFile_);
         try
         {
-        	Coordinate fileCoordinate = getCoordinates(key, dataReader);
+        	Range fileCoordinate = getRange(key, dataReader);
 
             /*
              * we have the position we have to read from in order to get the
@@ -684,7 +677,7 @@ public class SSTable
         
         try
         {
-        	Coordinate fileCoordinate = getCoordinates(key, dataReader);
+        	Range fileCoordinate = getRange(key, dataReader);
             /*
              * we have the position we have to read from in order to get the
              * column family, get the column family and column(s) needed.
@@ -712,7 +705,7 @@ public class SSTable
     /*
      * Get the data for the key from the position passed in. 
     */
-    private DataInputBuffer getData(IFileReader dataReader, String key, String column, Coordinate section) throws IOException
+    private DataInputBuffer getData(IFileReader dataReader, String key, String column, Range section) throws IOException
     {
         DataOutputBuffer bufOut = new DataOutputBuffer();
         DataInputBuffer bufIn = new DataInputBuffer();
@@ -735,7 +728,7 @@ public class SSTable
         return bufIn;
     }
     
-    private DataInputBuffer getData(IFileReader dataReader, String key, String cf, List<String> columns, Coordinate section) throws IOException
+    private DataInputBuffer getData(IFileReader dataReader, String key, String cf, List<String> columns, Range section) throws IOException
     {
         DataOutputBuffer bufOut = new DataOutputBuffer();
         DataInputBuffer bufIn = new DataInputBuffer();
@@ -820,4 +813,18 @@ public class SSTable
         }
     }
 
+    /**
+     * Section of a file that needs to be scanned
+     */
+    static class Range
+    {
+        long start;
+        long end;
+
+        Range(long start, long end)
+        {
+            this.start = start;
+            this.end = end;
+        }
+    }
 }

@@ -21,16 +21,13 @@ package com.facebook.infrastructure.io;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.zip.Adler32;
 
 import org.apache.log4j.Logger;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
@@ -711,10 +708,10 @@ public class SequenceFile
          * @param section indicates the location of the block index.
          * @throws IOException
          */
-        private void seekTo(String key, Coordinate section) throws IOException
+        private void seekTo(String key, SSTable.Range section) throws IOException
         {
             /* Goto the Block Index */
-            seek(section.end_);
+            seek(section.end);
             long position = getPositionFromBlockIndex(key);
             seek(position);                   
         }
@@ -730,7 +727,7 @@ public class SequenceFile
          * @param section region of the file that needs to be read
          * @return total number of bytes read/considered
         */
-        public long next(String key, DataOutputBuffer bufOut, String cf, Coordinate section) throws IOException
+        public long next(String key, DataOutputBuffer bufOut, String cf, SSTable.Range section) throws IOException
         {
     		String[] values = RowMutation.getColumnAndColumnFamily(cf);
     		String columnFamilyName = values[0];    		
@@ -865,7 +862,7 @@ public class SequenceFile
          * @return total number of bytes read/considered
          *
         */
-        public long next(String key, DataOutputBuffer bufOut, String cf, List<String> columnNames, Coordinate section) throws IOException
+        public long next(String key, DataOutputBuffer bufOut, String cf, List<String> columnNames, SSTable.Range section) throws IOException
         {
         	String[] values = RowMutation.getColumnAndColumnFamily(cf);
     		String columnFamilyName = values[0];
@@ -1052,7 +1049,7 @@ public class SequenceFile
          * @param section region of the file that needs to be read
          * @return total number of bytes read/considered
          */
-        public long next(String key, DataOutputBuffer bufOut, Coordinate section) throws IOException
+        public long next(String key, DataOutputBuffer bufOut, SSTable.Range section) throws IOException
         {
             long bytesRead = -1L;
             if ( isEOF() )
