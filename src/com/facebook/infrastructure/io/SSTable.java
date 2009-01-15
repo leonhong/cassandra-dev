@@ -22,6 +22,7 @@ import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.utils.BasicUtilities;
 import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.db.RowMutation;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -327,7 +328,7 @@ public class SSTable
             if ( indexMetadataMap_.get(filename) == null )
             {
                 long start = System.currentTimeMillis();
-                loadIndexFile(filename);
+                loadIndex(filename);
                 logger_.debug("INDEX LOAD TIME: " + (System.currentTimeMillis() - start) + " ms.");
             }
         }
@@ -364,7 +365,7 @@ public class SSTable
         }
     }
 
-    private static void loadIndexFile(String filename) throws IOException
+    private static void loadIndex(String filename) throws IOException
     {
         IFileReader indexReader = SequenceFile.reader(filename);
         File file = new File(filename);
@@ -447,6 +448,22 @@ public class SSTable
         }
     }
 
+
+    /**
+     * Section of a file that needs to be scanned
+     */
+    static class Range
+    {
+        long start;
+        long end;
+
+        Range(long start, long end)
+        {
+            this.start = start;
+            this.end = end;
+        }
+    }
+
   //
 //
 // BEGIN ACTUAL SSTABLE CODE
@@ -508,45 +525,16 @@ public class SSTable
                     dataReader.seek(blockMetadata.position_);
                     DataOutputBuffer bufOut = new DataOutputBuffer();
                     dataReader.next(bufOut);
-                    bufOut.reset();
                     logger_.debug("Finished the touch of the key to pull it into buffer cache.");
                 }
             }
         }
         finally
         {
-            if ( dataReader != null )
-                dataReader.close();
+            dataReader.close();
         }
     }
 
-    private long beforeAppend(String key) throws IOException
-    {
-    	if(key == null )
-            throw new IOException("Keys must not be null.");
-        if ( lastWrittenKey_ != null && key.compareTo(lastWrittenKey_) <= 0 )
-        {
-            logger_.info("Last written key : " + lastWrittenKey_);
-            logger_.info("Current key : " + key);
-            logger_.info("Writing into file " + dataFile_);
-            throw new IOException("Keys must be written in ascending order.");
-        }
-        long currentPosition = (lastWrittenKey_ == null) ? SSTable.positionAfterFirstBlockIndex_ : dataWriter_.getCurrentPosition();
-        return currentPosition;
-    }
-
-    private void afterAppend(String key, long position, long size) throws IOException
-    {
-        ++indexKeysWritten_;
-        lastWrittenKey_ = key;
-        blockIndex_.put(key, new BlockMetadata(position, size));
-        if ( indexKeysWritten_ == indexInterval_ )
-        {
-            dumpBlockIndex();        	
-            indexKeysWritten_ = 0;
-        }                
-    }
-    
     private void dumpBlockIndex() throws IOException
     {
         DataOutputBuffer bufOut = new DataOutputBuffer();
@@ -585,16 +573,30 @@ public class SSTable
 
     public void append(String key, DataOutputBuffer buffer) throws IOException
     {
-        long currentPosition = beforeAppend(key);
-        dataWriter_.append(key, buffer);
-        afterAppend(key, currentPosition, buffer.getLength());
+        append(key, buffer.getData());
     }
 
     public void append(String key, byte[] value) throws IOException
     {
-        long currentPosition = beforeAppend(key);
+        assert key != null;
+        if ( lastWrittenKey_ != null && key.compareTo(lastWrittenKey_) <= 0 )
+        {
+            logger_.info("Last written key : " + lastWrittenKey_);
+            logger_.info("Current key : " + key);
+            logger_.info("Writing into file " + dataFile_);
+            throw new IOException("Keys must be written in ascending order.");
+        }
+        long currentPosition = (lastWrittenKey_ == null) ? SSTable.positionAfterFirstBlockIndex_ : dataWriter_.getCurrentPosition();
+
         dataWriter_.append(key, value);
-        afterAppend(key, currentPosition, value.length );
+        ++indexKeysWritten_;
+        lastWrittenKey_ = key;
+        blockIndex_.put(key, new BlockMetadata(currentPosition, (long) value.length));
+        if ( indexKeysWritten_ == indexInterval_ )
+        {
+            dumpBlockIndex();
+            indexKeysWritten_ = 0;
+        }
     }
 
     private Range getRange(String key, IFileReader dataReader) throws IOException
@@ -647,108 +649,49 @@ public class SSTable
         return new Range(start, end);
     }
     
-    public DataInputBuffer next(String key, String cf, List<String> cNames) throws IOException
+    public DataInputBuffer next(String key, String columnFamilyName, List<String> cNames) throws IOException
     {
-    	DataInputBuffer bufIn = null;
+        assert columnFamilyName.split(":").length == 1;
         IFileReader dataReader = SequenceFile.reader(dataFile_);
         try
         {
-        	Range fileCoordinate = getRange(key, dataReader);
+        	Range range = getRange(key, dataReader);
+            /*
+             * we have the position we have to read from in order to get the
+             * column family, get the column family and column(s) needed.
+            */
+            DataOutputBuffer bufOut = new DataOutputBuffer();
+            DataInputBuffer bufIn = new DataInputBuffer();
 
-            /*
-             * we have the position we have to read from in order to get the
-             * column family, get the column family and column(s) needed.
-            */        	
-            bufIn = getData(dataReader, key, cf, cNames, fileCoordinate);
+            try
+            {
+                dataReader.next(key, bufOut, columnFamilyName, cNames, range);            
+                if ( bufOut.getLength() > 0 )
+                {
+                    bufIn.reset(bufOut.getData(), bufOut.getLength());
+                    /* read the key even though we do not use it */
+                    bufIn.readUTF();
+                    bufIn.readInt();
+                }
+            }
+            catch( IOException ex )
+            {
+                logger_.warn(LogUtil.throwableToString(ex));
+            }
+            return bufIn;
         }
         finally
         {
-            if ( dataReader != null )
-                dataReader.close();
+            dataReader.close();
         }
-        return bufIn;
     }
     
-    public DataInputBuffer next(String key, String columnName) throws IOException
+    public DataInputBuffer next(String key, String cf) throws IOException
     {
-        DataInputBuffer bufIn = null;
-        IFileReader dataReader = SequenceFile.reader(dataFile_);
-        //IFileReader dataReader = SequenceFile.checksumReader(dataFile_);
-        
-        try
-        {
-        	Range fileCoordinate = getRange(key, dataReader);
-            /*
-             * we have the position we have to read from in order to get the
-             * column family, get the column family and column(s) needed.
-            */            
-            bufIn = getData(dataReader, key, columnName, fileCoordinate);
-        }
-        finally
-        {
-            if ( dataReader != null )
-                dataReader.close();
-        }
-        return bufIn;
-    }
-    
-    long getSeekPosition(String key, long start)
-    {
-        Long seekStart = touchCache_.get(dataFile_ + ":" + key);
-        if( seekStart != null)
-        {
-            return seekStart;
-        }
-        return start;
-    }
-        
-    /*
-     * Get the data for the key from the position passed in. 
-    */
-    private DataInputBuffer getData(IFileReader dataReader, String key, String column, Range section) throws IOException
-    {
-        DataOutputBuffer bufOut = new DataOutputBuffer();
-        DataInputBuffer bufIn = new DataInputBuffer();
-                
-        try
-        {
-            dataReader.next(key, bufOut, column, section);
-            if ( bufOut.getLength() > 0 )
-            {                              
-                bufIn.reset(bufOut.getData(), bufOut.getLength());            
-                /* read the key even though we do not use it */
-                bufIn.readUTF();
-                bufIn.readInt();            
-            }
-        }
-        catch ( IOException ex )
-        {
-            logger_.warn(LogUtil.throwableToString(ex));
-        }
-        return bufIn;
-    }
-    
-    private DataInputBuffer getData(IFileReader dataReader, String key, String cf, List<String> columns, Range section) throws IOException
-    {
-        DataOutputBuffer bufOut = new DataOutputBuffer();
-        DataInputBuffer bufIn = new DataInputBuffer();
-                  
-        try
-        {
-            dataReader.next(key, bufOut, cf, columns, section);            
-            if ( bufOut.getLength() > 0 )
-            {                     
-                bufIn.reset(bufOut.getData(), bufOut.getLength());             
-                /* read the key even though we do not use it */
-                bufIn.readUTF();
-                bufIn.readInt();            
-            }
-        }
-        catch( IOException ex )
-        {
-            logger_.warn(LogUtil.throwableToString(ex));
-        }
-        return bufIn;
+ 		String[] values = RowMutation.getColumnAndColumnFamily(cf);
+   		String columnFamilyName = values[0];
+        List<String> cnNames = (values.length == 1) ? null : Arrays.asList(new String[] { values[1] });
+        return next(key, columnFamilyName, cnNames);
     }
 
     public void close(BloomFilter bf) throws IOException
@@ -798,33 +741,8 @@ public class SSTable
     
     public void closeRename(BloomFilter bf, List<String> files) throws IOException
     {
-        close( bf);
-        String tmpDataFile = dataFile_;
-        String dataFileName = dataFile_.replace("-" + temporaryFile_,"");
-        File dataFile = new File(dataFile_);
-        dataFile.renameTo(new File(dataFileName));
-        dataFile_ = dataFileName;
-        /* Now repair the in memory index associated with the old name */
-        List<KeyPositionInfo> keyPositionInfos = SSTable.indexMetadataMap_.remove(tmpDataFile);                         
-        SSTable.indexMetadataMap_.put(dataFile_, keyPositionInfos);
-        if ( files != null )
-        {            
-            files.add(dataFile_);
-        }
+        closeRename(bf);
+        files.add(dataFile_);
     }
 
-    /**
-     * Section of a file that needs to be scanned
-     */
-    static class Range
-    {
-        long start;
-        long end;
-
-        Range(long start, long end)
-        {
-            this.start = start;
-            this.end = end;
-        }
-    }
 }

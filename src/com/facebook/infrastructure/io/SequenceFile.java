@@ -715,140 +715,6 @@ public class SequenceFile
             long position = getPositionFromBlockIndex(key);
             seek(position);                   
         }
-
-        /**
-         * This method dumps the next key/value into the DataOuputStream
-         * passed in. Always use this method to query for application
-         * specific data as it will have indexes.
-         *
-         * @param key key we are interested in.
-         * @param dos DataOutputStream that needs to be filled.
-         * @param cf the IColumn we want to read
-         * @param section region of the file that needs to be read
-         * @return total number of bytes read/considered
-        */
-        public long next(String key, DataOutputBuffer bufOut, String cf, SSTable.Range section) throws IOException
-        {
-    		String[] values = RowMutation.getColumnAndColumnFamily(cf);
-    		String columnFamilyName = values[0];    		
-    		String columnName = (values.length == 1) ? null : values[1];
-
-            long bytesRead = -1L;
-            if ( isEOF() )
-                return bytesRead;
-                                   
-            seekTo(key, section);            
-            /* note the position where the key starts */
-            long startPosition = file_.getFilePointer();
-            String keyInDisk = file_.readUTF();
-            if ( keyInDisk != null )
-            {
-                /*
-                 * If key on disk is greater than requested key
-                 * we can bail out since we exploit the property
-                 * of the SSTable format.
-                */
-                if ( keyInDisk.compareTo(key) > 0 )
-                    return bytesRead;
-
-                /*
-                 * If we found the key then we populate the buffer that
-                 * is passed in. If not then we skip over this key and
-                 * position ourselves to read the next one.
-                */
-                int dataSize = file_.readInt();
-                if ( keyInDisk.equals(key) )
-                {
-                    /* write the key into buffer */
-                    bufOut.writeUTF( keyInDisk );
-
-                    /* if there is no column indexing enabled on this column then there are no indexes for it */
-                    if(!DatabaseDescriptor.isNameIndexEnabled(columnFamilyName))
-                    {
-                    	/* write the data size */
-                    	bufOut.writeInt(dataSize);
-	                    /* write the data into buffer, except the boolean we have read */
-	                    bufOut.write(file_, dataSize);
-                    }
-                    /* if we need to read the all the columns do not read the column indexes */
-                    else if(columnName == null)
-                    {
-                    	int bytesSkipped = IndexHelper.skip(file_);
-	                    /*
-	                     * read the correct number of bytes for the column family and
-	                     * write data into buffer
-	                    */
-                    	dataSize -= bytesSkipped;
-                    	/* write the data size */
-                    	bufOut.writeInt(dataSize);
-	                    /* write the data into buffer, except the boolean we have read */
-	                    bufOut.write(file_, dataSize);
-                    }
-                    else
-                    {
-                    	/* check if we have an index */
-                        boolean hasColumnIndexes = file_.readBoolean();
-                        int totalBytesRead = 1;
-                        List<ColumnPositionInfo> columnIndexList = null;
-                        /* if we do then deserialize the index */
-                        if(hasColumnIndexes)
-                        {
-                        	columnIndexList = new ArrayList<IndexHelper.ColumnPositionInfo>();
-                        	/* read the index */
-                        	totalBytesRead += IndexHelper.deserializeIndex(file_, columnIndexList);
-                        }
-                    	dataSize -= totalBytesRead;
-
-                        /* read the column family name */
-                        String cfName = file_.readUTF();
-                        dataSize -= (utfPrefix_ + cfName.length());
-
-                        /* read if this cf is marked for delete */
-                        boolean markedForDelete = file_.readBoolean();
-                        dataSize -= 1;
-
-                        /* read the total number of columns */
-                        int totalNumCols = file_.readInt();
-                        dataSize -= 4;
-
-                        /* get the column range we have to read */
-                        IndexHelper.ColumnPositionInfo columnRange = IndexHelper.getColumnRangeFromIndex(columnName, columnIndexList, dataSize, totalNumCols);
-
-                		/* seek to the correct offset to the data, and calculate the data size */
-                        file_.skipBytes(columnRange.start());
-                        dataSize = columnRange.end() - columnRange.start();
-
-                        /*
-                         * write the number of columns in the column family we are returning:
-                         * 	dataSize that we are reading +
-                         * 	length of column family name +
-                         * 	one booleanfor deleted or not +
-                         * 	one int for number of columns
-                        */
-                        bufOut.writeInt(dataSize + utfPrefix_+cfName.length() + 4 + 1);
-                        /* write the column family name */
-                        bufOut.writeUTF(cfName);
-                        /* write if this cf is marked for delete */
-                        bufOut.writeBoolean(markedForDelete);
-                        /* write number of columns */
-                        bufOut.writeInt(columnRange.numColumns());
-                        /* now write the columns */
-                        bufOut.write(file_, dataSize);
-                    }
-                }
-                else
-                {
-                    /* skip over data portion */
-                	file_.seek(dataSize + file_.getFilePointer());
-                }
-                
-                long endPosition = file_.getFilePointer();
-                bytesRead = endPosition - startPosition;                 
-            }
-
-            return bytesRead;
-        }
-
         /**
          * This method dumps the next key/value into the DataOuputStream
          * passed in. Always use this method to query for application
@@ -862,11 +728,8 @@ public class SequenceFile
          * @return total number of bytes read/considered
          *
         */
-        public long next(String key, DataOutputBuffer bufOut, String cf, List<String> columnNames, SSTable.Range section) throws IOException
+        public long next(String key, DataOutputBuffer bufOut, String columnFamilyName, List<String> columnNames, SSTable.Range section) throws IOException
         {
-        	String[] values = RowMutation.getColumnAndColumnFamily(cf);
-    		String columnFamilyName = values[0];
-
             long bytesRead = -1L;
             if ( isEOF() )
                 return bytesRead;
@@ -1205,32 +1068,32 @@ public class SequenceFile
     public static final short utfPrefix_ = 2;
     static final String marker_ = "Bloom-Filter";
 
-    public static IFileWriter writer(String filename) throws IOException
+    public static Writer writer(String filename) throws IOException
     {
         return new Writer(filename);
     }
 
-    public static IFileWriter bufferedWriter(String filename, int size) throws IOException
+    public static BufferWriter bufferedWriter(String filename, int size) throws IOException
     {
         return new BufferWriter(filename, size);
     }
 
-    public static IFileWriter concurrentWriter(String filename) throws IOException
+    public static ConcurrentWriter concurrentWriter(String filename) throws IOException
     {
         return new ConcurrentWriter(filename);
     }
     
-    public static IFileWriter fastWriter(String filename, int size) throws IOException
+    public static FastConcurrentWriter fastWriter(String filename, int size) throws IOException
     {
         return new FastConcurrentWriter(filename, size);
     }
 
-    public static IFileReader reader(String filename) throws FileNotFoundException
+    public static Reader reader(String filename) throws FileNotFoundException
     {
         return new Reader(filename);
     }
 
-    public static IFileReader bufferedReader(String filename, int size) throws IOException
+    public static BufferReader bufferedReader(String filename, int size) throws IOException
     {
         return new BufferReader(filename, size);
     }
