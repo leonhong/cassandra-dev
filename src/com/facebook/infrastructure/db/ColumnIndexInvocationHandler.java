@@ -18,10 +18,10 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.io.DataOutputBuffer;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-
-import com.facebook.infrastructure.io.DataOutputBuffer;
 
 /*
  * This is the abstraction that pre-processes calls to implmentations
@@ -29,11 +29,11 @@ import com.facebook.infrastructure.io.DataOutputBuffer;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class CompactSerializerInvocationHandler<T> implements InvocationHandler
+public class ColumnIndexInvocationHandler<T> implements InvocationHandler
 {
     private ICompactSerializer2<T> serializer_;
 
-    public CompactSerializerInvocationHandler(ICompactSerializer2<T> serializer)
+    public ColumnIndexInvocationHandler(ICompactSerializer2<T> serializer)
     {
         serializer_ = serializer;
     }

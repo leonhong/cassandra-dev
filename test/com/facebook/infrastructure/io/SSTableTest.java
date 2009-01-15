@@ -30,7 +30,7 @@ public class SSTableTest extends ServerTest {
         cf = new ColumnFamily("Test", "Standard");
         cf.createColumn("C", bytes, 1);
         DataOutputBuffer bufOut = new DataOutputBuffer();
-        ColumnFamily.serializer2().serialize(cf, bufOut);
+        ColumnFamily.serializerWithIndexes().serialize(cf, bufOut);
         ssTable.append(key, bufOut);
         bf.add(key);
 
@@ -62,7 +62,7 @@ public class SSTableTest extends ServerTest {
             cf = new ColumnFamily("Test", "Standard");
             bufOut.reset();
             cf.createColumn("C", ("Avinash Lakshman is a good man: " + i).getBytes(), i);
-            ColumnFamily.serializer2().serialize(cf, bufOut);
+            ColumnFamily.serializerWithIndexes().serialize(cf, bufOut);
             ssTable.append(key, bufOut);
             bf.add(key);
         }

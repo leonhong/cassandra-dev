@@ -110,7 +110,7 @@ public class ColumnFamilyCompactor {
                             columnFamilies.clear();
                             if (columnFamily != null) {
                                 /* serialize the cf with column indexes */
-                                ColumnFamily.serializer2().serialize(columnFamily, bufOut);
+                                ColumnFamily.serializerWithIndexes().serialize(columnFamily, bufOut);
                             }
                         } else {
                             FileStruct filestruct = lfs.get(0);
@@ -300,7 +300,7 @@ public class ColumnFamilyCompactor {
                         columnFamilies.clear();
                         if (columnFamily != null) {
                             /* serialize the cf with column indexes */
-                            ColumnFamily.serializer2().serialize(columnFamily, bufOut);
+                            ColumnFamily.serializerWithIndexes().serialize(columnFamily, bufOut);
                         }
                     } else {
                         FileStruct filestruct = mergeNeeded.get(0);

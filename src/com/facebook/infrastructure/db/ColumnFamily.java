@@ -18,15 +18,13 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.utils.FBUtilities;
+import org.apache.log4j.Logger;
+
 import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.utils.FBUtilities;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -63,9 +61,9 @@ public final class ColumnFamily
      * This method returns the serializer whose methods are
      * preprocessed by a dynamic proxy.
     */
-    public static ICompactSerializer2<ColumnFamily> serializer2()
+    public static ICompactSerializer2<ColumnFamily> serializerWithIndexes()
     {
-        return (ICompactSerializer2<ColumnFamily>)Proxy.newProxyInstance( ColumnFamily.class.getClassLoader(), new Class[]{ICompactSerializer2.class}, new CompactSerializerInvocationHandler<ColumnFamily>(serializer_) );
+        return (ICompactSerializer2<ColumnFamily>)Proxy.newProxyInstance( ColumnFamily.class.getClassLoader(), new Class[]{ICompactSerializer2.class}, new ColumnIndexInvocationHandler<ColumnFamily>(serializer_) );
     }
 
     public static String getColumnType(String key)

@@ -437,7 +437,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             if ( columnFamily != null )
             {
             	/* serialize the cf with column indexes */
-            	ColumnFamily.serializer2().serialize( columnFamily, buffer );
+            	ColumnFamily.serializerWithIndexes().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(key, buffer);
                 bf.add(key);
