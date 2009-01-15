@@ -18,18 +18,17 @@
 
 package com.facebook.infrastructure.loader;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.RowMutation;
 import com.facebook.infrastructure.db.Table;
 import com.facebook.infrastructure.io.SSTable;
 import com.facebook.infrastructure.service.StorageService;
+import org.apache.log4j.Logger;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.List;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -95,11 +94,7 @@ public class PreLoad
         /* Figure out the keys in the index file to relocate the node */
         List<String> ssTables = Table.open(table).getAllSSTablesOnDisk();
         /* Load the indexes into memory */
-        for ( String df : ssTables )
-        {
-        	SSTable ssTable = new SSTable(df);
-        	ssTable.close();
-        }
+        SSTable.onStart(ssTables);
         /* We should have only one file since we just compacted. */        
         List<String> indexedKeys = SSTable.getSortedKeys();
         storageService_.relocate(indexedKeys.toArray( new String[0]) );

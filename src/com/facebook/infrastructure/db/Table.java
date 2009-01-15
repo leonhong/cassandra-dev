@@ -18,20 +18,12 @@
 
 package com.facebook.infrastructure.db;
 
-import java.util.*;
-import java.io.IOException;
-import java.io.File;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.analytics.DBAnalyticsSource;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.dht.BootstrapInitiateMessage;
 import com.facebook.infrastructure.dht.Range;
-import com.facebook.infrastructure.io.*;
+import com.facebook.infrastructure.io.DataInputBuffer;
+import com.facebook.infrastructure.io.SSTable;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.IVerbHandler;
 import com.facebook.infrastructure.net.Message;
@@ -39,7 +31,18 @@ import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.net.io.IStreamComplete;
 import com.facebook.infrastructure.net.io.StreamContextManager;
 import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.*;
+import com.facebook.infrastructure.utils.BasicUtilities;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
+import com.facebook.infrastructure.utils.FBUtilities;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -131,9 +134,8 @@ public class Table
                  * with this file. We also need to cache the file name in the SSTables
                  * list of the associated Column Family. Also merge the CBF into the
                  * sampler.
-                */                
-                SSTable ssTable = new SSTable(streamContext.getTargetFile() );
-                ssTable.close();
+                */
+                SSTable.maybeLoadIndexFile(streamContext.getTargetFile());
                 logger_.debug("Merging the counting bloom filter in the sampler ...");
                 String[] peices = FBUtilities.strip(fileName, "-");
                 Table.open(peices[0]).getColumnFamilyStore(peices[1]).addToList(streamContext.getTargetFile());                

@@ -25,7 +25,6 @@ import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
@@ -235,16 +234,11 @@ public class SSTable
         return indexedKeys;
     }
     
-    /*
-     * Intialize the index files and also cache the Bloom Filters
-     * associated with these files.
-    */
     public static void onStart(List<String> filenames) throws IOException
     {
         for ( String filename : filenames )
         {
-            SSTable ssTable = new SSTable(filename);
-            ssTable.close();
+            SSTable.maybeLoadIndexFile(filename);
         }
     }
 
@@ -316,16 +310,24 @@ public class SSTable
      * of the data file associated with this SSTable. Use this
      * ctor to read the data in this file.
     */
-    public SSTable(String dataFileName) throws FileNotFoundException, IOException
+    public SSTable(String dataFileName) throws IOException
     {        
         dataFile_ = dataFileName;
+        SSTable.maybeLoadIndexFile(dataFile_);
+    }
+
+    /*
+     * Intialize the index files and also cache the Bloom Filters
+     * associated with these files.
+    */
+    public static void maybeLoadIndexFile(String filename) throws IOException {
         // prevent multiple threads from loading the same index files multiple times
         synchronized( indexLoadLock_ )
         {
-            if ( indexMetadataMap_.get(dataFile_) == null )
+            if ( indexMetadataMap_.get(filename) == null )
             {
                 long start = System.currentTimeMillis();
-                loadIndexFile();
+                loadIndexFile(filename);
                 logger_.debug("INDEX LOAD TIME: " + (System.currentTimeMillis() - start) + " ms.");
             }
         }
@@ -345,20 +347,20 @@ public class SSTable
         SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition();
     }
 
-    private void loadBloomFilter(IFileReader indexReader, long size) throws IOException
+    private static void loadBloomFilter(IFileReader reader, long size) throws IOException
     {        
         /* read the position of the bloom filter */
-        indexReader.seek(size - 8);
+        reader.seek(size - 8);
         byte[] bytes = new byte[8];
-        long currentPosition = indexReader.getCurrentPosition();
-        indexReader.readDirect(bytes);
+        long currentPosition = reader.getCurrentPosition();
+        reader.readDirect(bytes);
         long position = BasicUtilities.byteArrayToLong(bytes);
         /* seek to the position of the bloom filter */
-        indexReader.seek(currentPosition - position);
+        reader.seek(currentPosition - position);
         DataOutputBuffer bufOut = new DataOutputBuffer();
         DataInputBuffer bufIn = new DataInputBuffer();
         /* read the bloom filter from disk */
-        indexReader.next(bufOut);        
+        reader.next(bufOut);
         bufIn.reset(bufOut.getData(), bufOut.getLength());
         String key = bufIn.readUTF();
         if ( key.equals(SequenceFile.marker_) )
@@ -371,16 +373,15 @@ public class SSTable
              * need not read the rest of the file.
             */
             bufIn.readInt();
-            if ( bfs_.get(dataFile_) == null )
-                bfs_.put(dataFile_, BloomFilter.serializer().deserialize(bufIn));
+            if ( bfs_.get(reader.getFileName()) == null )
+                bfs_.put(reader.getFileName(), BloomFilter.serializer().deserialize(bufIn));
         }
     }
-    
 
-    private void loadIndexFile() throws IOException
+    private static void loadIndexFile(String filename) throws IOException
     {
-        IFileReader indexReader = SequenceFile.reader(dataFile_);
-        File file = new File(dataFile_);
+        IFileReader indexReader = SequenceFile.reader(filename);
+        File file = new File(filename);
         long size = file.length();
         /* load the bloom filter into memory */
         loadBloomFilter(indexReader, size);
@@ -393,7 +394,7 @@ public class SSTable
         indexReader.readDirect(bytes);
         long lastBlockIndexPosition = BasicUtilities.byteArrayToLong(bytes);  
         List<KeyPositionInfo> keyPositionInfos = new ArrayList<KeyPositionInfo>();
-        indexMetadataMap_.put(dataFile_, keyPositionInfos);
+        indexMetadataMap_.put(filename, keyPositionInfos);
         DataOutputBuffer bufOut = new DataOutputBuffer();
         DataInputBuffer bufIn = new DataInputBuffer();        
         /* Read all block indexes to maintain an index in memory */
@@ -452,7 +453,7 @@ public class SSTable
         }
         catch( IOException ex )
         {
-        	logger_.warn(LogUtil.throwableToString(ex));
+        	logger_.error(LogUtil.throwableToString(ex));
         }
         finally
         {
@@ -757,11 +758,6 @@ public class SSTable
         return bufIn;
     }
 
-    public void close() throws IOException
-    {
-        close( new byte[0], 0 );
-    }
-
     public void close(BloomFilter bf) throws IOException
     {
         /* Any remnants in the blockIndex should be dumped */
@@ -771,7 +767,23 @@ public class SSTable
         BloomFilter.serializer().serialize(bf, bufOut);
         byte[] bytes = new byte[bufOut.getLength()];
         System.arraycopy(bufOut.getData(), 0, bytes, 0, bytes.length);
-        close(bytes, bytes.length);
+        /*
+         * Write the bloom filter for this SSTable.
+         * Then write two longs one which is a version
+         * and one which is a pointer to the last written
+         * block index.
+         */
+        long bloomFilterPosition = dataWriter_.getCurrentPosition();
+        dataWriter_.close(bytes, bytes.length);
+        /* write the version field into the SSTable */
+        dataWriter_.writeDirect(BasicUtilities.longToByteArray(version_));
+        /* write the relative position of the last block index from current position */
+        long blockPosition = dataWriter_.getCurrentPosition() - prevBlockPosition_;
+        dataWriter_.writeDirect(BasicUtilities.longToByteArray(blockPosition));
+        /* write the position of the bloom filter */
+        long bloomFilterRelativePosition = dataWriter_.getCurrentPosition() - bloomFilterPosition;
+        dataWriter_.writeDirect(BasicUtilities.longToByteArray(bloomFilterRelativePosition));
+        dataWriter_.close();
         bufOut.close();
     }
 
@@ -807,29 +819,5 @@ public class SSTable
             files.add(dataFile_);
         }
     }
-    
-    private void close(byte[] footer, int size) throws IOException
-    {
-        /*
-         * Write the bloom filter for this SSTable.
-         * Then write two longs one which is a version
-         * and one which is a pointer to the last written
-         * block index.
-         */
-        if ( dataWriter_ != null )
-        {            
-            long bloomFilterPosition = dataWriter_.getCurrentPosition();
-            dataWriter_.close(footer, size);
-            /* write the version field into the SSTable */
-            dataWriter_.writeDirect(BasicUtilities.longToByteArray(version_));
-            /* write the relative position of the last block index from current position */
-            long blockPosition = dataWriter_.getCurrentPosition() - prevBlockPosition_;
-            dataWriter_.writeDirect(BasicUtilities.longToByteArray(blockPosition));
-            /* write the position of the bloom filter */
-            long bloomFilterRelativePosition = dataWriter_.getCurrentPosition() - bloomFilterPosition;
-            dataWriter_.writeDirect(BasicUtilities.longToByteArray(bloomFilterRelativePosition));
-            dataWriter_.close();
-        }
-    } 
 
 }
