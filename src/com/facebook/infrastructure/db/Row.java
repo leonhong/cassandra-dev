@@ -18,15 +18,19 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.io.ICompactSerializer;
+import com.facebook.infrastructure.utils.FBUtilities;
+import org.apache.log4j.Logger;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.utils.FBUtilities;
-import com.facebook.infrastructure.io.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -102,27 +106,6 @@ public class Row implements Serializable
     }
     
     /*
-     * This is used as oldRow.merge(newRow). Basically we take the newRow
-     * and merge it into the oldRow.
-    */
-    void merge(Row row)
-    {
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
-        Set<String> cfNames = columnFamilies.keySet();
-
-        for ( String cfName : cfNames )
-        {
-            ColumnFamily cf = columnFamilies_.get(cfName);
-            if ( cf == null )
-                columnFamilies_.put(cfName, columnFamilies.get(cfName));
-            else
-            {
-                cf.merge(columnFamilies.get(cfName));
-            }
-        }
-    }
-
-    /*
      * This function will repair the current row with the input row
      * what that means is that if there are any differences between the 2 rows then
      * this fn will make the current row take the latest changes .
@@ -144,7 +127,6 @@ public class Row implements Serializable
         }
 
     }
-
 
     /*
      * This function will calculate the difference between 2 rows

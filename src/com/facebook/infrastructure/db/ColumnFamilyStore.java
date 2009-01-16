@@ -18,7 +18,20 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.*;
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.dht.Range;
+import com.facebook.infrastructure.io.DataInputBuffer;
+import com.facebook.infrastructure.io.SSTable;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.service.StorageService;
+import com.facebook.infrastructure.utils.BloomFilter;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
+import com.facebook.infrastructure.utils.Filter;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -26,13 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.dht.Range;
-import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.*;
 
 
 /**
@@ -71,8 +77,7 @@ public class ColumnFamilyStore
         }
     }
 
-    private static int threshHold_ = 4;
-    private static final int bufSize_ = 128*1024*1024;
+    public static final int BUFFER_SIZE = 128*1024*1024;
     private static Logger logger_ = Logger.getLogger(ColumnFamilyStore.class);
 
     private String table_;
@@ -168,12 +173,12 @@ public class ColumnFamilyStore
         /* Load the index files and the Bloom Filters associated with them. */
         SSTable.onStart(filenames);
         logger_.debug("Submitting a major compaction task ...");
-        MinorCompactionManager.instance().submit(ColumnFamilyStore.this);
+        CompactionManager.instance().submit(this);
         if(columnFamily_.equals(Table.hints_))
         {
         	HintedHandOffManager.instance().submit(this);
         }
-        MinorCompactionManager.instance().submitPeriodicCompaction(this);
+        CompactionManager.instance().submitPeriodicCompaction(this);
     }
 
     List<String> getAllSSTablesOnDisk()
@@ -270,9 +275,9 @@ public class ColumnFamilyStore
         CountingBloomFilter cbf = null;
     	Future<CountingBloomFilter> futurePtr = null;
     	if( ranges != null)
-    		futurePtr = MinorCompactionManager.instance().submit(ColumnFamilyStore.this, ranges, target, fileList);
+    		futurePtr = CompactionManager.instance().submit(this, ranges, target, fileList);
     	else
-    		futurePtr = MinorCompactionManager.instance().submitMajor(ColumnFamilyStore.this, ranges, skip);
+    		futurePtr = CompactionManager.instance().submitMajor(this, ranges, skip);
 
         try
         {
@@ -655,7 +660,6 @@ public class ColumnFamilyStore
     */
     void storeLocation(String filename, BloomFilter bf) throws IOException
     {
-        boolean doCompaction = false;
         int ssTableSize = 0;
     	lock_.writeLock().lock();
         try
@@ -668,253 +672,39 @@ public class ColumnFamilyStore
         {
         	lock_.writeLock().unlock();
         }
-        if (ssTableSize >= threshHold_ && !isCompacting_.get())
-        {
-            doCompaction = true;
-        }
-
-        if (isCompacting_.get())
-        {
-            if ( ssTableSize % threshHold_ == 0 )
-            {
-                doCompaction = true;
-            }
-        }
-        if ( doCompaction )
+        if ((ssTableSize >= ColumnFamilyCompactor.THRESHOLD && !isCompacting_.get())
+            || (isCompacting_.get() && ssTableSize % ColumnFamilyCompactor.THRESHOLD == 0))
         {
             logger_.debug("Submitting for  compaction ...");
-            MinorCompactionManager.instance().submit(ColumnFamilyStore.this);
+            CompactionManager.instance().submit(this);
             logger_.debug("Submitted for compaction ...");
         }
     }
 
-    /*
-     * Stage the compactions , compact similar size files.
-     * This fn figures out the files close enough by size and if they
-     * are greater than the threshold then compacts.
-     */
-    Map<Integer, List<String>> stageCompaction(List<String> files)
-    {
-    	Map<Integer, List<String>>  buckets = new HashMap<Integer, List<String>>();
-    	long averages[] = new long[100];
-    	int count = 0 ;
-    	long max = 200L*1024L*1024L*1024L;
-    	long min = 50L*1024L*1024L;
-    	List<String> largeFileList = new ArrayList<String>();
-    	for(String file : files)
-    	{
-    		File f = new File(file);
-    		long size = f.length();
-    		if ( size > max)
-    		{
-    			largeFileList.add(file);
-    			continue;
-    		}
-    		boolean bFound = false;
-    		for ( int i = 0 ; i < count ; i++ )
-    		{
-    			if ( (size > averages[i]/2 && size < 3*averages[i]/2) || ( size < min && averages[i] < min ))
-    			{
-    				averages[i] = (averages[i] + size) / 2 ;
-    				List<String> fileList = buckets.get(i);
-    				if(fileList == null)
-    				{
-    					fileList = new ArrayList<String>();
-    					buckets.put(i, fileList);
-    				}
-    				fileList.add(file);
-    				bFound = true;
-    				break;
-    			}
-    		}
-    		if(!bFound)
-    		{
-				List<String> fileList = buckets.get(count);
-				if(fileList == null)
-				{
-					fileList = new ArrayList<String>();
-					buckets.put(count, fileList);
-				}
-				fileList.add(file);
-    			averages[count] = size;
-    			count++;
-    		}
-
-    	}
-		// Put files greater than teh max in a separate bucket so that they are never compacted
-		// but we need them in the buckets since for range compactions we need to split these files.
-    	count++;
-    	for(String file : largeFileList)
-    	{
-    		List<String> tempLargeFileList = new ArrayList<String>();
-    		tempLargeFileList.add(file);
-    		buckets.put(count, tempLargeFileList);
-    		count++;
-    	}
-    	return buckets;
-    }
-    
-    /*
-     * Break the files into buckets and then compact.
-     */
-    CountingBloomFilter doCompaction(List<Range> ranges)  throws IOException
-    {
+    public Filter compact(ColumnFamilyCompactor.Wrapper r) {
+        logger_.debug("Started  compaction ..." + columnFamily_);
+        assert !isCompacting_.get();
         isCompacting_.set(true);
-        List<String> files = new ArrayList<String>(ssTables_);
-        CountingBloomFilter result = null;
         try
         {
-	        int count = 0;
-	    	Map<Integer, List<String>> buckets = stageCompaction(files);
-	    	Set<Integer> keySet = buckets.keySet();
-	    	for(Integer key : keySet)
-	    	{
-	    		List<String> fileList = buckets.get(key);
-	            CountingBloomFilter tempResult = null;
-	    		// If ranges != null we should split the files irrespective of the threshold.
-	    		if(fileList.size() >= threshHold_ || ranges != null)
-	    		{
-	    			files.clear();
-	    			count = 0;
-	    			for(String file : fileList)
-	    			{
-	    				files.add(file);
-	    				count++;
-	    				if( count == threshHold_ && ranges == null )
-	    					break;
-	    			}
-	    	        try
-	    	        {
-	    	        	// For each bucket if it has crossed the threshhold do the compaction
-	    	        	// In case of range  compaction merge the counting bloom filters also.
-                        if(ranges == null )
-                            tempResult = ColumnFamilyCompactor.doRangeCompaction(this, files, ranges, bufSize_);
-                        else
-                            tempResult = ColumnFamilyCompactor.doRangeCompaction(this, files, ranges, bufSize_);
-
-	    	        	if(result == null)
-	    	        	{
-	    	        		result = tempResult;
-	    	        	}
-	    	        	else
-	    	        	{
-	    	        		result.merge(tempResult);
-	    	        	}
-	    	        }
-	    	        catch ( Exception ex)
-	    	        {
-	    	        	ex.printStackTrace();
-	    	        }
-	    		}
-	    	}
+        	 return r.run();
+        }
+        catch (Throwable t)
+        {
+            throw new RuntimeException(t);
         }
         finally
         {
-        	isCompacting_.set(false);
+            isCompacting_.set(false);
+            logger_.debug("Finished compaction ..." + columnFamily_);
         }
-        return result;
-    }
-
-    CountingBloomFilter doMajorCompaction(long skip)  throws IOException
-    {
-    	return doMajorCompactionInternal( skip );
-    }
-
-    CountingBloomFilter doMajorCompaction()  throws IOException
-    {
-    	return doMajorCompactionInternal( 0 );
-    }
-    /*
-     * Compact all the files irrespective of the size.
-     * skip : is the ammount in Gb of the files to be skipped
-     * all files greater than skip GB are skipped for this compaction.
-     * Except if skip is 0 , in that case this is ignored and all files are taken.
-     */
-    CountingBloomFilter doMajorCompactionInternal(long skip)  throws IOException
-    {
-        isCompacting_.set(true);
-        List<String> filesInternal = new ArrayList<String>(ssTables_);
-        List<String> files = null;
-        CountingBloomFilter result = null;
-        try
-        {
-        	 if( skip > 0L )
-        	 {
-        		 files = new ArrayList<String>();
-	        	 for ( String file : filesInternal )
-	        	 {
-	        		 File f = new File(file);
-	        		 if( f.length() < skip*1024L*1024L*1024L )
-	        		 {
-	        			 files.add(file);
-	        		 }
-	        	 }
-        	 }
-        	 else
-        	 {
-        		 files = filesInternal;
-        	 }
-        	 result = ColumnFamilyCompactor.doRangeCompaction(this, files, null, bufSize_);
-        }
-        catch ( Exception ex)
-        {
-        	ex.printStackTrace();
-        }
-        finally
-        {
-        	isCompacting_.set(false);
-        }
-        return result;
-    }
-
-    CountingBloomFilter doRangeAntiCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
-    {
-        isCompacting_.set(true);
-        List<String> files = new ArrayList<String>(ssTables_);
-        CountingBloomFilter result = null;
-        try
-        {
-        	 result = ColumnFamilyCompactor.doRangeOnlyAntiCompaction(this, files, ranges, target, bufSize_, fileList, null);
-        }
-        catch ( Exception ex)
-        {
-        	ex.printStackTrace();
-        }
-        finally
-        {
-        	isCompacting_.set(false);
-        }
-        return result;
-
     }
 
     void forceCleanup()
     {
-    	MinorCompactionManager.instance().submitCleanup(ColumnFamilyStore.this);
+    	CompactionManager.instance().submitCleanup(this);
     }
-    
-    /**
-     * This function goes over each file and removes the keys that the node is not responsible for 
-     * and only keeps keys that this node is responsible for.
-     * @throws IOException
-     */
-    void doCleanupCompaction() throws IOException
-    {
-        isCompacting_.set(true);
-        List<String> files = new ArrayList<String>(ssTables_);
-        for(String file: files)
-        {
-	        try
-	        {
-	        	doCleanup(file);
-	        }
-	        catch ( Exception ex)
-	        {
-	        	ex.printStackTrace();
-	        }
-        }
-    	isCompacting_.set(false);
-    }
+
     /**
      * cleans up one particular file by removing keys that this node is not responsible for.
      * @param file
@@ -932,7 +722,7 @@ public class ColumnFamilyStore
     	Map<EndPoint, List<Range>> endPointtoRangeMap = StorageService.instance().constructEndPointToRangesMap();
     	myRanges = endPointtoRangeMap.get(StorageService.getLocalStorageEndPoint());
     	List<BloomFilter> compactedBloomFilters = new ArrayList<BloomFilter>();
-        ColumnFamilyCompactor.doRangeOnlyAntiCompaction(this, files, myRanges, null, bufSize_, newFiles, compactedBloomFilters);
+        ColumnFamilyCompactor.doRangeOnlyAntiCompaction(this, files, myRanges, null, BUFFER_SIZE, newFiles, compactedBloomFilters);
         logger_.info("Original file : " + file + " of size " + new File(file).length());
         lock_.writeLock().lock();
         try
@@ -961,8 +751,8 @@ public class ColumnFamilyStore
     long completeCompaction(List<String> files, String newfile, long totalBytesWritten, BloomFilter compactedBloomFilter) {
         lock_.writeLock().lock();
         try
-	            {
-	                for (String file : files)
+	    {
+	        for (String file : files)
             {
                 ssTables_.remove(file);
                 SSTable.removeAssociatedBloomFilter(file);

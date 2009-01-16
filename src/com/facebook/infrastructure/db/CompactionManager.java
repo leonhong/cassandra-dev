@@ -18,7 +18,19 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.concurrent.DebuggableScheduledThreadPoolExecutor;
+import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
+import com.facebook.infrastructure.dht.Range;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.service.IComponentShutdown;
+import com.facebook.infrastructure.service.StorageService;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
+import com.facebook.infrastructure.utils.Filter;
+import org.apache.log4j.Logger;
+
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -27,28 +39,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.concurrent.*;
-import com.facebook.infrastructure.dht.Range;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.service.IComponentShutdown;
-import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.infrastructure.utils.CountingBloomFilter;
-
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-class MinorCompactionManager implements IComponentShutdown
+class CompactionManager implements IComponentShutdown
 {
-    private static MinorCompactionManager instance_;
+    private static CompactionManager instance_;
     private static Lock lock_ = new ReentrantLock();
-    private static Logger logger_ = Logger.getLogger(MinorCompactionManager.class);
+    private static Logger logger_ = Logger.getLogger(CompactionManager.class);
     final static long intervalInMins_ = 5;
 
-    public static MinorCompactionManager instance()
+    public static CompactionManager instance()
     {
         if ( instance_ == null )
         {
@@ -56,7 +58,7 @@ class MinorCompactionManager implements IComponentShutdown
             try
             {
                 if ( instance_ == null )
-                    instance_ = new MinorCompactionManager();
+                    instance_ = new CompactionManager();
             }
             finally
             {
@@ -77,20 +79,11 @@ class MinorCompactionManager implements IComponentShutdown
 
         public void run()
         {
-            try
-            {
-                logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
-            	columnFamilyStore_.doCompaction(null);
-                logger_.debug("Finished compaction ..."+columnFamilyStore_.columnFamily_);
-            }
-            catch (IOException e)
-            {
-                logger_.debug( LogUtil.throwableToString(e) );
-            }
-            catch (Throwable th)
-            {
-                logger_.error( LogUtil.throwableToString(th) );
-            }
+            columnFamilyStore_.compact(new ColumnFamilyCompactor.Wrapper() {
+                public Filter run() throws IOException {
+                    return ColumnFamilyCompactor.doCompaction(columnFamilyStore_, null);
+                }
+            });
         }
     }
 
@@ -117,18 +110,11 @@ class MinorCompactionManager implements IComponentShutdown
 
         public CountingBloomFilter call()
         {
-        	CountingBloomFilter result = null;
-            try
-            {
-                logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
-                result = columnFamilyStore_.doRangeAntiCompaction(ranges_, target_,fileList_);
-                logger_.debug("Finished compaction ..."+columnFamilyStore_.columnFamily_);
-            }
-            catch (IOException e)
-            {
-                logger_.debug( LogUtil.throwableToString(e) );
-            }
-            return result;
+        	return (CountingBloomFilter) columnFamilyStore_.compact(new ColumnFamilyCompactor.Wrapper() {
+                public Filter run() throws IOException {
+                    return ColumnFamilyCompactor.doRangeOnlyAntiCompaction(columnFamilyStore_, columnFamilyStore_.getAllSSTablesOnDisk(), ranges_, target_, ColumnFamilyStore.BUFFER_SIZE, fileList_, null);
+                }
+            });
         }
     }
 
@@ -145,18 +131,29 @@ class MinorCompactionManager implements IComponentShutdown
 
         public CountingBloomFilter call()
         {
-        	CountingBloomFilter result = null;
-            try
+            List<String> filesInternal = columnFamilyStore_.getAllSSTablesOnDisk();
+            final List<String> files;
+            if( skip_ > 0L )
             {
-                logger_.debug("Started  Major compaction ..."+columnFamilyStore_.columnFamily_);
-                result = columnFamilyStore_.doMajorCompaction(skip_);
-                logger_.debug("Finished Major compaction ..."+columnFamilyStore_.columnFamily_);
+                files = new ArrayList<String>();
+                for ( String file : filesInternal )
+                {
+                    File f = new File(file);
+                    if( f.length() < skip_ *1024L*1024L*1024L )
+                    {
+                        files.add(file);
+                    }
+                }
             }
-            catch (IOException e)
+            else
             {
-                logger_.debug( LogUtil.throwableToString(e) );
+                files = filesInternal;
             }
-            return result;
+            return (CountingBloomFilter) columnFamilyStore_.compact(new ColumnFamilyCompactor.Wrapper() {
+                public Filter run() throws IOException {
+                    return ColumnFamilyCompactor.doRangeCompaction(columnFamilyStore_, files, null, ColumnFamilyStore.BUFFER_SIZE);
+                }
+            });
         }
     }
 
@@ -171,27 +168,21 @@ class MinorCompactionManager implements IComponentShutdown
 
         public void run()
         {
-            try
-            {
-                logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
-            	columnFamilyStore_.doCleanupCompaction();
-                logger_.debug("Finished compaction ..."+columnFamilyStore_.columnFamily_);
-            }
-            catch (IOException e)
-            {
-                logger_.debug( LogUtil.throwableToString(e) );
-            }
-            catch (Throwable th)
-            {
-                logger_.error( LogUtil.throwableToString(th) );
-            }
+            columnFamilyStore_.compact(new ColumnFamilyCompactor.Wrapper() {
+                public Filter run() throws IOException {
+                    for(String file: columnFamilyStore_.getAllSSTablesOnDisk()) {
+                        columnFamilyStore_.doCleanup(file);
+                    }
+                    return null;
+                }
+            });
         }
     }
     
     
     private ScheduledExecutorService compactor_ = new DebuggableScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("MINOR-COMPACTION-POOL"));
 
-    public MinorCompactionManager()
+    public CompactionManager()
     {
     	StorageService.instance().registerComponentForShutdown(this);
 	}
@@ -203,8 +194,8 @@ class MinorCompactionManager implements IComponentShutdown
 
     public void submitPeriodicCompaction(ColumnFamilyStore columnFamilyStore)
     {        
-    	compactor_.scheduleWithFixedDelay(new FileCompactor(columnFamilyStore), MinorCompactionManager.intervalInMins_,
-    			MinorCompactionManager.intervalInMins_, TimeUnit.MINUTES);       
+    	compactor_.scheduleWithFixedDelay(new FileCompactor(columnFamilyStore), CompactionManager.intervalInMins_,
+    			CompactionManager.intervalInMins_, TimeUnit.MINUTES);
     }
 
     public void submit(ColumnFamilyStore columnFamilyStore)

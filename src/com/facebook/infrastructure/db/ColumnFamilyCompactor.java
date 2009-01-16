@@ -1,23 +1,128 @@
 package com.facebook.infrastructure.db;
 
-import com.facebook.infrastructure.utils.BloomFilter;
-import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.infrastructure.utils.CountingBloomFilter;
-import com.facebook.infrastructure.dht.Range;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.io.*;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.dht.Range;
+import com.facebook.infrastructure.io.*;
+import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.service.StorageService;
-
-import java.util.*;
-import java.io.IOException;
-import java.io.File;
-import java.math.BigInteger;
-
+import com.facebook.infrastructure.utils.BloomFilter;
+import com.facebook.infrastructure.utils.CountingBloomFilter;
+import com.facebook.infrastructure.utils.Filter;
+import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.*;
 
 public class ColumnFamilyCompactor {
     private static Logger logger_ = Logger.getLogger(ColumnFamilyCompactor.class);
+    static final int THRESHOLD = 4;
+
+    /*
+     * Break the files into buckets and then compact.
+     */
+    static CountingBloomFilter doCompaction(ColumnFamilyStore cfs, List<Range> ranges)  throws IOException
+    {
+        List<String> files = cfs.getAllSSTablesOnDisk();
+        CountingBloomFilter result = null;
+        for(List<String> fileList : ColumnFamilyCompactor.getCompactionBuckets(files, 50L*1024L*1024L, 200L*1024L*1024L*1024L))
+        {
+            CountingBloomFilter tempResult = null;
+            // If ranges != null we should split the files irrespective of the threshold.
+            if(fileList.size() >= ColumnFamilyCompactor.THRESHOLD || ranges != null)
+            {
+                files.clear();
+                int count = 0;
+                for(String file : fileList)
+                {
+                    files.add(file);
+                    count++;
+                    if( count == ColumnFamilyCompactor.THRESHOLD && ranges == null )
+                        break;
+                }
+                try
+                {
+                    // For each bucket if it has crossed the threshhold do the compaction
+                    // In case of range  compaction merge the counting bloom filters also.
+                    if(ranges == null )
+                        tempResult = ColumnFamilyCompactor.doRangeCompaction(cfs, files, ranges, ColumnFamilyStore.BUFFER_SIZE);
+                    else
+                        tempResult = ColumnFamilyCompactor.doRangeCompaction(cfs, files, ranges, ColumnFamilyStore.BUFFER_SIZE);
+
+                    if(result == null)
+                    {
+                        result = tempResult;
+                    }
+                    else
+                    {
+                        result.merge(tempResult);
+                    }
+                }
+                catch ( Exception ex)
+                {
+                    logger_.error(ex);
+                }
+            }
+        }
+        return result;
+    }
+
+    /*
+     * Stage the compactions , compact similar size files.
+     * This fn figures out the files close enough by size and if they
+     * are greater than the threshold then compacts.
+     */
+    static Set<List<String>> getCompactionBuckets(List<String> files, long min, long max)
+    {
+    	Map<List<String>, Long> buckets = new HashMap<List<String>, Long>();
+        List<String> largeFileList = new ArrayList<String>();
+    	for(String fname : files)
+    	{
+    		File f = new File(fname);
+    		long size = f.length();
+    		if ( size > max)
+    		{
+    			largeFileList.add(fname);
+    			continue;
+    		}
+    		boolean bFound = false;
+            for (List<String> bucket : new ArrayList<List<String>>(buckets.keySet()))
+    		{
+                long averageSize = buckets.get(bucket);
+                // group in the same bucket if it's w/in 50% of the average for this bucket,
+                // or this file and the bucket are all considered "small" (less than `min`)
+                if ((size > averageSize/2 && size < 3*averageSize/2) 
+                    || ( size < min && averageSize < min))
+    			{
+                    // remove and re-add because adding changes the hash
+                    buckets.remove(bucket);
+    				averageSize = (averageSize + size) / 2 ;
+                    bucket.add(fname);
+                    buckets.put(bucket, averageSize);
+    				bFound = true;
+    				break;
+    			}
+    		}
+    		if(!bFound)
+    		{
+                ArrayList<String> bucket = new ArrayList<String>();
+                bucket.add(fname);
+                buckets.put(bucket, size);
+    		}
+
+    	}
+
+        // Put files greater than the max in separate buckets so that they are never compacted
+        // (but we need them in the buckets since for range compactions we need to split these files)
+        Set<List<String>> bucketSet = new HashSet<List<String>>(buckets.keySet());
+    	for (String file : largeFileList)
+    	{
+    		bucketSet.add(Arrays.asList(new String[] { file }));
+    	}
+    	return bucketSet;
+    }
 
     /**
      * This function is used to do the anti compaction process , it spits out the file which has keys that belong to a given range
@@ -612,5 +717,9 @@ public class ColumnFamilyCompactor {
     		}
     	}
     	return isLoop;
+    }
+
+    public interface Wrapper {
+        public Filter run() throws IOException;
     }
 }

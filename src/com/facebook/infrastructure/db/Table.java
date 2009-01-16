@@ -423,7 +423,7 @@ public class Table
         {
             ColumnFamilyStore cfStore = columnFamilyStores_.get( columnFamily );
             if ( cfStore != null )
-                MinorCompactionManager.instance().submitMajor(cfStore, null, 0);
+                CompactionManager.instance().submitMajor(cfStore, null, 0);
         }
     }
 
