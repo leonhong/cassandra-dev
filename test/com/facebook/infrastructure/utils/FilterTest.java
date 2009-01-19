@@ -8,28 +8,31 @@ import java.io.IOException;
 import java.util.*;
 
 public class FilterTest {
-    public void testManyHashes(Collection<String> keys) {
+    public void testManyHashes(Iterator<String> keys) {
         int MAX_HASH_COUNT = 128;
         Set<Integer> hashes = new HashSet<Integer>();
         int collisions = 0;
-        for (String key : keys) {
+        while (keys.hasNext()) {
             hashes.clear();
-            for (int hashIndex : Filter.getHashBuckets(key, MAX_HASH_COUNT, 1024*1024)) {
+            for (int hashIndex : Filter.getHashBuckets(keys.next(), MAX_HASH_COUNT, 1024*1024)) {
                 hashes.add(hashIndex);
             }
             collisions += (MAX_HASH_COUNT - hashes.size());
         }
-        System.out.println("Collisions: " + collisions);
+        synchronized (System.out) {
+            System.out.println("Collisions: " + collisions);
+            System.out.flush();
+        }
         assert collisions <= 100;
     }
 
     @Test
     public void testManyInt() {
-        testManyHashes(intKeys);
+        testManyHashes(intKeys());
     }
     @Test
     public void testManyRandom() {
-        testManyHashes(randomKeys);
+        testManyHashes(randomKeys());
     }
 
     // used by filter subclass tests
@@ -37,57 +40,43 @@ public class FilterTest {
     public static final BloomCalculations.BloomSpecification spec = BloomCalculations.computeBucketsAndK(0.1);
     static final int ELEMENTS = 10000;
 
-    static final Collection<String> intKeys = Collections.unmodifiableCollection(new ArrayList<String>() {{
-        for (int i = 0; i < ELEMENTS; i++) {
-            add(Integer.toString(i));
-        }
-    }});
-
-    private static String randomKey(Random r) {
-        StringBuffer buffer = new StringBuffer();
-        for (int j = 0; j < 16; j++) {
-            buffer.append((char)r.nextInt());
-        }
-        return buffer.toString();
+    static final ResetableIterator<String> intKeys() {
+        return new KeyGenerator.IntGenerator(ELEMENTS);
+    }
+    static final ResetableIterator<String> randomKeys() {
+        return new KeyGenerator.RandomStringGenerator(314159, ELEMENTS);
+    }
+    static final ResetableIterator<String> randomKeys2() {
+        return new KeyGenerator.RandomStringGenerator(271828, ELEMENTS);
     }
 
-    static final Collection<String> randomKeys = Collections.unmodifiableCollection(new HashSet<String>() {{
-        Random r = new Random(314159);
-        while (size() < ELEMENTS) {
-            add(randomKey(r));
-        }
-        assert size() == ELEMENTS;
-    }});
-    static final Collection<String> randomKeys2 = Collections.unmodifiableCollection(new HashSet<String>() {{
-        Random r = new Random(271828);
-        while (size() < ELEMENTS) {
-            String key = randomKey(r);
-            if (!randomKeys.contains(key)) {
-                add(randomKey(r));
-            }
-        }
-    }});
+    static int total_fp;
 
+    public static void testFalsePositives(Filter f, ResetableIterator<String> keys, ResetableIterator<String> otherkeys) {
+        assert keys.size() == otherkeys.size();
 
-    public static void testFalsePositives(Filter f, Collection<String> keys, Collection<String> otherkeys) {
-        assert keys.size() == ELEMENTS;
-        assert otherkeys.size() == ELEMENTS;
-
-        for (String key : keys) {
-            f.add(key);
+        while(keys.hasNext()) {
+            f.add(keys.next());
         }
-        for (String key : keys) {
-            assert f.isPresent(key);
+        System.out.println("keys added");
+        /*
+        keys.reset();
+        while(keys.hasNext()) {
+            assert f.isPresent(keys.next());
         }
+        */
 
         int fp = 0;
-        for (String key : otherkeys) {
-            if (f.isPresent(key)) {
+        while(otherkeys.hasNext()) {
+            if (f.isPresent(otherkeys.next())) {
                 fp++;
             }
         }
-        System.out.println("False positives: " + fp);
-        assert fp < 1.03 * ELEMENTS * BloomCalculations.getFailureRate(spec.bucketsPerElement);
+        total_fp += fp;
+        synchronized (System.out) {
+            System.out.println("Total/this false positives: " + total_fp + "/" + fp);
+        }
+        assert fp < 1.03 * keys.size() * BloomCalculations.getFailureRate(spec.bucketsPerElement);
     }
 
     public static Filter testSerialize(Filter f) throws IOException {

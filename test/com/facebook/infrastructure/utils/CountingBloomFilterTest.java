@@ -92,11 +92,18 @@ public class CountingBloomFilterTest {
 
     @Test
     public void testFalsePositivesInt() {
-        FilterTest.testFalsePositives(cbf, FilterTest.intKeys, FilterTest.randomKeys2);
+        FilterTest.testFalsePositives(cbf, FilterTest.intKeys(), FilterTest.randomKeys2());
     }
     @Test
     public void testFalsePositivesRandom() {
-        FilterTest.testFalsePositives(cbf, FilterTest.randomKeys, FilterTest.randomKeys2);
+        FilterTest.testFalsePositives(cbf, FilterTest.randomKeys(), FilterTest.randomKeys2());
+    }
+    @Test
+    public void testWords() {
+        CountingBloomFilter cbf2 = new CountingBloomFilter(KeyGenerator.WordGenerator.WORDS / 2, FilterTest.spec.bucketsPerElement);
+        FilterTest.testFalsePositives(cbf2,
+                                      new KeyGenerator.WordGenerator(0, 2),
+                                      new KeyGenerator.WordGenerator(1, 2));
     }
 
     @Test
