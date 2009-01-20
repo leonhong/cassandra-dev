@@ -4,7 +4,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.Random;
 
 public class BloomFilterTest {
     public BloomFilter bf;
@@ -39,8 +38,9 @@ public class BloomFilterTest {
     @Test
     public void testWords() {
         BloomFilter bf2 = new BloomFilter(KeyGenerator.WordGenerator.WORDS / 2, FilterTest.spec.bucketsPerElement);
+        int skipEven = KeyGenerator.WordGenerator.WORDS % 2 == 0 ? 0 : 2;
         FilterTest.testFalsePositives(bf2,
-                                      new KeyGenerator.WordGenerator(2, 2),
+                                      new KeyGenerator.WordGenerator(skipEven, 2),
                                       new KeyGenerator.WordGenerator(1, 2));
     }
     
@@ -49,6 +49,7 @@ public class BloomFilterTest {
         FilterTest.testSerialize(bf);
     }
 
+    /* TODO move these into a nightly suite (they take 5-10 minutes each)
     @Test
     // run with -mx1G
     public void testBigInt() {
@@ -68,7 +69,6 @@ public class BloomFilterTest {
                                       new KeyGenerator.RandomStringGenerator(new Random().nextInt(), size));
     }
 
-    /*
     @Test
     // run with -server -mx1G
     public void timeit() {

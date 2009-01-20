@@ -101,8 +101,9 @@ public class CountingBloomFilterTest {
     @Test
     public void testWords() {
         CountingBloomFilter cbf2 = new CountingBloomFilter(KeyGenerator.WordGenerator.WORDS / 2, FilterTest.spec.bucketsPerElement);
+        int skipEven = KeyGenerator.WordGenerator.WORDS % 2 == 0 ? 0 : 2;
         FilterTest.testFalsePositives(cbf2,
-                                      new KeyGenerator.WordGenerator(0, 2),
+                                      new KeyGenerator.WordGenerator(skipEven, 2),
                                       new KeyGenerator.WordGenerator(1, 2));
     }
 

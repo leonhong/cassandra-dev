@@ -106,7 +106,7 @@ public class KeyGenerator {
         }
 
         public int size() {
-            return (WORDS - skip) / modulo;
+            return (1 + WORDS - skip) / modulo;
         }
 
         public void reset() {
