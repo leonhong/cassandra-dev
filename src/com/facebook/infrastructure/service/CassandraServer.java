@@ -18,38 +18,33 @@
 
 package com.facebook.infrastructure.service;
 
-import com.facebook.thrift.*;
-import com.facebook.thrift.server.*;
-import com.facebook.thrift.server.TThreadPoolServer.Options;
-import com.facebook.thrift.transport.*;
-import com.facebook.thrift.protocol.*;
 import com.facebook.fb303.FacebookBase;
 import com.facebook.fb303.fb_status;
-import java.io.*;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.*;
-import com.facebook.infrastructure.gms.FailureDetector;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.net.*;
-import com.facebook.infrastructure.utils.*;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.net.IAsyncResult;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.thrift.TException;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import com.facebook.thrift.protocol.TProtocolFactory;
+import com.facebook.thrift.server.TThreadPoolServer;
+import com.facebook.thrift.server.TThreadPoolServer.Options;
+import com.facebook.thrift.transport.TServerSocket;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class CassandraServer extends FacebookBase implements
-		Cassandra.Iface
+public final class CassandraServer extends FacebookBase implements Cassandra.Iface
 {
 
 	private static Logger logger_ = Logger.getLogger(CassandraServer.class);
@@ -59,10 +54,6 @@ public class CassandraServer extends FacebookBase implements
 	 */
 	StorageService storageService_;
 
-	protected CassandraServer(String name)
-	{
-		super(name);
-	}
 	public CassandraServer() throws Throwable
 	{
 		super("Peerstorage");
@@ -71,13 +62,7 @@ public class CassandraServer extends FacebookBase implements
 	}
 
 	/*
-	 * The start function initializes the server and start
-	 * 
-	 * 
-	 * 
-	 * 
-	 * s listening on the
-	 * specified port
+	 * The start function initializes the server and starts listening on the specified port
 	 */
 	public void start() throws Throwable
 	{
@@ -91,11 +76,11 @@ public class CassandraServer extends FacebookBase implements
 		Map<EndPoint, Message> messageMap = new HashMap<EndPoint, Message>();
 		Message message = RowMutationMessage.makeRowMutationMessage(rmMessage);
 		
-		Set<EndPoint> targets = endpointMap.keySet();
-		for( EndPoint target : targets )
+		for (Map.Entry<EndPoint, EndPoint> entry : endpointMap.entrySet())
 		{
-			EndPoint hint = endpointMap.get(target);
-			if ( !target.equals(hint) )
+            EndPoint target = entry.getKey();
+            EndPoint hint = entry.getValue();
+            if ( !target.equals(hint) )
 			{
 				Message hintedMessage = RowMutationMessage.makeRowMutationMessage(rmMessage);
 				hintedMessage.addHeader(RowMutationMessage.hint_, EndPoint.toBytes(hint) );
@@ -110,7 +95,7 @@ public class CassandraServer extends FacebookBase implements
 		return messageMap;
 	}
 	
-	protected void insert(RowMutation rm)
+	private void insert(RowMutation rm)
 	{
 		// 1. Get the N nodes from storage service where the data needs to be
 		// replicated
@@ -127,10 +112,9 @@ public class CassandraServer extends FacebookBase implements
 			RowMutationMessage rmMsg = new RowMutationMessage(rm); 
 			/* Create the write messages to be sent */
 			Map<EndPoint, Message> messageMap = createWriteMessages(rmMsg, endpointMap);
-			Set<EndPoint> endpoints = messageMap.keySet();
-			for(EndPoint endpoint : endpoints)
+			for (Map.Entry<EndPoint, Message> entry : messageMap.entrySet())
 			{
-				MessagingService.getMessagingInstance().sendOneWay(messageMap.get(endpoint), endpoint);
+				MessagingService.getMessagingInstance().sendOneWay(entry.getValue(), entry.getKey());
 			}
 		}
 		catch (Exception e)
@@ -139,379 +123,150 @@ public class CassandraServer extends FacebookBase implements
 		}
 		return;
 	}
-	protected Row doReadProtocol(String key, ReadMessage readMessage) throws IOException,TimeoutException
-	{
-    	EndPoint endPoint = null;
-    	try
-    	{
-    		endPoint = storageService_.findSuitableEndPoint(key);
-    	}
-    	catch( Throwable ex)
-    	{
-    		ex.printStackTrace();
-    	}
-    	if(endPoint != null)
-    	{
-	        Message message = ReadMessage.makeReadMessage(readMessage);
-			IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
-			Object[] result = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
-			byte[] body = (byte[])result[0];
-			DataInputBuffer bufIn = new DataInputBuffer();
-			bufIn.reset(body, body.length);
-			ReadResponseMessage responseMessage = ReadResponseMessage.serializer().deserialize(bufIn);
-			return responseMessage.row();
-    	}
-    	else
-    	{
-    		logger_.warn(" Alert : Unable to find a suitable end point for the key : " + key );
-    	}
-    	return null;
-	}
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, List<String> columnNames, StorageService.ConsistencyLevel consistencyLevel) throws Exception
-	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
-		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
-		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, columnNames);
-			return doReadProtocol(key, readMessage);
-		}
-		else
-		{
-			switch ( consistencyLevel )
-			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-			}
-		}
-		return row;
-		
-		
-	}
-	
 
-	
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, int start, int count, StorageService.ConsistencyLevel consistencyLevel) throws Exception
+   /**
+    * Performs the actual reading of a row out of the StorageService, fetching
+    * a specific set of column names from a given column family.
+    */
+    private Row readProtocol(ReadParameters params, StorageService.ConsistencyLevel consistencyLevel) throws Exception
 	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
+		EndPoint[] endpoints = storageService_.getNStorageEndPoint(params.key);
+        boolean foundLocal = Arrays.asList(endpoints).contains(StorageService.getLocalStorageEndPoint());
+
 		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
 		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, start, count);
-			return doReadProtocol(key, readMessage);
-		}
+            EndPoint endPoint = null;
+            try {
+                endPoint = storageService_.findSuitableEndPoint(params.key);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            Message message = ReadParameters.makeReadMessage(params);
+            IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
+            Object[] result = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
+            byte[] body = (byte[]) result[0];
+            DataInputBuffer bufIn = new DataInputBuffer();
+            bufIn.reset(body, body.length);
+            ReadResponseMessage responseMessage = ReadResponseMessage.serializer().deserialize(bufIn);
+            return responseMessage.row();
+        }
 		else
 		{
 			switch ( consistencyLevel )
 			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, start, count);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, start, count);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, start, count);
-				break;
+                case WEAK:
+                    return weakReadProtocol(params);
+                case STRONG:
+                    return strongReadProtocol(params);
+                default:
+                    throw new UnsupportedOperationException();
 			}
 		}
-		return row;
-	}
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, long sinceTimestamp, StorageService.ConsistencyLevel consistencyLevel) throws Exception
-	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
-		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
-		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-			return doReadProtocol(key, readMessage);
-		}
-		else
-		{
-			switch ( consistencyLevel )
-			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-			}
-		}
-		return row;
 	}
 
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, List<String> columns) throws Exception
+    /*
+     * This function executes the read protocol.
+        // 1. Get the N nodes from storage service where the data needs to be
+        // replicated
+        // 2. Construct a message for read\write
+         * 3. Set one of teh messages to get teh data and teh rest to get teh digest
+        // 4. SendRR ( to all the nodes above )
+        // 5. Wait for a response from atleast X nodes where X <= N and teh data node
+         * 6. If the digest matches return teh data.
+         * 7. else carry out read repair by getting data from all the nodes.
+        // 5. return success
+     */
+	private Row strongReadProtocol(ReadParameters params) throws Exception
 	{		
         long startTime = System.currentTimeMillis();		
 		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = new ReadMessage(tablename, key, columnFamily, columns);               
-        
-        ReadMessage readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, columns);		
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");		
-		return row;
-	}
-	
-	/*
-	 * This function executes the read protocol.
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		 * 3. Set one of teh messages to get teh data and teh rest to get teh digest
-		// 4. SendRR ( to all the nodes above )
-		// 5. Wait for a response from atleast X nodes where X <= N and teh data node
-		 * 6. If the digest matches return teh data.
-		 * 7. else carry out read repair by getting data from all the nodes.
-		// 5. return success
-	 * 
-	 */
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, int start, int count) throws IOException, TimeoutException
-	{		
-        long startTime = System.currentTimeMillis();		
-		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = null;
-		ReadMessage readMessageDigestOnly = null;
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			readMessage = new ReadMessage(tablename, key, columnFamily, start, count);
-		}
-		else
-		{
-			readMessage = new ReadMessage(tablename, key, columnFamily);
-		}
-        Message message = ReadMessage.makeReadMessage(readMessage);
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, start, count);
-		}
-		else
-		{
-			readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily);
-		}
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
+
+        ReadParameters readMessageDigestOnly = params.copy();
+		readMessageDigestOnly.setIsDigestQuery(true);
+
+        Row row = null;
+        Message message = ReadParameters.makeReadMessage(params);
+        Message messageDigestOnly = ReadParameters.makeReadMessage(readMessageDigestOnly);
+
+        IResponseResolver<Row> readResponseResolver = new ReadResponseResolver();
+        QuorumResponseHandler<Row> quorumResponseHandler = new QuorumResponseHandler<Row>(
+                DatabaseDescriptor.getReplicationFactor(),
+                readResponseResolver);
+        EndPoint dataPoint = storageService_.findSuitableEndPoint(params.key);
+        List<EndPoint> endpointList = new ArrayList<EndPoint>( Arrays.asList( storageService_.getNStorageEndPoint(params.key) ) );
+        /* Remove the local storage endpoint from the list. */
+        endpointList.remove( dataPoint );
+        EndPoint[] endPoints = new EndPoint[endpointList.size() + 1];
+        Message messages[] = new Message[endpointList.size() + 1];
+
+        // first message is the data Point
+        endPoints[0] = dataPoint;
+        messages[0] = message;
+
+        for(int i=1; i < endPoints.length ; i++)
+        {
+            endPoints[i] = endpointList.get(i-1);
+            messages[i] = messageDigestOnly;
+        }
+
+        try {
+            MessagingService.getMessagingInstance().sendRR(messages, endPoints, quorumResponseHandler);
+
+            long startTime2 = System.currentTimeMillis();
+            row = quorumResponseHandler.get();
+            logger_.info("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2) + " ms.");
+        }
+        catch (DigestMismatchException ex) {
+            IResponseResolver<Row> readResponseResolverRepair = new ReadResponseResolver();
+            QuorumResponseHandler<Row> quorumResponseHandlerRepair = new QuorumResponseHandler<Row>(
+                    DatabaseDescriptor.getReplicationFactor(),
+                    readResponseResolverRepair);
+            params.setIsDigestQuery(false);
+            logger_.info("DigestMismatchException: " + params.key);
+            Message messageRepair = ReadParameters.makeReadMessage(params);
+            MessagingService.getMessagingInstance().sendRR(messageRepair, endPoints,
+                                                           quorumResponseHandlerRepair);
+            try {
+                row = quorumResponseHandlerRepair.get();
+            }
+            catch (DigestMismatchException dex) {
+                logger_.error(LogUtil.throwableToString(dex));
+            }
+        }
+
         logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-        return row;
-	}
-	
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, long sinceTimestamp) throws IOException, TimeoutException
-	{		
-        long startTime = System.currentTimeMillis();		
-		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = null;
-		ReadMessage readMessageDigestOnly = null;
-		readMessage = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-        Message message = ReadMessage.makeReadMessage(readMessage);
-		readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-        return row;
-	}
-
-	/*
-	 * This method performs the actual read from the replicas.
-	 *  param @ key - key for which the data is required.
-	 *  param @ readMessage - the read message to get the actual data
-	 *  param @ readMessageDigest - the read message to get the digest.
-	*/
-	private Row doStrongReadProtocol(String key, ReadMessage readMessage, ReadMessage readMessageDigest) throws IOException, TimeoutException
-	{
-		Row row = null;
-		Message message = ReadMessage.makeReadMessage(readMessage);
-		Message messageDigestOnly = ReadMessage.makeReadMessage(readMessageDigest);
-		
-		IResponseResolver<Row> readResponseResolver = new ReadResponseResolver();
-		QuorumResponseHandler<Row> quorumResponseHandler = new QuorumResponseHandler<Row>(
-				DatabaseDescriptor.getReplicationFactor(),
-				readResponseResolver);
-		EndPoint dataPoint = storageService_.findSuitableEndPoint(key);
-		List<EndPoint> endpointList = new ArrayList<EndPoint>( Arrays.asList( storageService_.getNStorageEndPoint(key) ) );
-		/* Remove the local storage endpoint from the list. */ 
-		endpointList.remove( dataPoint );
-		EndPoint[] endPoints = new EndPoint[endpointList.size() + 1];
-		Message messages[] = new Message[endpointList.size() + 1];
-		
-		// first message is the data Point 
-		endPoints[0] = dataPoint;
-		messages[0] = message;
-		
-		for(int i=1; i < endPoints.length ; i++)
-		{
-			endPoints[i] = endpointList.get(i-1);
-			messages[i] = messageDigestOnly;
-		}
-		
-		try
-		{
-			MessagingService.getMessagingInstance().sendRR(messages, endPoints,	quorumResponseHandler);
-			
-	        long startTime2 = System.currentTimeMillis();
-			row = quorumResponseHandler.get();
-	        logger_.info("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2)
-	                + " ms.");
-			if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return row;
-			}
-		}
-		catch (DigestMismatchException ex)
-		{
-			IResponseResolver<Row> readResponseResolverRepair = new ReadResponseResolver();
-			QuorumResponseHandler<Row> quorumResponseHandlerRepair = new QuorumResponseHandler<Row>(
-					DatabaseDescriptor.getReplicationFactor(),
-					readResponseResolverRepair);
-			readMessage.setIsDigestQuery(false);
-			logger_.info("DigestMismatchException: " + key);            
-            Message messageRepair = ReadMessage.makeReadMessage(readMessage);
-			MessagingService.getMessagingInstance().sendRR(messageRepair, endPoints,
-					quorumResponseHandlerRepair);
-			try
-			{
-				row = quorumResponseHandlerRepair.get();
-			}
-			catch(DigestMismatchException dex)
-			{
-				logger_.warn(LogUtil.throwableToString(dex));
-			}
-			if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);				
-			}
-		}        
 		return row;
 	}
-	
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, List<String> columns) throws Exception
+
+    /*
+    * This function executes the read protocol locally and should be used only if consistency is not a concern.
+    * Read the data from the local disk and return if the row is NOT NULL. If the data is NULL do the read from
+    * one of the other replicas (in the same data center if possible) till we get the data. In the event we get
+    * the data we perform consistency checks and figure out if any repairs need to be done to the replicas.
+    */
+	private Row weakReadProtocol(ReadParameters params) throws Exception
 	{		
 		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
+		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(params.key);
 		/* Remove the local storage endpoint from the list. */ 
 		endpoints.remove( StorageService.getLocalStorageEndPoint() );
 		// TODO: throw a thrift exception if we do not have N nodes
 		
 		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		Row row = table.getRow(key, columnFamily, columns);
-		
+		Row row = params.getRow(table);
 		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
+
 		/*
 		 * Do the consistency checks in the background and return the
 		 * non NULL row.
 		 */
 		if ( endpoints.size() > 0 )
-			StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, columns);
+			StorageService.instance().doConsistencyCheck(row, endpoints, params);
 		return row;
 	}
 	
-	/*
-	 * This function executes the read protocol locally and should be used only if consistency is not a concern. 
-	 * Read the data from the local disk and return if the row is NOT NULL. If the data is NULL do the read from
-     * one of the other replicas (in the same data center if possible) till we get the data. In the event we get
-     * the data we perform consistency checks and figure out if any repairs need to be done to the replicas. 
-	 */
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, int start, int count) throws Exception
-	{
-		Row row = null;
-		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
-		/* Remove the local storage endpoint from the list. */ 
-		endpoints.remove( StorageService.getLocalStorageEndPoint() );
-		// TODO: throw a thrift exception if we do not have N nodes
-		
-		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			row = table.getRow(key, columnFamily, start, count);
-		}
-		else
-		{
-			row = table.getRow(key, columnFamily);
-		}
-		
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-		/*
-		 * Do the consistency checks in the background and return the
-		 * non NULL row.
-		 */
-		StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, start, count);
-		return row;        	
-	}
-	
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, long sinceTimestamp) throws Exception
-	{
-		Row row = null;
-		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
-		/* Remove the local storage endpoint from the list. */ 
-		endpoints.remove( StorageService.getLocalStorageEndPoint() );
-		// TODO: throw a thrift exception if we do not have N nodes
-		
-		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		row = table.getRow(key, columnFamily,sinceTimestamp);
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-		/*
-		 * Do the consistency checks in the background and return the
-		 * non NULL row.
-		 */
-		StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, sinceTimestamp);
-		return row;        	
-	}
-
-	protected ColumnFamily get_cf(String tablename, String key, String columnFamily, List<String> columNames) throws TException
+	private ColumnFamily get_cf(String tablename, String key, String columnFamily, List<String> columNames) throws TException
 	{
     	ColumnFamily cfamily = null;
 		try
@@ -520,7 +275,7 @@ public class CassandraServer extends FacebookBase implements
 	        // check for  values 
 	        if( values.length < 1 )
 	        	return cfamily;
-	        Row row = readProtocol(tablename, key, columnFamily, columNames, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily, columNames), StorageService.ConsistencyLevel.WEAK);
 	        if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -566,7 +321,7 @@ public class CassandraServer extends FacebookBase implements
 	        if( values.length < 1 )
 	        	return retlist;
 	        
-	        Row row = readProtocol(tablename, key, columnFamily_column, timeStamp, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_column, timeStamp), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -646,7 +401,7 @@ public class CassandraServer extends FacebookBase implements
 	        if( values.length < 1 )
 	        	return retlist;
 	        
-	        Row row = readProtocol(tablename, key, columnFamily_column, start, count, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_column, start, count), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -721,7 +476,7 @@ public class CassandraServer extends FacebookBase implements
 	        // check for  values 
 	        if( values.length < 2 )
 	        	return ret;
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_column), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -792,7 +547,7 @@ public class CassandraServer extends FacebookBase implements
 	        // check for  values 
 	        if( values.length < 1 )
 	        	return -1;
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_column), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -981,7 +736,7 @@ public class CassandraServer extends FacebookBase implements
 	        // check for  values 
 	        if( values.length < 1 )
 	        	return retlist;
-	        Row row = readProtocol(tablename, key, columnFamily_superColumnName, start, count, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_superColumnName, start, count), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
@@ -1054,7 +809,7 @@ public class CassandraServer extends FacebookBase implements
 	        if( values.length < 2 )
 	        	return ret;
 
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily_column), StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);

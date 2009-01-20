@@ -19,10 +19,7 @@
 package com.facebook.infrastructure.importer;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -30,17 +27,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import com.facebook.infrastructure.analytics.AnalyticsContext;
 import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.Memtable;
-import com.facebook.infrastructure.db.ReadMessage;
-import com.facebook.infrastructure.db.Row;
-import com.facebook.infrastructure.db.RowMutation;
-import com.facebook.infrastructure.db.RowMutationMessage;
+import com.facebook.infrastructure.db.ReadParameters;
+import com.facebook.infrastructure.db.*;
 import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.IResponseResolver;
@@ -146,7 +137,7 @@ public class StressTest
         
     }	
 	
-    public void readLoad(ReadMessage readMessage)
+    public void readLoad(ReadParameters readMessage)
     {
 		IResponseResolver<Row> readResponseResolver = new ReadResponseResolver();
 		QuorumResponseHandler<Row> quorumResponseHandler = new QuorumResponseHandler<Row>(
@@ -186,7 +177,7 @@ public class StressTest
 	            String stringKey = new Integer(key).toString();
 	            stringKey = stringKey + keyFix_ ;
             	int j = random.nextInt(columns) + 1;
-	            ReadMessage rm = new ReadMessage(tablename_, stringKey, columnFamilyColumn_ + ":" + columnFix_ + j);
+	            ReadParameters rm = new ReadParameters(tablename_, stringKey, columnFamilyColumn_ + ":" + columnFix_ + j);
 	            readLoad(rm);
 				if ( requestsPerSecond_ > 1000)
 					Thread.sleep(0, 1000000000/requestsPerSecond_);
@@ -256,7 +247,7 @@ public class StressTest
 	            stringKey = stringKey + keyFix_ ;
             	int i = random.nextInt(superColumns) + 1;
             	int j = random.nextInt(columns) + 1;
-	            ReadMessage rm = new ReadMessage(tablename_, stringKey, columnFamilySuperColumn_ + ":" + superColumnFix_ + i + ":" + columnFix_ + j);
+	            ReadParameters rm = new ReadParameters(tablename_, stringKey, columnFamilySuperColumn_ + ":" + superColumnFix_ + i + ":" + columnFix_ + j);
 	            readLoad(rm);
 			}
 		}

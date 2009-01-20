@@ -18,19 +18,8 @@
 
 package com.facebook.infrastructure.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.concurrent.DebuggableScheduledThreadPoolExecutor;
-import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.ReadMessage;
+import com.facebook.infrastructure.db.ReadParameters;
 import com.facebook.infrastructure.db.ReadResponseMessage;
 import com.facebook.infrastructure.db.Row;
 import com.facebook.infrastructure.io.DataInputBuffer;
@@ -42,6 +31,12 @@ import com.facebook.infrastructure.utils.Cachetable;
 import com.facebook.infrastructure.utils.ICacheExpungeHook;
 import com.facebook.infrastructure.utils.ICachetable;
 import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 class ConsistencyManager implements Runnable
 {
@@ -91,8 +86,8 @@ class ConsistencyManager implements Runnable
             replicas_.add(StorageService.getLocalStorageEndPoint());
 			IAsyncCallback responseHandler = new DataRepairHandler(ConsistencyManager.this.replicas_.size(), readResponseResolver);	
 			String table = DatabaseDescriptor.getTables().get(0);
-			ReadMessage readMessage = new ReadMessage(table, row_.key(), columnFamily_);
-            Message message = ReadMessage.makeReadMessage(readMessage);
+			ReadParameters readMessage = new ReadParameters(table, row_.key(), columnFamily_);
+            Message message = ReadParameters.makeReadMessage(readMessage);
 			MessagingService.getMessagingInstance().sendRR(message, replicas_.toArray( new EndPoint[0] ), responseHandler);			
 		}
 	}
@@ -147,9 +142,19 @@ class ConsistencyManager implements Runnable
 	private int start_;
 	private int count_;
 	private long sinceTimestamp_;
-	private List<String> columnNames_ = new ArrayList<String>();	
-	
-	ConsistencyManager(Row row, List<EndPoint> replicas, String columnFamily, List<String> columns)
+	private List<String> columnNames_ = new ArrayList<String>();
+
+    public ConsistencyManager(Row row_, List<EndPoint> replicas_, String columnFamily_, int start_, int count_, long sinceTimestamp_, List<String> columnNames_) {
+        this.row_ = row_;
+        this.replicas_ = replicas_;
+        this.columnFamily_ = columnFamily_;
+        this.start_ = start_;
+        this.count_ = count_;
+        this.sinceTimestamp_ = sinceTimestamp_;
+        this.columnNames_ = columnNames_;
+    }
+
+    ConsistencyManager(Row row, List<EndPoint> replicas, String columnFamily, List<String> columns)
 	{
 		row_ = row;
 		replicas_ = replicas;
@@ -178,31 +183,31 @@ class ConsistencyManager implements Runnable
 	{
 		logger_.debug(" Run the consistency checks for " + columnFamily_);
 		String table = DatabaseDescriptor.getTables().get(0);
-		ReadMessage readMessageDigestOnly = null;
+		ReadParameters readMessageDigestOnly = null;
 		if(columnNames_.size() == 0)
 		{
 			if( start_ >= 0 && count_ < Integer.MAX_VALUE)
 			{
-				readMessageDigestOnly = new ReadMessage(table, row_.key(), columnFamily_, start_, count_);
+				readMessageDigestOnly = new ReadParameters(table, row_.key(), columnFamily_, start_, count_);
 			}
 			else if(sinceTimestamp_ > 0)
 			{
-				readMessageDigestOnly = new ReadMessage(table, row_.key(), columnFamily_, sinceTimestamp_);
+				readMessageDigestOnly = new ReadParameters(table, row_.key(), columnFamily_, sinceTimestamp_);
 			}
 			else
 			{
-				readMessageDigestOnly = new ReadMessage(table, row_.key(), columnFamily_);
+				readMessageDigestOnly = new ReadParameters(table, row_.key(), columnFamily_);
 			}
 		}
 		else
 		{
-			readMessageDigestOnly = new ReadMessage(table, row_.key(), columnFamily_, columnNames_);
+			readMessageDigestOnly = new ReadParameters(table, row_.key(), columnFamily_, columnNames_);
 			
 		}
 		readMessageDigestOnly.setIsDigestQuery(true);
 		try
 		{
-			Message messageDigestOnly = ReadMessage.makeReadMessage(readMessageDigestOnly);
+			Message messageDigestOnly = ReadParameters.makeReadMessage(readMessageDigestOnly);
 			IAsyncCallback digestResponseHandler = new DigestResponseHandler();
 			MessagingService.getMessagingInstance().sendRR(messageDigestOnly, replicas_.toArray(new EndPoint[0]), digestResponseHandler);
 		}

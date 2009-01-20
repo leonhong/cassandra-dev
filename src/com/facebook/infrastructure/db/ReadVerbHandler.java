@@ -18,15 +18,16 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.io.DataOutputBuffer;
-import com.facebook.infrastructure.net.*;
-import com.facebook.infrastructure.utils.*;
+import com.facebook.infrastructure.net.IVerbHandler;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.service.StorageService;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -58,24 +59,24 @@ public class ReadVerbHandler implements IVerbHandler
 
         try
         {
-            ReadMessage readMessage = ReadMessage.serializer().deserialize(readCtx.bufIn_);
-            Table table = Table.open(readMessage.table());
+            ReadParameters readMessage = ReadParameters.serializer().deserialize(readCtx.bufIn_);
+            Table table = Table.open(readMessage.table);
             Row row = null;
             long start = System.currentTimeMillis();
-            if( readMessage.columnFamily_column() == null )
-            	row = table.get(readMessage.key());
+            if( readMessage.columnFamily_column == null )
+            	row = table.get(readMessage.key);
             else
             {
             	if(readMessage.getColumnNames().size() == 0)
             	{
-	            	if(readMessage.count() > 0 && readMessage.start() >= 0)
-	            		row = table.getRow(readMessage.key(), readMessage.columnFamily_column(), readMessage.start(), readMessage.count());
+	            	if(readMessage.count > 0 && readMessage.start >= 0)
+	            		row = table.getRow(readMessage.key, readMessage.columnFamily_column, readMessage.start, readMessage.count);
 	            	else
-	            		row = table.getRow(readMessage.key(), readMessage.columnFamily_column());
+	            		row = table.getRow(readMessage.key, readMessage.columnFamily_column);
             	}
             	else
             	{
-            		row = table.getRow(readMessage.key(), readMessage.columnFamily_column(), readMessage.getColumnNames());
+            		row = table.getRow(readMessage.key, readMessage.columnFamily_column, readMessage.getColumnNames());
             	}
             }
             logger_.info("getRow()  TIME: " + (System.currentTimeMillis() - start) + " ms.");

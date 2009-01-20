@@ -20,19 +20,14 @@ package com.facebook.infrastructure.importer;
 
 import com.facebook.thrift.transport.TTransport;
 import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.transport.THttpClient;
-import com.facebook.thrift.transport.TFramedTransport;
 import com.facebook.thrift.protocol.TBinaryProtocol;
 import com.facebook.infrastructure.concurrent.DebuggableScheduledThreadPoolExecutor;
-import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.db.*;
 import com.facebook.infrastructure.service.Cassandra;
 import com.facebook.infrastructure.service.batch_mutation_super_t;
 import com.facebook.infrastructure.service.batch_mutation_t;
 import com.facebook.infrastructure.service.column_t;
-import com.facebook.infrastructure.utils.BasicUtilities;
-import com.facebook.infrastructure.utils.LogUtil;
 import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.service.*;
 import java.io.BufferedReader;
@@ -42,21 +37,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.StringTokenizer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -879,7 +867,7 @@ public class DataImporter {
 				key = user + ":1";
 			}
 
-			ReadMessage readMessage = new ReadMessage(tablename_, key);
+			ReadParameters readMessage = new ReadParameters(tablename_, key);
 			Message message = new Message(from_, StorageService.readStage_,
 					StorageService.readVerbHandler_,
 					new Object[] { readMessage });

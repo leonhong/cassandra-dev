@@ -18,6 +18,41 @@
 
 package com.facebook.infrastructure.service;
 
+import com.facebook.infrastructure.analytics.AnalyticsContext;
+import com.facebook.infrastructure.concurrent.*;
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.db.*;
+import com.facebook.infrastructure.dht.BootStrapper;
+import com.facebook.infrastructure.dht.BootstrapInitiateMessage;
+import com.facebook.infrastructure.dht.BootstrapMetadataVerbHandler;
+import com.facebook.infrastructure.dht.Range;
+import com.facebook.infrastructure.gms.*;
+import com.facebook.infrastructure.locator.*;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.net.IVerbHandler;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.net.http.HttpConnection;
+import com.facebook.infrastructure.net.io.StreamContextManager;
+import com.facebook.infrastructure.tools.MembershipCleanerVerbHandler;
+import com.facebook.infrastructure.tools.TokenUpdateVerbHandler;
+import com.facebook.infrastructure.utils.LogUtil;
+import com.yahoo.zookeeper.KeeperException;
+import com.yahoo.zookeeper.Watcher;
+import com.yahoo.zookeeper.ZooDefs.Ids;
+import com.yahoo.zookeeper.ZooKeeper;
+import com.yahoo.zookeeper.data.Stat;
+import com.yahoo.zookeeper.proto.WatcherEvent;
+import org.apache.commons.math.linear.RealMatrix;
+import org.apache.commons.math.linear.RealMatrixImpl;
+import org.apache.log4j.Logger;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -25,48 +60,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.io.*;
-import java.lang.management.ManagementFactory;
-import java.math.BigInteger;
-import java.net.UnknownHostException;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import org.apache.commons.math.linear.RealMatrix;
-import org.apache.commons.math.linear.RealMatrixImpl;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.analytics.AnalyticsContext;
-import com.facebook.infrastructure.concurrent.*;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.*;
-import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.io.ICompactSerializer;
-import com.facebook.infrastructure.dht.BootStrapper;
-import com.facebook.infrastructure.dht.BootstrapInitiateMessage;
-import com.facebook.infrastructure.dht.BootstrapMetadataVerbHandler;
-import com.facebook.infrastructure.dht.Range;
-import com.facebook.infrastructure.locator.EndPointSnitch;
-import com.facebook.infrastructure.locator.IEndPointSnitch;
-import com.facebook.infrastructure.locator.IReplicaPlacementStrategy;
-import com.facebook.infrastructure.locator.RackAwareStrategy;
-import com.facebook.infrastructure.locator.RackUnawareStrategy;
-import com.facebook.infrastructure.locator.TokenMetadata;
-import com.facebook.infrastructure.net.http.HttpConnection;
-import com.facebook.infrastructure.net.io.*;
-import com.facebook.infrastructure.net.CompactEndPointSerializationHelper;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.IVerbHandler;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.gms.*;
-import com.facebook.infrastructure.tools.MembershipCleanerVerbHandler;
-import com.facebook.infrastructure.tools.TokenUpdateVerbHandler;
-import com.facebook.infrastructure.utils.*;
-import com.yahoo.zookeeper.KeeperException;
-import com.yahoo.zookeeper.Watcher;
-import com.yahoo.zookeeper.ZooKeeper;
-import com.yahoo.zookeeper.ZooDefs.Ids;
-import com.yahoo.zookeeper.data.Stat;
-import com.yahoo.zookeeper.proto.WatcherEvent;
 
 /*
  * This abstraction contains the token/identifier of this node
@@ -508,23 +501,12 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
      * sure that the N replicas are in sync. We do this in the
      * background when we do not care much about consistency.
      */
-    public void doConsistencyCheck(Row row, List<EndPoint> endpoints, String columnFamily, int start, int count)
+    public void doConsistencyCheck(Row row, List<EndPoint> endpoints, ReadParameters message)
 	{
-		Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, columnFamily, start, count);
+		Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, message.columnFamily_column,
+                                                              message.start, message.count, message.sinceTimestamp, message.getColumnNames());
 		consistencyManager_.submit(consistencySentinel);
 	}
-    
-    public void doConsistencyCheck(Row row, List<EndPoint> endpoints, String columnFamily, long sinceTimestamp)
-	{
-		Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, columnFamily, sinceTimestamp);
-		consistencyManager_.submit(consistencySentinel);
-	}
-
-    public void doConsistencyCheck(Row row, List<EndPoint> endpoints, String columnFamily, List<String> columns)
-    {
-    	Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, columnFamily, columns);
-		consistencyManager_.submit(consistencySentinel);
-    }
 
     /*
      * This method displays all the ranges and the replicas
