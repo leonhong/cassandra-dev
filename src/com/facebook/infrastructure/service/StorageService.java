@@ -51,6 +51,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.math.BigInteger;
 import java.util.*;
@@ -72,7 +73,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 {
     private static Logger logger_ = Logger.getLogger(StorageService.class);
     private static final BigInteger prime_ = BigInteger.valueOf(31);
-    private final static int maxKeyHashLength_ = 24;
     private final static String nodeId_ = "NODE-IDENTIFIER";
     private final static String loadAll_ = "LOAD-ALL";
     public final static String mutationStage_ = "ROW-MUTATION-STAGE";
@@ -123,13 +123,18 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     public static BigInteger hash(String key)
     {
         BigInteger h = BigInteger.ZERO;
-        char val[] = key.toCharArray();
-        for (int i = 0; i < StorageService.maxKeyHashLength_; i++)
+        int MAX_LENGTH = 16; // old hash generated up to 256**16, but node tokens are up to 256**20.  either is probably ok.
+
+        byte[] bytes;
+        try {
+            bytes = key.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        for (int i = 0; i < MAX_LENGTH && i < bytes.length; i++)
         {
-            if( i < val.length )
-                h = StorageService.prime_.multiply(h).add( BigInteger.valueOf(val[i]) );
-            else
-                h = StorageService.prime_.multiply(h).add( StorageService.prime_ );
+            int v = (0xFF & bytes[i]);
+            h = h.add(BigInteger.valueOf(v).multiply(BigInteger.valueOf(256).pow(MAX_LENGTH - i)));
         }
 
         return h;
@@ -754,17 +759,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 doBootstrap(ep, BootstrapMode.FULL);
             }
         }
-    }
-
-    public static BigInteger generateRandomToken()
-    {
-	    byte[] randomBytes = new byte[24];
-	    Random random = new Random();
-	    for ( int i = 0 ; i < 24 ; i++)
-	    {
-	    randomBytes[i] = (byte)(31 + random.nextInt(256 - 31));
-	    }
-	    return hash(new String(randomBytes));
     }
 
     /**
