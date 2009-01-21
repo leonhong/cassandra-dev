@@ -64,6 +64,7 @@ service Cassandra extends fb303.FacebookService
   async void          	batch_insert_superColumn(batch_mutation_super_t batchMutationSuper),
 
   bool                	batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper),
+  list<string>	        get_range(string tablename, string startkey),
 }
 
 
