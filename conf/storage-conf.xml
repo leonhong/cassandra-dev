@@ -2,7 +2,7 @@
    <ClusterName>Test</ClusterName>
    <RackAware>false</RackAware>
    <MulticastChannel>230.0.0.1</MulticastChannel>
-   <ReplicationFactor>3</ReplicationFactor>
+   <ReplicationFactor>1</ReplicationFactor>
    <ZookeeperAddress></ZookeeperAddress>
    <RpcTimeoutInMillis>5000</RpcTimeoutInMillis>
    <StoragePort>7000</StoragePort>
