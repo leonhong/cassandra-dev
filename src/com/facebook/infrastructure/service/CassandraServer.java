@@ -97,7 +97,9 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 	}
 
     public boolean insert_blocking(String tablename, String key, String columnFamily_column, String cellData, long timestamp) throws TException {
-        throw new UnsupportedOperationException();
+        RowMutation rm = new RowMutation(tablename, key.trim());
+        rm.add(columnFamily_column, cellData.getBytes(), timestamp);
+        return insertBlocking(rm);
     }
 
     private void insert(RowMutation rm)
@@ -108,10 +110,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		// 3. SendRR ( to all the nodes above )
 		// 4. Wait for a response from atleast X nodes where X <= N
 		// 5. return success
-
 		try
 		{
-			logger_.debug(" insert");
 			Map<EndPoint, EndPoint> endpointMap = storageService_.getNStorageEndPointMap(rm.key());
 			// TODO: throw a thrift exception if we do not have N nodes
 			RowMutationMessage rmMsg = new RowMutationMessage(rm); 
@@ -125,9 +125,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		}
 		catch (Exception e)
 		{
-			logger_.error( LogUtil.throwableToString(e) );
+			throw new RuntimeException(e);
 		}
-		return;
 	}
 
    /**
@@ -439,26 +438,21 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp)
 	{
-		try
-		{
-			RowMutation rm = new RowMutation(tablename, key.trim());
-			rm.add(columnFamily_column, cellData.getBytes(), timestamp);
-			insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return;
+        RowMutation rm = new RowMutation(tablename, key.trim());
+        rm.add(columnFamily_column, cellData.getBytes(), timestamp);
+        insert(rm);
 	}
 
     public boolean batch_insert_blocking(batch_mutation_t batchMutation)
     {
-        logger_.warn("batch_insert_blocking");
-    	boolean result = false;
-		try
+        logger_.debug("batch_insert_blocking");
+        RowMutation rm = RowMutation.getRowMutation(batchMutation);
+        return insertBlocking(rm);
+    }
+
+    private boolean insertBlocking(RowMutation rm) {
+        try
 		{
-            RowMutation rm = RowMutation.getRowMutation(batchMutation);
             RowMutationMessage rmMsg = new RowMutationMessage(rm);
             Message message = RowMutationMessage.makeRowMutationMessage(rmMsg);
 
@@ -470,37 +464,23 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             logger_.debug("writing to " + StringUtils.join(endpoints, ' '));
             // TODO: throw a thrift exception if we do not have N nodes
 
-			MessagingService.getMessagingInstance().sendRR(message, endpoints,
-					quorumResponseHandler);
-			logger_.debug(" Calling quorum response handler's get");
-			result = quorumResponseHandler.get();
+            MessagingService.getMessagingInstance().sendRR(message, endpoints, quorumResponseHandler);
+            return quorumResponseHandler.get();
 
-			// TODO: if the result is false that means the writes to all the
-			// servers failed hence we need to throw an exception or return an
-			// error back to the client so that it can take appropriate action.
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return result;
-
+            // TODO: if the result is false that means the writes to all the
+            // servers failed hence we need to throw an exception or return an
+            // error back to the client so that it can take appropriate action.
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void batch_insert(batch_mutation_t batchMutation)
 	{
         logger_.debug("batch_insert");
-
-		try
-		{
-            RowMutation rm = RowMutation.getRowMutation(batchMutation);
-			insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return;
+        RowMutation rm = RowMutation.getRowMutation(batchMutation);
+        insert(rm);
 	}
 
     public void remove(String tablename, String key, String columnFamily_column, long timestamp)
@@ -521,33 +501,15 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)
     {
         logger_.debug("batch_insert_SuperColumn_blocking");
-    	boolean result = false;
-		try
-		{
-            RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
-			insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return result;
-    	
+        RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
+    	return insertBlocking(rm);
     }
 
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper)
     {
         logger_.debug("batch_insert_SuperColumn_blocking");
-		try
-		{
-            RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
-			insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return;
+        RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
+    	insert(rm);
     }
     
     

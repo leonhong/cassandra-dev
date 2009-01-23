@@ -18,15 +18,17 @@
 
 package com.facebook.infrastructure.db;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.io.*;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.service.*;
-import com.facebook.infrastructure.utils.*;
-import com.facebook.infrastructure.concurrent.*;
+import com.facebook.infrastructure.concurrent.StageManager;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.net.*;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.net.IVerbHandler;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.service.StorageService;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -46,9 +48,7 @@ public class RowMutationVerbHandler implements IVerbHandler
     
     public void doVerb(Message message)
     {
-        /* For DEBUG only. Printing queue length */                         
         logger_.info( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
-        /* END DEBUG */
             
         byte[] bytes = (byte[])message.getMessageBody()[0];
         /* Obtain a Row Mutation Context from TLS */
@@ -91,10 +91,10 @@ public class RowMutationVerbHandler implements IVerbHandler
             long end = System.currentTimeMillis();                       
             logger_.info("ROW MUTATION APPLY: " + (end - start) + " ms.");
             
-            /*WriteResponseMessage writeResponseMessage = new WriteResponseMessage(rm.table(), rm.key(), true);
-            Message response = message.getReply( StorageService.getLocalStorageEndPoint(), new Object[]{writeResponseMessage} );
-            logger_.debug("Sending teh response to " +  message.getFrom() + " for key :" + rm.key());
-            MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());  */                    
+            WriteResponseMessage writeResponseMessage = new WriteResponseMessage(rm.table(), rm.key(), true);
+            Message response = message.getReply(StorageService.getLocalStorageEndPoint(), new Object[] { writeResponseMessage });
+            logger_.debug("Sending response to " +  message.getFrom() + " for key :" + rm.key());
+            MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
         }         
         catch( ColumnFamilyNotDefinedException ex )
         {
