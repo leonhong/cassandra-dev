@@ -180,38 +180,36 @@ public class ColumnFamilyCompactor {
                         fs = pq.poll();
                     }
                     if (fs != null
-                            && (lastkey == null || lastkey.compareTo(fs.key) == 0)) {
+                            && (lastkey == null || lastkey.compareTo(fs.getKey()) == 0)) {
                         // The keys are the same so we need to add this to the
                         // ldfs list
-                        lastkey = fs.key;
+                        lastkey = fs.getKey();
                         lfs.add(fs);
                     } else {
                         Collections.sort(lfs, new ColumnFamilyStore.FileStructComparator());
-                        ColumnFamily columnFamily = null;
                         bufOut.reset();
                         if (lfs.size() > 1) {
                             for (FileStruct filestruct : lfs) {
                                 try {
                                     /* read the length although we don't need it */
-                                    filestruct.bufIn.readInt();
+                                    filestruct.getBufIn().readInt();
                                     // Skip the Index
                                     if (DatabaseDescriptor.isNameIndexEnabled(cfs.getColumnFamilyName())) {
-                                        IndexHelper.skip(filestruct.bufIn);
+                                        IndexHelper.skip(filestruct.getBufIn());
                                     }
                                     // We want to add only 2 and resolve them right there in order to save on memory footprint
                                     if (columnFamilies.size() > 1) {
                                         ColumnFamilyStore.merge(columnFamilies);
                                     }
                                     // deserialize into column families
-                                    columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.bufIn));
+                                    columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.getBufIn()));
                                 }
                                 catch (Exception ex) {
-                                    logger_.warn(LogUtil.throwableToString(ex));
-                                    continue;
+                                    logger_.error(LogUtil.throwableToString(ex));
                                 }
                             }
                             // Now after merging all crap append to the sstable
-                            columnFamily = ColumnFamilyStore.resolveAndRemoveDeleted(columnFamilies);
+                            ColumnFamily columnFamily = ColumnFamilyStore.resolveAndRemoveDeleted(columnFamilies);
                             columnFamilies.clear();
                             if (columnFamily != null) {
                                 /* serialize the cf with column indexes */
@@ -221,12 +219,12 @@ public class ColumnFamilyCompactor {
                             FileStruct filestruct = lfs.get(0);
                             try {
                                 /* read the length although we don't need it */
-                                int size = filestruct.bufIn.readInt();
-                                bufOut.write(filestruct.bufIn, size);
+                                int size = filestruct.getBufIn().readInt();
+                                bufOut.write(filestruct.getBufIn(), size);
                             }
                             catch (Exception ex) {
                                 logger_.warn(LogUtil.throwableToString(ex));
-                                filestruct.reader.close();
+                                filestruct.close();
                                 continue;
                             }
                         }
@@ -255,13 +253,13 @@ public class ColumnFamilyCompactor {
                         for (FileStruct filestruct : lfs) {
                             try {
                                 filestruct.getNextKey();
-                                if (filestruct.exhausted) {
+                                if (filestruct.isExhausted()) {
                                     continue;
                                 }
                                 /* keep on looping until we find a key in the range */
-                                while (!Range.isKeyInRanges(ranges, filestruct.key)) {
+                                while (!Range.isKeyInRanges(ranges, filestruct.getKey())) {
                                     fs.getNextKey();
-                                    if (filestruct.exhausted) {
+                                    if (filestruct.isExhausted()) {
                                         break;
                                     }
                                     /* check if we need to continue , if we are done with ranges empty the queue and close all file handles and exit */
@@ -281,9 +279,8 @@ public class ColumnFamilyCompactor {
                                 // Ignore the exception as it might be a corrupted file
                                 // in any case we have read as far as possible from it
                                 // and it will be deleted after compaction.
-                                logger_.warn(LogUtil.throwableToString(ex));
-                                filestruct.reader.close();
-                                continue;
+                                logger_.error(LogUtil.throwableToString(ex));
+                                filestruct.close();
                             }
                         }
                         lfs.clear();
@@ -368,10 +365,10 @@ public class ColumnFamilyCompactor {
                     // pop off the queue until we get a different key
                     FileStruct fs = pq.peek();
                     if (fs != null
-                        && (lastkey == null || lastkey.equals(fs.key))) {
+                        && (lastkey == null || lastkey.equals(fs.getKey()))) {
                         // The keys are the same so we need to add this to the
                         // merge list
-                        lastkey = fs.key;
+                        lastkey = fs.getKey();
                         mergeNeeded.add(pq.poll());
                         continue;
                     }
@@ -383,20 +380,20 @@ public class ColumnFamilyCompactor {
                         for (FileStruct filestruct : mergeNeeded) {
                             try {
                                 /* read the length although we don't need it */
-                                filestruct.bufIn.readInt();
+                                filestruct.getBufIn().readInt();
                                 // Skip the Index
                                 if (DatabaseDescriptor.isNameIndexEnabled(cfs.getColumnFamilyName())) {
-                                    IndexHelper.skip(filestruct.bufIn);
+                                    IndexHelper.skip(filestruct.getBufIn());
                                 }
                                 // We want to add only 2 and resolve them right there in order to save on memory footprint
                                 if (columnFamilies.size() > 1) {
                                     ColumnFamilyStore.merge(columnFamilies);
                                 }
                                 // deserialize into column families
-                                columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.bufIn));
+                                columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.getBufIn()));
                             }
                             catch (Exception ex) {
-                                ex.printStackTrace();
+                                logger_.error(ex);
                                 continue;
                             }
                         }
@@ -411,12 +408,12 @@ public class ColumnFamilyCompactor {
                         FileStruct filestruct = mergeNeeded.get(0);
                         try {
                             /* read the length although we don't need it */
-                            int size = filestruct.bufIn.readInt();
-                            bufOut.write(filestruct.bufIn, size);
+                            int size = filestruct.getBufIn().readInt();
+                            bufOut.write(filestruct.getBufIn(), size);
                         }
                         catch (Exception ex) {
                             ex.printStackTrace();
-                            filestruct.reader.close();
+                            filestruct.close();
                             continue;
                         }
                     }
@@ -449,7 +446,7 @@ public class ColumnFamilyCompactor {
                     for (FileStruct filestruct : mergeNeeded) {
                         try {
                             filestruct.getNextKey();
-                            if (filestruct.exhausted) {
+                            if (filestruct.isExhausted()) {
                                 continue;
                             }
                             pq.add(filestruct);
@@ -459,8 +456,8 @@ public class ColumnFamilyCompactor {
                             // Ignore the exception as it might be a corrupted file
                             // in any case we have read as far as possible from it
                             // and it will be deleted after compaction.
-                            ex.printStackTrace();
-                            filestruct.reader.close();
+                            logger_.error(ex);
+                            filestruct.close();
                             continue;
                         }
                     }
@@ -501,13 +498,9 @@ public class ColumnFamilyCompactor {
             {
             	try
             	{
-            		fs = new FileStruct();
-	                fs.bufIn = new DataInputBuffer();
-	                fs.bufOut = new DataOutputBuffer();
-	                fs.reader = SequenceFile.bufferedReader(file, bufferSize);
-	                fs.key = null;
+            		fs = new FileStruct(SequenceFile.bufferedReader(file, bufferSize));
 	                fs.getNextKey();
-	                if(fs.exhausted)
+	                if(fs.isExhausted())
 	                	continue;
 	                pq.add(fs);
             	}
@@ -518,73 +511,17 @@ public class ColumnFamilyCompactor {
             		{
             			if(fs != null)
             			{
-            				fs.reader.close();
+            				fs.close();
             			}
             		}
             		catch(Exception e)
             		{
-            			logger_.warn("Unable to close file :" + file);
+            			logger_.error("Unable to close file :" + file, e);
             		}
-                    continue;
             	}
             }
         }
         return pq;
-    }
-
-    static class FileStruct implements Comparable<FileStruct>
-    {
-        IFileReader reader;
-        String key;
-        DataInputBuffer bufIn;
-        DataOutputBuffer bufOut;
-        boolean exhausted = false;
-
-        public int compareTo(FileStruct f)
-        {
-            return key.compareTo(f.key);
-        }
-
-        /*
-         * Read the next key from the data file , this fn will skip teh block index
-         * and read teh next available key into the filestruct that is passed.
-         * If it cannot read or a end of file is reached it will return null.
-         */
-        void getNextKey() throws IOException
-        {
-            bufOut.reset();
-            if (reader.isEOF())
-            {
-                reader.close();
-                exhausted = true;
-                return;
-            }
-
-            long bytesread = reader.next(bufOut);
-            if (bytesread == -1)
-            {
-                reader.close();
-                exhausted = true;
-                return;
-            }
-
-            bufIn.reset(bufOut.getData(), bufOut.getLength());
-            key = bufIn.readUTF();
-            /* If the key we read is the Block Index Key then omit and read the next key. */
-            if ( key.equals(SSTable.blockIndexKey_) )
-            {
-                bufOut.reset();
-                bytesread = reader.next(bufOut);
-                if (bytesread == -1)
-                {
-                    reader.close();
-                    exhausted = true;
-                    return;
-                }
-                bufIn.reset(bufOut.getData(), bufOut.getLength());
-                key = bufIn.readUTF();
-            }
-        }
     }
 
     /*

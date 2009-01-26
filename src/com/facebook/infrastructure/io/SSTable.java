@@ -452,10 +452,10 @@ public class SSTable
     /**
      * Section of a file that needs to be scanned
      */
-    static class Range
+    public static class Range
     {
-        long start;
-        long end;
+        public long start;
+        public long end;
 
         Range(long start, long end)
         {
@@ -599,9 +599,9 @@ public class SSTable
         }
     }
 
-    private Range getRange(String key, IFileReader dataReader) throws IOException
+    public static Range getRange(String key, IFileReader dataReader) throws IOException
     {
-    	List<KeyPositionInfo> indexInfo = indexMetadataMap_.get(dataFile_);
+    	List<KeyPositionInfo> indexInfo = indexMetadataMap_.get(dataReader.getFileName());
     	int size = (indexInfo == null) ? 0 : indexInfo.size();
     	long start = 0L;
     	long end = dataReader.getEOF();
@@ -665,7 +665,7 @@ public class SSTable
 
             try
             {
-                dataReader.next(key, bufOut, columnFamilyName, cNames, range);            
+                dataReader.next(key, bufOut, columnFamilyName, cNames, range);
                 if ( bufOut.getLength() > 0 )
                 {
                     bufIn.reset(bufOut.getData(), bufOut.getLength());

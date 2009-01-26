@@ -1,7 +1,9 @@
 package com.facebook.infrastructure.io;
 
 import com.facebook.infrastructure.ServerTest;
+import com.facebook.infrastructure.db.FileStruct;
 import com.facebook.infrastructure.utils.BloomFilter;
+import org.apache.commons.collections.CollectionUtils;
 import org.testng.annotations.Test;
 
 import java.io.File;
@@ -65,5 +67,39 @@ public class SSTableTest extends ServerTest {
             bufIn.readFully(bytes2);
             assert Arrays.equals(bytes2, map.get(key));
         }
+    }
+
+    @Test
+    public void testFileStruct() throws IOException {
+        File f = File.createTempFile("sstable", "");
+        SSTable ssTable;
+
+        TreeMap<String, byte[]> map = new TreeMap<String,byte[]>();
+        for ( int i = 200; i < 1000; i += 2 )
+        {
+            map.put(Integer.toString(i), ("Avinash Lakshman is a good man: " + i).getBytes());
+        }
+
+        // write
+        ssTable = new SSTable(f.getParent(), f.getName());
+        BloomFilter bf = new BloomFilter(1000, 8);
+        for (String key: map.navigableKeySet())
+        {
+            ssTable.append(key, map.get(key));
+        }
+        ssTable.close(bf);
+
+        List<String> keys = new ArrayList<String>();
+        CollectionUtils.addAll(keys, new ArrayList(map.keySet()).listIterator(200));
+        assert keys.get(0).equals("600");
+        FileStruct fs = new FileStruct(SequenceFile.reader(f.getPath() + "-Data.db"));
+        fs.seekTo("599");
+        assert fs.getKey().equals("600");
+        for (String key : keys) {
+            assert !fs.isExhausted();
+            assert key.equals(fs.getKey());
+            fs.getNextKey();
+        }
+        assert fs.isExhausted();
     }
 }

@@ -47,11 +47,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ColumnFamilyStore
 {
-    static class FileStructComparator implements Comparator<ColumnFamilyCompactor.FileStruct>
+    static class FileStructComparator implements Comparator<FileStruct>
     {
-        public int compare(ColumnFamilyCompactor.FileStruct f, ColumnFamilyCompactor.FileStruct f2)
+        public int compare(FileStruct f, FileStruct f2)
         {
-            return f.reader.getFileName().compareTo(f2.reader.getFileName());
+            return f.getFileName().compareTo(f2.getFileName());
         }
 
         public boolean equals(Object o)
