@@ -220,12 +220,11 @@ public class Table
             
             /* Generate unique file names per entry */
             Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-            Map<String, ColumnFamilyStore> columnFamilyStores = table.getColumnFamilyStores();
-            
+
             for ( String distinctEntry : distinctEntries )
             {
                 String[] peices = FBUtilities.strip(distinctEntry, "-");
-                ColumnFamilyStore cfStore = columnFamilyStores.get(peices[0]);
+                ColumnFamilyStore cfStore = table.columnFamilyStores_.get(peices[0]);
                 logger_.debug("Generating file name for " + distinctEntry + " ...");
                 fileNames.put(distinctEntry, cfStore.getNextFileName());
             }
@@ -285,12 +284,7 @@ public class Table
         return tableMetadata_.getColumnFamilies();
     }
 
-    Map<String, ColumnFamilyStore> getColumnFamilyStores()
-    {
-        return columnFamilyStores_;
-    }
-
-    ColumnFamilyStore getColumnFamilyStore(String cfName)
+    public ColumnFamilyStore getColumnFamilyStore(String cfName)
     {
         return columnFamilyStores_.get(cfName);
     }

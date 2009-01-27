@@ -18,6 +18,10 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.utils.BasicUtilities;
+import com.facebook.infrastructure.utils.FBUtilities;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Map;
@@ -25,10 +29,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.utils.BasicUtilities;
-import com.facebook.infrastructure.utils.FBUtilities;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -39,8 +39,7 @@ public class DBManager
     private static DBManager dbMgr_;
     private static Lock lock_ = new ReentrantLock();
 
-    public static DBManager instance() throws Throwable
-    {
+    public static DBManager instance() throws IOException {
         if ( dbMgr_ == null )
         {
             lock_.lock();
@@ -84,8 +83,7 @@ public class DBManager
         }
     }
 
-    public DBManager() throws Throwable
-    {
+    public DBManager() throws IOException {
         /* Read the configuration file */
         Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.getTableToColumnFamilyMap();
         Set<String> tables = tableToColumnFamilyMap.keySet();

@@ -775,6 +775,13 @@ public class ColumnFamilyStore
         }
         return totalBytesWritten;
     }
-    
+
+    public Memtable getMemtable() {
+        return memtable_.get();
+    }
+
+    public Set<String> getSSTables() {
+        return Collections.unmodifiableSet(ssTables_);
+    }
 }
 

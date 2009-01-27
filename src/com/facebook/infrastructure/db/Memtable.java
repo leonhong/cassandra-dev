@@ -18,23 +18,23 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
+import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.io.DataOutputBuffer;
+import com.facebook.infrastructure.io.SSTable;
+import com.facebook.infrastructure.utils.BloomFilter;
+import com.facebook.infrastructure.utils.DestructivePQIterator;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
-import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
-import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -87,6 +87,10 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         table_ = table;
         cfName_ = cfName;
         creationTime_ = System.currentTimeMillis();
+    }
+
+    public Iterator<String> sortedKeyIterator() {
+        return new DestructivePQIterator<String>(new PriorityQueue<String>(columnFamilies_.keySet()));
     }
 
     class Putter implements Runnable

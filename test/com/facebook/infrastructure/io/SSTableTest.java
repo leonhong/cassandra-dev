@@ -73,6 +73,7 @@ public class SSTableTest extends ServerTest {
     public void testFileStruct() throws IOException {
         File f = File.createTempFile("sstable", "");
         SSTable ssTable;
+        FileStruct fs;
 
         TreeMap<String, byte[]> map = new TreeMap<String,byte[]>();
         for ( int i = 200; i < 1000; i += 2 )
@@ -89,10 +90,11 @@ public class SSTableTest extends ServerTest {
         }
         ssTable.close(bf);
 
+        // test seek
         List<String> keys = new ArrayList<String>();
         CollectionUtils.addAll(keys, new ArrayList(map.keySet()).listIterator(200));
         assert keys.get(0).equals("600");
-        FileStruct fs = new FileStruct(SequenceFile.reader(f.getPath() + "-Data.db"));
+        fs = new FileStruct(SequenceFile.reader(f.getPath() + "-Data.db"));
         fs.seekTo("599");
         assert fs.getKey().equals("600");
         for (String key : keys) {
@@ -101,5 +103,13 @@ public class SSTableTest extends ServerTest {
             fs.getNextKey();
         }
         assert fs.isExhausted();
+
+        // test iterator
+        fs = new FileStruct(SequenceFile.reader(f.getPath() + "-Data.db"));
+        Iterator<String> iter = fs.iterator();
+        for (String key : map.keySet()) {
+            assert key.equals(iter.next());
+        }
+        assert !iter.hasNext();
     }
 }

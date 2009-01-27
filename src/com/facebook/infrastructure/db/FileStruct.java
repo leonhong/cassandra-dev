@@ -1,13 +1,14 @@
 package com.facebook.infrastructure.db;
 
-import com.facebook.infrastructure.io.IFileReader;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.io.DataOutputBuffer;
+import com.facebook.infrastructure.io.IFileReader;
 import com.facebook.infrastructure.io.SSTable;
 
 import java.io.IOException;
+import java.util.Iterator;
 
-public class FileStruct implements Comparable<FileStruct>
+public class FileStruct implements Comparable<FileStruct>, Iterable<String>
 {
     private String key = null;
     private boolean exhausted = false;
@@ -75,43 +76,83 @@ public class FileStruct implements Comparable<FileStruct>
      * Caller must check isExhausted after each call to see if further
      * reads are valid.
      */
-    public void getNextKey() throws IOException
+    public void getNextKey()
     {
         if (exhausted) {
-            return;
+            throw new IndexOutOfBoundsException();
         }
 
-        bufOut.reset();
-        if (reader.isEOF())
-        {
-            reader.close();
-            exhausted = true;
-            return;
-        }
-
-        long bytesread = reader.next(bufOut);
-        if (bytesread == -1)
-        {
-            reader.close();
-            exhausted = true;
-            return;
-        }
-
-        bufIn.reset(bufOut.getData(), bufOut.getLength());
-        key = bufIn.readUTF();
-        /* If the key we read is the Block Index Key then omit and read the next key. */
-        if ( key.equals(SSTable.blockIndexKey_) )
-        {
+        try {
             bufOut.reset();
-            bytesread = reader.next(bufOut);
+            if (reader.isEOF())
+            {
+                reader.close();
+                exhausted = true;
+                return;
+            }
+
+            long bytesread = reader.next(bufOut);
             if (bytesread == -1)
             {
                 reader.close();
                 exhausted = true;
                 return;
             }
+
             bufIn.reset(bufOut.getData(), bufOut.getLength());
             key = bufIn.readUTF();
+            /* If the key we read is the Block Index Key then omit and read the next key. */
+            if ( key.equals(SSTable.blockIndexKey_) )
+            {
+                bufOut.reset();
+                bytesread = reader.next(bufOut);
+                if (bytesread == -1)
+                {
+                    reader.close();
+                    exhausted = true;
+                    return;
+                }
+                bufIn.reset(bufOut.getData(), bufOut.getLength());
+                key = bufIn.readUTF();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Iterator<String> iterator() {
+        return new FileStructIterator();
+    }
+
+    private class FileStructIterator implements Iterator<String> {
+        String saved;
+
+        public FileStructIterator() {
+            if (getKey() == null && !isExhausted()) {
+                forward();
+            }
+        }
+
+        private void forward() {
+            getNextKey();
+            saved = isExhausted() ? null : getKey();
+        }
+
+        public boolean hasNext() {
+            return saved != null;
+        }
+
+        public String next() {
+            if (saved == null) {
+                throw new IndexOutOfBoundsException();
+            }
+            String key = saved;
+            forward();
+            return key;
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
         }
     }
 }

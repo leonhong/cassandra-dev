@@ -398,8 +398,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     	MessagingService.getMessagingInstance().registerVerbHandlers(verb, verbHandler);
     }
 
-    public void start() throws Throwable
-    {
+    public void start() throws IOException {
         storageMetadata_ = DBManager.instance().start();
                       
         /* Set up TCP endpoint */

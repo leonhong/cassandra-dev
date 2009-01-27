@@ -506,7 +506,7 @@ public class ColumnFamilyCompactor {
             	}
             	catch ( Exception ex)
             	{
-            		ex.printStackTrace();
+                    logger_.error("corrupt sstable", ex);
             		try
             		{
             			if(fs != null)

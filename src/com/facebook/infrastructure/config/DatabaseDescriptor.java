@@ -18,17 +18,18 @@
 
 package com.facebook.infrastructure.config;
 
-import java.util.*;
-import java.io.*;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 import com.facebook.infrastructure.db.ColumnFamily;
 import com.facebook.infrastructure.db.FileUtils;
 import com.facebook.infrastructure.utils.XMLUtils;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 
 
 /**
@@ -362,6 +363,12 @@ public class DatabaseDescriptor
     public static List<String> getTables()
     {
         return tables_;
+    }
+
+    // todo ultimately we want to support multiple tables; until then, this makes code assuming only one
+    // a little cleaner
+    public static String getTableName() {
+        return tables_.get(0);
     }
 
     public static void  setTables(String table)
