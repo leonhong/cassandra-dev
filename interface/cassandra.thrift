@@ -41,15 +41,25 @@ struct batch_mutation_super_t {
 }
 
 
+exception InvalidRequestException {
+    1: string why
+}
+
+exception NotFoundException {
+}
+
+
 service Cassandra extends fb303.FacebookService 
 {
-  list<column_t>	get_slice(string tablename,string key,string columnFamily_column, i32 start = -1 , i32 count = -1),
+  list<column_t>	get_slice(string tablename,string key,string columnFamily_column, i32 start = -1 , i32 count = -1) throws (1: InvalidRequestException ire),
 
-  column_t       	get_column(string tablename,string key,string columnFamily_column),
+  column_t       	get_column(string tablename,string key,string columnFamily_column) throws (1: InvalidRequestException ire, 2: NotFoundException nfe),
 
-  i32            	get_column_count(string tablename,string key,string columnFamily_column),
+  i32            	get_column_count(string tablename,string key,string columnFamily_column) throws (1: InvalidRequestException ire),
 
   async void     	insert(string tablename,string key,string columnFamily_column, string cellData, i64 timestamp),
+
+  bool     		insert_blocking(string tablename, string key, string columnFamily_column, string cellData, i64 timestamp),
 
   async void     	batch_insert(batch_mutation_t batchMutation),
 
@@ -57,15 +67,12 @@ service Cassandra extends fb303.FacebookService
 
   async void     	remove(string tablename,string key,string columnFamily_column,i64 timestamp),
 
-  list<superColumn_t> 	get_slice_super(string tablename, string key, string columnFamily_superColumnName, i32 start = -1 , i32 count = -1),
+  list<superColumn_t> 	get_slice_super(string tablename, string key, string columnFamily_superColumnName, i32 start = -1 , i32 count = -1) throws (1: InvalidRequestException ire),
 
-  superColumn_t       	get_superColumn(string tablename,string key,string columnFamily_superColumnName),
+  superColumn_t       	get_superColumn(string tablename,string key,string columnFamily_superColumnName) throws (1: InvalidRequestException ire, 2: NotFoundException nfe),
 
   async void          	batch_insert_superColumn(batch_mutation_super_t batchMutationSuper),
 
   bool                	batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper),
-  list<string>	        get_range(string tablename, string startkey),
+  list<string>	        get_range(string tablename, string startkey) throws (1: InvalidRequestException ire),
 }
-
-
-

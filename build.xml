@@ -126,9 +126,10 @@
      debug="${javac.debug}"
      debuglevel="${javac.debuglevel}"
      destdir="${build.classes}"
-     srcdir="${src.dir}"
     >
       <classpath refid="classpath"/>
+      <src path="${src.dir}"/>
+      <src path="${gensrc.dir}"/>
     </javac>
   </target>
 

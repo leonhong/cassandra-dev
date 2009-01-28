@@ -82,6 +82,10 @@ public class Row implements Serializable
         return columnFamilies_;
     }
 
+    public ColumnFamily getColumnFamily(String name) {
+        return columnFamilies_.get(name);
+    }
+
     void addColumnFamily(ColumnFamily columnFamily)
     {
         columnFamilies_.put(columnFamily.name(), columnFamily);
