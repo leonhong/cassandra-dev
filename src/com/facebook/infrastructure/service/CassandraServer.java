@@ -265,49 +265,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 			StorageService.instance().doConsistencyCheck(row, endpoints, params);
 		return row;
 	}
-	
-	private ColumnFamily get_cf(String tablename, String key, String columnFamily, List<String> columNames) throws TException
-	{
-    	ColumnFamily cfamily = null;
-		try
-		{
-	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily);
-	        // check for  values 
-	        if( values.length < 1 )
-	        	return cfamily;
-	        Row row = readProtocol(new ReadParameters(tablename, key, columnFamily, columNames), StorageService.ConsistencyLevel.WEAK);
-	        if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return cfamily;
-			}
-	        
-			
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
-			if (cfMap == null || cfMap.size() == 0)
-			{
-				logger_	.info("ERROR ColumnFamily " + columnFamily + " map is missing.....: "
-							   + "   key:" + key
-								);
-				// TODO: throw a thrift exception 
-				return cfamily;
-			}
-			cfamily = cfMap.get(values[0]);
-			if (cfamily == null)
-			{
-				logger_.info("ERROR ColumnFamily " + columnFamily + " is missing.....: "
-							+"   key:" + key
-							+ "  ColumnFamily:" + values[0]);
-				return cfamily;
-			}
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return cfamily;
-	}
 
     public  ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException
 	{
@@ -617,48 +574,24 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		}
 		return;
 	}
+
     public boolean batch_insert_blocking(batch_mutation_t batchMutation)
     {
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		// 3. SendRR ( to all the nodes above )
-		// 4. Wait for a response from atleast X nodes where X <= N
-		// 5. return success
+        logger_.warn("batch_insert_blocking");
     	boolean result = false;
 		try
 		{
-			logger_.warn(" batch_insert_blocking");
-			IResponseResolver<Boolean> writeResponseResolver = new WriteResponseResolver();
-			QuorumResponseHandler<Boolean> quorumResponseHandler = new QuorumResponseHandler<Boolean>(
-					DatabaseDescriptor.getReplicationFactor(),
-					writeResponseResolver);
-			EndPoint[] endpoints = storageService_.getNStorageEndPoint(batchMutation.key);
-			// TODO: throw a thrift exception if we do not have N nodes
-
-			logger_.debug(" Creating the row mutation");
-			RowMutation rm = new RowMutation(batchMutation.table,
-					batchMutation.key.trim());
-			Set keys = batchMutation.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<column_t> list = batchMutation.cfmap.get(key);
-				for (column_t columnData : list)
-				{
-					rm.add(key.toString() + ":" + columnData.columnName,
-							columnData.value.getBytes(), columnData.timestamp);
-
-				}
-			}            
+            RowMutation rm = RowMutation.getRowMutation(batchMutation);
+            RowMutationMessage rmMsg = new RowMutationMessage(rm);
+            Message message = RowMutationMessage.makeRowMutationMessage(rmMsg);
             
-			RowMutationMessage rmMsg = new RowMutationMessage(rm);           
-			Message message = new Message(StorageService.getLocalStorageEndPoint(), 
-                    StorageService.mutationStage_,
-					StorageService.mutationVerbHandler_, 
-                    new Object[]{ rmMsg }
-            );
+            IResponseResolver<Boolean> writeResponseResolver = new WriteResponseResolver();
+            QuorumResponseHandler<Boolean> quorumResponseHandler = new QuorumResponseHandler<Boolean>(
+                    DatabaseDescriptor.getReplicationFactor(),
+                    writeResponseResolver);
+            EndPoint[] endpoints = storageService_.getNStorageEndPoint(batchMutation.key);
+            // TODO: throw a thrift exception if we do not have N nodes
+
 			MessagingService.getMessagingInstance().sendRR(message, endpoints,
 					quorumResponseHandler);
 			logger_.debug(" Calling quorum response handler's get");
@@ -675,34 +608,14 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return result;
     	
     }
-	public void batch_insert(batch_mutation_t batchMutation)
+
+    public void batch_insert(batch_mutation_t batchMutation)
 	{
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		// 3. SendRR ( to all the nodes above )
-		// 4. Wait for a response from atleast X nodes where X <= N
-		// 5. return success
+        logger_.debug("batch_insert");
 
 		try
 		{
-			logger_.debug(" batch_insert");
-			logger_.debug(" Creating the row mutation");
-			RowMutation rm = new RowMutation(batchMutation.table,
-					batchMutation.key.trim());
-			Set keys = batchMutation.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<column_t> list = batchMutation.cfmap.get(key);
-				for (column_t columnData : list)
-				{
-					rm.add(key.toString() + ":" + columnData.columnName,
-							columnData.value.getBytes(), columnData.timestamp);
-
-				}
-			}            
+            RowMutation rm = RowMutation.getRowMutation(batchMutation);
 			insert(rm);
 		}
 		catch (Exception e)
@@ -873,35 +786,11 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     
     public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)
     {
+        logger_.debug("batch_insert_SuperColumn_blocking");
     	boolean result = false;
 		try
 		{
-			logger_.warn(" batch_insert_SuperColumn_blocking");
-			logger_.debug(" Creating the row mutation");
-			RowMutation rm = new RowMutation(batchMutationSuper.table,
-					batchMutationSuper.key.trim());
-			Set keys = batchMutationSuper.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
-				for (superColumn_t superColumnData : list)
-				{
-					if(superColumnData.columns.size() != 0 )
-					{
-						for (column_t columnData : superColumnData.columns)
-						{
-							rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
-									columnData.value.getBytes(), columnData.timestamp);
-						}
-					}
-					else
-					{
-						rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
-					}
-				}
-			}            
+            RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
 			insert(rm);
 		}
 		catch (Exception e)
@@ -911,36 +800,13 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return result;
     	
     }
+
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper)
     {
+        logger_.debug("batch_insert_SuperColumn_blocking");
 		try
 		{
-			logger_.debug(" batch_insert");
-			logger_.debug(" Creating the row mutation");
-			RowMutation rm = new RowMutation(batchMutationSuper.table,
-					batchMutationSuper.key.trim());
-			Set keys = batchMutationSuper.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
-				for (superColumn_t superColumnData : list)
-				{
-					if(superColumnData.columns.size() != 0 )
-					{
-						for (column_t columnData : superColumnData.columns)
-						{
-							rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
-									columnData.value.getBytes(), columnData.timestamp);
-						}
-					}
-					else
-					{
-						rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
-					}
-				}
-			}            
+            RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
 			insert(rm);
 		}
 		catch (Exception e)
