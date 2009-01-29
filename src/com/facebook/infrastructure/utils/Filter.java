@@ -40,7 +40,7 @@ public abstract class Filter {
         int[] result = new int[hashCount];
         for (int i = 0, initval = 0; i < hashCount; i++) {
             initval = hasher.hash(b, b.length, initval);
-            result[i] = Math.abs(initval) % max;
+            result[i] = Math.abs(initval % max);
         }
         return result;
     }
