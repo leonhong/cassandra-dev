@@ -19,15 +19,12 @@
 package com.facebook.infrastructure.db;
 
 import com.facebook.infrastructure.io.ICompactSerializer;
-import com.facebook.infrastructure.service.batch_mutation_super_t;
-import com.facebook.infrastructure.service.batch_mutation_t;
-import com.facebook.infrastructure.service.column_t;
-import com.facebook.infrastructure.service.superColumn_t;
+import com.facebook.infrastructure.service.*;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.utils.FBUtilities;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
 
 
@@ -37,8 +34,9 @@ import java.util.*;
 
 public class RowMutation implements Serializable
 {      
-	private static ICompactSerializer<RowMutation> serializer_;	
-	
+	private static ICompactSerializer<RowMutation> serializer_;
+    public static final String HINT = "HINT";
+
     static
     {
         serializer_ = new RowMutationSerializer();
@@ -85,6 +83,22 @@ public class RowMutation implements Serializable
     	deletions_ = deletions;
     }
     
+    public Message makeRowMutationMessage() throws IOException
+    {
+        return makeRowMutationMessage(StorageService.mutationVerbHandler_);
+    }
+
+    public Message makeRowMutationMessage(String verbHandlerName) throws IOException
+    {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream( bos );
+        serializer().serialize(this, dos);
+        EndPoint local = StorageService.getLocalStorageEndPoint();
+        EndPoint from = ( local != null ) ? local : new EndPoint(FBUtilities.getHostName(), 7000);
+        Message message = new Message(from, StorageService.mutationStage_, verbHandlerName, new Object[]{bos.toByteArray()});
+        return message;
+    }
+
     public static String[] getColumnAndColumnFamily(String cf)
     {
         return cf.split(":");

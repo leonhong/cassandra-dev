@@ -18,24 +18,18 @@
 
 package com.facebook.infrastructure.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.db.ColumnFamily;
 import com.facebook.infrastructure.db.ReadResponseMessage;
 import com.facebook.infrastructure.db.Row;
 import com.facebook.infrastructure.db.RowMutation;
-import com.facebook.infrastructure.db.RowMutationMessage;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.*;
 
 /*
  * This class is used by all read functions and is called by the Qorum 
@@ -149,9 +143,8 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 	            ColumnFamily cf = columnFamilies.get(cfName);
 	            rowMutation.add(cfName, cf);
 	        }
-            RowMutationMessage rowMutationMessage = new RowMutationMessage(rowMutation);
 	        // schedule the read repair
-	        ReadRepairManager.instance().schedule(endPoints.get(i),rowMutationMessage);
+	        ReadRepairManager.instance().schedule(endPoints.get(i),rowMutation);
 		}
         logger_.info("resolve: " + (System.currentTimeMillis() - startTime)
                 + " ms.");

@@ -18,14 +18,6 @@
 
 package com.facebook.infrastructure.db;
 
-import java.util.Collection;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.concurrent.DebuggableScheduledThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
@@ -34,10 +26,14 @@ import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.IComponentShutdown;
-import com.facebook.infrastructure.service.IResponseResolver;
-import com.facebook.infrastructure.service.QuorumResponseHandler;
 import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.service.WriteResponseResolver;
+import org.apache.log4j.Logger;
+
+import java.util.Collection;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -100,8 +96,7 @@ public class HintedHandOffManager implements IComponentShutdown
         	Row row = null;
         	row = table.get(key);
         	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), row);
-			RowMutationMessage rmMsg = new RowMutationMessage(rm);
-			Message message = RowMutationMessage.makeRowMutationMessage( rmMsg );
+            Message message = rm.makeRowMutationMessage();
 			EndPoint endPoint = new EndPoint(endpointAddress, DatabaseDescriptor.getStoragePort());
 			MessagingService.getMessagingInstance().sendOneWay(message, endPoint);
 			return success;

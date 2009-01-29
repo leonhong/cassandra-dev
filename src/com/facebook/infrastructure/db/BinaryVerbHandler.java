@@ -18,13 +18,11 @@
 
 package com.facebook.infrastructure.db;
 
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.db.RowMutationVerbHandler.RowMutationContext;
 import com.facebook.infrastructure.net.IVerbHandler;
 import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -51,8 +49,7 @@ public class BinaryVerbHandler implements IVerbHandler
         
 	    try
 	    {
-            RowMutationMessage rmMsg = RowMutationMessage.serializer().deserialize(rowMutationCtx.buffer_);
-            RowMutation rm = rmMsg.getRowMutation();
+            RowMutation rm = RowMutation.serializer().deserialize(rowMutationCtx.buffer_);
             	    
             rowMutationCtx.row_.key(rm.key());
             rm.load(rowMutationCtx.row_);

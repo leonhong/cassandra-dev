@@ -18,13 +18,13 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.*;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.service.*;
-import com.facebook.infrastructure.utils.*;
-import com.facebook.infrastructure.concurrent.*;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.net.*;
+import com.facebook.infrastructure.net.IVerbHandler;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -42,8 +42,7 @@ public class ReadRepairVerbHandler implements IVerbHandler
         
         try
         {
-            RowMutationMessage rmMsg = RowMutationMessage.serializer().deserialize(buffer);
-            RowMutation rm = rmMsg.getRowMutation();
+            RowMutation rm = RowMutation.serializer().deserialize(buffer);
             rm.apply();                                   
         }
         catch( ColumnFamilyNotDefinedException ex )

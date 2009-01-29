@@ -39,15 +39,14 @@ public class LoadVerbHandler implements IVerbHandler
         try
         {
 	        Object[] body = message.getMessageBody();
-	        RowMutationMessage rmMsg = (RowMutationMessage)body[0];
-	        RowMutation rm = rmMsg.getRowMutation();
+	        RowMutation rm = (RowMutation)body[0];
 	
 			EndPoint[] endpoints = StorageService.instance().getNStorageEndPoint(rm.key());
 	
 			Message messageInternal = new Message(StorageService.getLocalStorageEndPoint(), 
 	                StorageService.mutationStage_,
 					StorageService.mutationVerbHandler_, 
-	                new Object[]{ rmMsg }
+	                new Object[]{ rm }
 	        );
             
             StringBuilder sb = new StringBuilder();

@@ -18,39 +18,28 @@
 
 package com.facebook.infrastructure.importer;
 
-import com.facebook.thrift.transport.TTransport;
-import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.protocol.TBinaryProtocol;
 import com.facebook.infrastructure.concurrent.DebuggableScheduledThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.db.*;
-import com.facebook.infrastructure.service.Cassandra;
-import com.facebook.infrastructure.service.batch_mutation_super_t;
-import com.facebook.infrastructure.service.batch_mutation_t;
-import com.facebook.infrastructure.service.column_t;
-import com.facebook.infrastructure.net.*;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.net.IAsyncResult;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.*;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.StringTokenizer;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import com.facebook.thrift.transport.TSocket;
+import com.facebook.thrift.transport.TTransport;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -784,10 +773,10 @@ public class DataImporter {
 	// This is the task that gets scheduled
 	// This could be different for different kind of tasks
 	class Task implements Runnable {       
-		RowMutationMessage rmMsg_ = null;
-		
-		public Task(RowMutationMessage rmMsg) {
-			rmMsg_ = rmMsg;
+		RowMutation rm = null;
+
+        public Task(RowMutation rm) {
+			this.rm = rm;
 		}
 
 		public void run() {
@@ -797,7 +786,7 @@ public class DataImporter {
 				Message message = new Message(DataImporter.from_,
 						StorageService.mutationStage_,
 						StorageService.mutationVerbHandler_,
-						new Object[] { rmMsg_ });
+						new Object[] {rm});
 				MessagingService.getMessagingInstance().sendOneWay(message,
 						DataImporter.to_);
 			} catch (Exception e) {
@@ -821,10 +810,6 @@ public class DataImporter {
 				new FileInputStream(filepath)), 16 * 1024 * 1024);
 		String line = null;
 		String delimiter_ = new String(",");
-		RowMutationMessage rmInbox = null;
-		RowMutationMessage rmOutbox = null;
-		ColumnFamily cfInbox = null;
-		ColumnFamily cfOutbox = null;
 		while ((line = bufReader.readLine()) != null) {
 			StringTokenizer st = new StringTokenizer(line, delimiter_);
 			int i = 0;
@@ -958,10 +943,6 @@ public class DataImporter {
 				new FileInputStream(filepath)), 16 * 1024 * 1024);
 		String line = null;
 		String delimiter_ = new String(",");
-		RowMutationMessage rmInbox = null;
-		RowMutationMessage rmOutbox = null;
-		ColumnFamily cfInbox = null;
-		ColumnFamily cfOutbox = null;
 		String firstuser = null ;
 		String nextuser = null;
 		while ((line = bufReader.readLine()) != null) {
@@ -1064,10 +1045,6 @@ public class DataImporter {
 				new FileInputStream(filepath)), 16 * 1024 * 1024);
 		String line = null;
 		String delimiter_ = new String(",");
-		RowMutationMessage rmInbox = null;
-		RowMutationMessage rmOutbox = null;
-		ColumnFamily cfInbox = null;
-		ColumnFamily cfOutbox = null;
 		String firstuser = null ;
 		String nextuser = null;
 		while ((line = bufReader.readLine()) != null) {
@@ -1315,11 +1292,10 @@ public class DataImporter {
             counter_.incrementAndGet();
     		columnFamilyHack_++;
             EndPoint to = new EndPoint(7000);
-            RowMutationMessage rmMsg = new RowMutationMessage(rm);           
-            Message message = new Message(to, 
+            Message message = new Message(to,
                     StorageService.mutationStage_,
                     StorageService.mutationVerbHandler_, 
-                    new Object[]{ rmMsg }
+                    new Object[]{ rm }
             );                                                            
 			MessagingService.getMessagingInstance().sendRR(message, to);
             Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
@@ -1339,8 +1315,6 @@ public class DataImporter {
 				new FileInputStream(filepath)), 16 * 1024 * 1024);
 		String line = null;
 		String delimiter_ = new String(",");
-		RowMutationMessage rmInbox = null;
-		RowMutationMessage rmOutbox = null;
 		ColumnFamily cfInbox = null;
 		ColumnFamily cfOutbox = null;
 		String firstuser = null ;

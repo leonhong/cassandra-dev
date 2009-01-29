@@ -18,6 +18,23 @@
 
 package com.facebook.infrastructure.importer;
 
+import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
+import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
+import com.facebook.infrastructure.db.ReadParameters;
+import com.facebook.infrastructure.db.Row;
+import com.facebook.infrastructure.db.RowMutation;
+import com.facebook.infrastructure.net.EndPoint;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.service.*;
+import com.facebook.infrastructure.utils.FBUtilities;
+import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import com.facebook.thrift.transport.TSocket;
+import com.facebook.thrift.transport.TTransport;
+import com.martiansoftware.jsap.*;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,29 +43,6 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
-import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
-import com.facebook.infrastructure.db.ReadParameters;
-import com.facebook.infrastructure.db.*;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.service.IResponseResolver;
-import com.facebook.infrastructure.service.Cassandra;
-import com.facebook.infrastructure.service.QuorumResponseHandler;
-import com.facebook.infrastructure.service.ReadResponseResolver;
-import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.service.batch_mutation_super_t;
-import com.facebook.infrastructure.service.batch_mutation_t;
-import com.facebook.infrastructure.service.column_t;
-import com.facebook.infrastructure.service.superColumn_t;
-import com.facebook.infrastructure.utils.FBUtilities;
-import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.transport.TTransport;
-import com.martiansoftware.jsap.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -78,29 +72,19 @@ public class StressTest
     
     class LoadManager implements Runnable
     {
-    	private RowMutationMessage rmsg_ = null;
-    	private batch_mutation_t bt_ = null;
-    	private batch_mutation_super_t bts_ = null;
-   
-    	LoadManager(RowMutationMessage rmsg)
+    	private RowMutation rm = null;
+
+        LoadManager(RowMutation rmsg)
         {
-    		rmsg_ = rmsg;
-        }
-    	LoadManager(batch_mutation_t bt)
-        {
-    		bt_ = bt;
-        }
-    	LoadManager(batch_mutation_super_t bts)
-        {
-    		bts_ = bts;
+    		rm = rmsg;
         }
         
         public void run()
         {
-        	if( rmsg_ != null )
+        	if( rm != null )
         	{
 				Message message = new Message(from_ , StorageService.mutationStage_,
-						StorageService.loadVerbHandler_, new Object[] { rmsg_ });
+						StorageService.loadVerbHandler_, new Object[] {rm});
 				MessagingService.getMessagingInstance().sendOneWay(message, to_);
         	}
         	
@@ -120,11 +104,10 @@ public class StressTest
         try
         {
             long t = System.currentTimeMillis();
-            RowMutationMessage rmMsg = new RowMutationMessage(rm);           
-            Message message = new Message(from_, 
+            Message message = new Message(from_,
                     StorageService.mutationStage_,
                     StorageService.mutationVerbHandler_, 
-                    new Object[]{ rmMsg }
+                    new Object[]{ rm }
             );                                                            
 			MessagingService.getMessagingInstance().sendOneWay(message, to_);
             Thread.sleep(1, 1000000000/requestsPerSecond_);
@@ -214,7 +197,7 @@ public class StressTest
                 ts++;
 				for(int k = 0 ; k < requestsPerSecond_/1000 +1 ; k++ )
 				{
-					runner_.submit(new LoadManager(new RowMutationMessage(rm)));
+					runner_.submit(new LoadManager(rm));
 				}
 				try
 				{
@@ -282,7 +265,7 @@ public class StressTest
                 ts++;
 				for(int k = 0 ; k < requestsPerSecond_/1000 +1 ; k++ )
 				{
-					runner_.submit(new LoadManager(new RowMutationMessage(rm)));
+					runner_.submit(new LoadManager(rm));
 				}
 				try
 				{
@@ -321,11 +304,9 @@ public class StressTest
 	                random.nextBytes(bytes);
 	                rm.add( columnFamilyColumn_ + ":" + columnFix_ + j, bytes, ts);
 	            }
-				RowMutationMessage rmMsg = new RowMutationMessage(rm);
-				
 				for(int k = 0 ; k < requestsPerSecond_/1000 +1 ; k++ )
 				{
-					runner_.submit(new LoadManager(rmMsg));
+					runner_.submit(new LoadManager(rm));
 				}
 				try
 				{
@@ -368,10 +349,9 @@ public class StressTest
 		                rm.add( columnFamilySuperColumn_ + ":" + superColumnFix_ + i + ":" + columnFix_ + j, bytes, ts);
 		            }
 	            }
-	            RowMutationMessage rmMsg = new RowMutationMessage(rm);
 				for(int k = 0 ; k < requestsPerSecond_/1000 +1 ; k++ )
 				{
-					runner_.submit(new LoadManager(rmMsg));
+					runner_.submit(new LoadManager(rm));
 				}
 				try
 				{

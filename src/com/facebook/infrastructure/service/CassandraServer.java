@@ -75,10 +75,10 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		storageService_.start();
 	}
 
-	private Map<EndPoint, Message> createWriteMessages(RowMutationMessage rmMessage, Map<EndPoint, EndPoint> endpointMap) throws IOException
+	private Map<EndPoint, Message> createWriteMessages(RowMutation rm, Map<EndPoint, EndPoint> endpointMap) throws IOException
 	{
 		Map<EndPoint, Message> messageMap = new HashMap<EndPoint, Message>();
-		Message message = RowMutationMessage.makeRowMutationMessage(rmMessage);
+		Message message = rm.makeRowMutationMessage();
 		
 		for (Map.Entry<EndPoint, EndPoint> entry : endpointMap.entrySet())
 		{
@@ -86,8 +86,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             EndPoint hint = entry.getValue();
             if ( !target.equals(hint) )
 			{
-				Message hintedMessage = RowMutationMessage.makeRowMutationMessage(rmMessage);
-				hintedMessage.addHeader(RowMutationMessage.hint_, EndPoint.toBytes(hint) );
+				Message hintedMessage = rm.makeRowMutationMessage();
+				hintedMessage.addHeader(rm.HINT, EndPoint.toBytes(hint) );
 				logger_.debug("Sending the hint of " + target.getHost() + " to " + hint.getHost());
 				messageMap.put(target, hintedMessage);
 			}
@@ -117,9 +117,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		{
 			Map<EndPoint, EndPoint> endpointMap = storageService_.getNStorageEndPointMap(rm.key());
 			// TODO: throw a thrift exception if we do not have N nodes
-			RowMutationMessage rmMsg = new RowMutationMessage(rm); 
 			/* Create the write messages to be sent */
-			Map<EndPoint, Message> messageMap = createWriteMessages(rmMsg, endpointMap);
+			Map<EndPoint, Message> messageMap = createWriteMessages(rm, endpointMap);
             logger_.debug("Sending to " + StringUtils.join(messageMap.keySet(), ' '));
 			for (Map.Entry<EndPoint, Message> entry : messageMap.entrySet())
 			{
@@ -506,8 +505,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     private boolean insertBlocking(RowMutation rm) {
         try
 		{
-            RowMutationMessage rmMsg = new RowMutationMessage(rm);
-            Message message = RowMutationMessage.makeRowMutationMessage(rmMsg);
+            Message message = rm.makeRowMutationMessage();
 
             IResponseResolver<Boolean> writeResponseResolver = new WriteResponseResolver();
             QuorumResponseHandler<Boolean> quorumResponseHandler = new QuorumResponseHandler<Boolean>(

@@ -18,26 +18,16 @@
 
 package com.facebook.infrastructure.service;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.concurrent.locks.*;
-
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.db.Column;
-import com.facebook.infrastructure.db.ColumnFamily;
 import com.facebook.infrastructure.db.RowMutation;
-import com.facebook.infrastructure.db.RowMutationMessage;
-import com.facebook.infrastructure.db.SuperColumn;
 import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.Header;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.utils.Cachetable;
-import com.facebook.infrastructure.utils.FBUtilities;
-import com.facebook.infrastructure.utils.ICacheExpungeHook;
-import com.facebook.infrastructure.utils.ICachetable;
-import com.facebook.infrastructure.utils.LogUtil;
+import com.facebook.infrastructure.utils.*;
+import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /*
@@ -110,7 +100,7 @@ class ReadRepairManager
 	 * specify a endpoint on whcih the read repair should happen and the row mutaion
 	 * message that has the repaired row.
 	 */
-	public void schedule(EndPoint target, RowMutationMessage rowMutationMessage)
+	public void schedule(EndPoint target, RowMutation rm)
 	{
         /*
 		Message message = new Message(StorageService.getLocalStorageEndPoint(),
@@ -120,7 +110,7 @@ class ReadRepairManager
         */
         try
         {
-            Message message = RowMutationMessage.makeRowMutationMessage(rowMutationMessage, StorageService.readRepairVerbHandler_);
+            Message message = rm.makeRowMutationMessage(StorageService.readRepairVerbHandler_);
     		String key = target + ":" + message.getMessageId();
     		readRepairTable_.put(key, message);
         }

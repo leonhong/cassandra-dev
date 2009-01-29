@@ -19,14 +19,12 @@
 package com.facebook.infrastructure.importer;
 
 import com.facebook.infrastructure.db.RowMutation;
-import com.facebook.infrastructure.db.RowMutationMessage;
 import com.facebook.infrastructure.db.Table;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.BasicUtilities;
-import com.facebook.infrastructure.utils.LogUtil;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -155,10 +153,9 @@ public class PostLoad
         {
 			rm.add(Table.recycleBin_ + ":" + columnFamilyName, bytes, operation);
         }
-		RowMutationMessage rmMsg = new RowMutationMessage(rm);
         if( server_ != null)
         {
-            Message message = RowMutationMessage.makeRowMutationMessage(rmMsg, StorageService.binaryVerbHandler_);
+            Message message = rm.makeRowMutationMessage(StorageService.binaryVerbHandler_);
 	        EndPoint to = new EndPoint(server_, 7000);
 			MessagingService.getMessagingInstance().sendOneWay(message, to);
         }
@@ -166,7 +163,7 @@ public class PostLoad
         {
         	for( String server : servers_ )
         	{
-                Message message = RowMutationMessage.makeRowMutationMessage(rmMsg, StorageService.binaryVerbHandler_);
+                Message message = rm.makeRowMutationMessage(StorageService.binaryVerbHandler_);
 		        EndPoint to = new EndPoint(server, 7000);
 				MessagingService.getMessagingInstance().sendOneWay(message, to);
         	}

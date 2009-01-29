@@ -63,10 +63,9 @@ public class RowMutationVerbHandler implements IVerbHandler
         
         try
         {
-            RowMutationMessage rmMsg = RowMutationMessage.serializer().deserialize(rowMutationCtx.buffer_);
-            RowMutation rm = rmMsg.getRowMutation();
+            RowMutation rm = RowMutation.serializer().deserialize(rowMutationCtx.buffer_);
             /* Check if there were any hints in this message */
-            byte[] hintedBytes = message.getHeader(RowMutationMessage.hint_);            
+            byte[] hintedBytes = message.getHeader(RowMutation.HINT);            
             if ( hintedBytes != null && hintedBytes.length > 0 )
             {
             	EndPoint hint = EndPoint.fromBytes(hintedBytes);
