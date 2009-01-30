@@ -23,7 +23,6 @@ import com.facebook.fb303.fb_status;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.*;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.io.SequenceFile;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
@@ -35,13 +34,12 @@ import com.facebook.thrift.protocol.TProtocolFactory;
 import com.facebook.thrift.server.TThreadPoolServer;
 import com.facebook.thrift.server.TThreadPoolServer.Options;
 import com.facebook.thrift.transport.TServerSocket;
-import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.collections.Predicate;
+import com.facebook.thrift.transport.TTransportException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -434,58 +432,49 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return makeThriftSuperColumn(column);
     }
 
-    public static final Comparator<String> STRING_COMPARATOR = new Comparator<String>() {
-        public int compare(String o1, String o2) {
-            return o1.compareTo(o2);
-        }
-    };
-
     public List<String> get_range(String tablename, final String startkey) throws TException {
-        // todo is this good enough, consistency-wise?  we could miss some keys if the
-        // memtable is started to flush but not yet turned into a SSTable
-        List<Iterator<String>> iterators = new ArrayList<Iterator<String>>();
+        // send the request
+        // for now we ignore tablename like 90% of the rest of cassandra
+        Message message;
+        try {
+            message = new Message(StorageService.getLocalStorageEndPoint(),
+                            StorageService.readStage_,
+                            StorageService.rangeVerbHandler_,
+                            new Object[] { startkey.getBytes("UTF-16") });
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        EndPoint endPoint;
+        try {
+            endPoint = storageService_.findSuitableEndPoint(startkey);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
 
-        Table table = Table.open(tablename);
-        for (String cfName : table.getColumnFamilies()) {
-            if (!DatabaseDescriptor.isApplicationColumnFamily(cfName)) {
-                continue;
-            }
-            ColumnFamilyStore cfs = table.getColumnFamilyStore(cfName);
+        // read response
+        Object[] result;
+        try {
+            result = iar.get(2 * DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+        byte[] body = (byte[]) result[0];
+        DataInputBuffer bufIn = new DataInputBuffer();
+        bufIn.reset(body, body.length);
 
-            // memtable keys
-            iterators.add(IteratorUtils.filteredIterator(cfs.getMemtable().sortedKeyIterator(), new Predicate() {
-                public boolean evaluate(Object key) {
-                    return ((String)key).compareTo(startkey) >= 0;
-                }
-            }));
-
-            // sstables
-            for (String filename : cfs.getSSTables()) {
-                try {
-                    FileStruct fs = new FileStruct(SequenceFile.reader(filename));
-                    fs.seekTo(startkey);
-                    iterators.add(fs.iterator());
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+        // turn into List
+        List<String> keys = new ArrayList<String>();
+        while (bufIn.getPosition() < body.length) {
+            try {
+                keys.add(bufIn.readUTF());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
 
-        Iterator<String> iter = IteratorUtils.collatedIterator(STRING_COMPARATOR, iterators);
-        List<String> L = new ArrayList<String>();
-        String last = null, current = null;
-        while (L.size() < 1000) {
-            if (!iter.hasNext()) {
-                break;
-            }
-            current = iter.next();
-            if (!current.equals(last)) {
-                last = current;
-                L.add(current);
-            }
-        }
-
-        return L;
+        return keys;
     }
 
     public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp)
@@ -581,22 +570,13 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
 	public static void main(String[] args) throws Throwable
 	{
-		int port = 9160;		
 		try
 		{
-			CassandraServer peerStorageServer = new CassandraServer();
-			peerStorageServer.start();
-			Cassandra.Processor processor = new Cassandra.Processor(peerStorageServer);
-			// Transport
-			TServerSocket tServerSocket =  new TServerSocket(port);
-			 // Protocol factory
-			TProtocolFactory tProtocolFactory = new TBinaryProtocol.Factory();
-			 // ThreadPool Server
-			Options options = new Options();
-			options.minWorkerThreads = 64;
-			TThreadPoolServer serverEngine = new TThreadPoolServer(processor, tServerSocket, tProtocolFactory);
-			serverEngine.serve();
-		}
+			CassandraServer server = new CassandraServer();
+			server.start();
+            TThreadPoolServer threadPoolServer = thriftEngine(server);
+            threadPoolServer.serve();
+        }
 		catch (Throwable x)
 		{
             logger_.error("Fatal error; exiting", x);
@@ -604,5 +584,17 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		}
 
 	}
+
+    private static TThreadPoolServer thriftEngine(CassandraServer server) throws TTransportException {
+        Cassandra.Processor processor = new Cassandra.Processor(server);
+        // Transport
+        TServerSocket tServerSocket =  new TServerSocket(9160);
+        // Protocol factory
+        TProtocolFactory tProtocolFactory = new TBinaryProtocol.Factory();
+        // ThreadPool Server
+        Options options = new Options();
+        options.minWorkerThreads = 64;
+        return new TThreadPoolServer(processor, tServerSocket, tProtocolFactory);
+    }
 
 }

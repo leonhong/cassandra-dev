@@ -18,18 +18,19 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
+import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
-import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -41,7 +42,8 @@ public class MemtableManager
     private static Lock lock_ = new ReentrantLock();
     private static Logger logger_ = Logger.getLogger(MemtableManager.class);
     private ReentrantReadWriteLock rwLock_ = new ReentrantReadWriteLock(true);
-    static MemtableManager instance() 
+
+    public static MemtableManager instance()
     {
         if ( instance_ == null )
         {
@@ -58,7 +60,7 @@ public class MemtableManager
         }
         return instance_;
     }
-    
+
     class MemtableFlusher implements Runnable
     {
         private Memtable memtable_;
@@ -158,7 +160,18 @@ public class MemtableManager
     	}
     }
 
-
+    public List<Memtable> getUnflushedMemtables(String cfName) {
+        rwLock_.readLock().lock();
+        try {
+            List<Memtable> memtables = history_.get(cfName);
+            if (memtables != null) {
+                return new ArrayList<Memtable>(memtables);
+            }
+            return Arrays.asList(new Memtable[0]);
+        } finally {
+            rwLock_.readLock().unlock();
+        }
+    }
 
 
 }

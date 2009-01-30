@@ -18,27 +18,25 @@
 
 package com.facebook.infrastructure.net;
 
-import java.io.*;
-import java.net.InetSocketAddress;
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.net.io.*;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.*;
+import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.net.io.*;
-import com.facebook.infrastructure.net.io.TcpReader.TcpReaderState;
-import com.facebook.infrastructure.net.sink.*;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -74,35 +72,33 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
     // used from getConnection - outgoing
     TcpConnection(TcpConnectionManager pool, EndPoint from, EndPoint to) throws IOException
     {          
-        socketChannel_ = SocketChannel.open();            
-        socketChannel_.configureBlocking(false);        
         pool_ = pool;
         
         localEp_ = from;
         remoteEp_ = to;
-        
-        if ( !socketChannel_.connect( remoteEp_.getInetAddress() ) )
-        {
-            key_ = SelectorManager.getSelectorManager().register(socketChannel_, this, SelectionKey.OP_CONNECT);
-        }
-        else
-        {
-            key_ = SelectorManager.getSelectorManager().register(socketChannel_, this, SelectionKey.OP_READ);
-            connected_.set(true);     
-        }         
+
+        setupChannel();
     }
-    
+
     /*
      * Used for streaming purposes has no pooling semantics.
     */
     TcpConnection(EndPoint from, EndPoint to) throws IOException
     {
-        socketChannel_ = SocketChannel.open();               
-        socketChannel_.configureBlocking(false);       
-        
+
         localEp_ = from;
         remoteEp_ = to;
-        
+
+        setupChannel();
+        bStream_ = true;
+        lock_ = new ReentrantLock();
+        condition_ = lock_.newCondition();
+    }
+
+    private void setupChannel() throws IOException {
+        socketChannel_ = SocketChannel.open();
+        socketChannel_.configureBlocking(false);
+        logger_.info("Opening socketchannel to " + remoteEp_.getInetAddress() + "(" + socketChannel_ + ")");
         if ( !socketChannel_.connect( remoteEp_.getInetAddress() ) )
         {
             key_ = SelectorManager.getSelectorManager().register(socketChannel_, this, SelectionKey.OP_CONNECT);
@@ -110,13 +106,10 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
         else
         {
             key_ = SelectorManager.getSelectorManager().register(socketChannel_, this, SelectionKey.OP_READ);
-            connected_.set(true);     
-        }        
-        bStream_ = true;
-        lock_ = new ReentrantLock();
-        condition_ = lock_.newCondition();
+            connected_.set(true);
+        }
     }
-    
+
     /*
      * This method is invoked by the TcpConnectionHandler to accept incoming TCP connections.
      * Accept the connection and then register interest for reads.
@@ -169,29 +162,29 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
     
     public void write(Message message) throws IOException
     {           
-        byte[] data = serializer_.serialize(message);        
-        if ( data.length > 0 )
-        {    
-            boolean listening = ( message.getFrom().equals(EndPoint.randomLocalEndPoint_) ) ? false : true;
-            ByteBuffer buffer = MessagingService.packIt( data , false, false, listening);   
-            synchronized(this)
+        byte[] data = serializer_.serialize(message);
+        if (data.length <= 0) {
+            return;
+        }
+        boolean listening = !message.getFrom().equals(EndPoint.randomLocalEndPoint_);
+        ByteBuffer buffer = MessagingService.packIt( data , false, false, listening);
+        synchronized(this)
+        {
+            if (!pendingWrites_.isEmpty() || !connected_.get())
             {
-                if (!pendingWrites_.isEmpty() || !connected_.get()) 
-                {                     
-                    pendingWrites_.add(buffer);                
-                    return;
-                }
-                
-                logger_.debug("Sending packets of size " + data.length);            
-                socketChannel_.write(buffer);                
-                
-                if (buffer.remaining() > 0) 
-                {                   
-                    pendingWrites_.add(buffer);
-                    if ((key_.interestOps() & SelectionKey.OP_WRITE) == 0)
-                    {                                    
-                        SelectorManager.getSelectorManager().modifyKeyForWrite(key_);                     
-                    }
+                pendingWrites_.add(buffer);
+                return;
+            }
+
+            logger_.debug("Sending packets of size " + data.length);
+            socketChannel_.write(buffer);
+
+            if (buffer.remaining() > 0)
+            {
+                pendingWrites_.add(buffer);
+                if ((key_.interestOps() & SelectionKey.OP_WRITE) == 0)
+                {
+                    SelectorManager.getSelectorManager().modifyKeyForWrite(key_);
                 }
             }
         }
@@ -385,28 +378,23 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
         key.interestOps(key.interestOps() & (~SelectionKey.OP_CONNECT));        
         try
         {
-            if (socketChannel_.finishConnect())
-            {                                
-                SelectorManager.getSelectorManager().modifyKeyForRead(key);
-                connected_.set(true);                
-                
-                // this will flush the pending                
-                if (!pendingWrites_.isEmpty()) 
-                {                    
-                    SelectorManager.getSelectorManager().modifyKeyForWrite(key_);  
-                } 
-                resumeStreaming();
-            } 
-            else 
-            {  
-                logger_.warn("Closing connection because socket channel could not finishConnect.");;
-                errorClose();
+            if (!socketChannel_.finishConnect())
+            {
+                throw new IOException("Unable to finishConnect to " + socketChannel_);
             }
-        } 
+            SelectorManager.getSelectorManager().modifyKeyForRead(key);
+            connected_.set(true);
+
+            // this will flush the pending
+            if (!pendingWrites_.isEmpty())
+            {
+                SelectorManager.getSelectorManager().modifyKeyForWrite(key_);
+            }
+            resumeStreaming();
+        }
         catch(IOException e) 
         {               
-            logger_.warn("Encountered IOException on connection: "  + socketChannel_);
-            logger_.warn( LogUtil.throwableToString(e) );
+            logger_.error("Encountered IOException on connection: "  + socketChannel_, e);
             errorClose();
         }
     }
