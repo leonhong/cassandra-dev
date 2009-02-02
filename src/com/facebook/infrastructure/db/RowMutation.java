@@ -152,12 +152,12 @@ public class RowMutation implements Serializable
         if ( values.length == 0 || values.length == 1 || values.length > 3 )
             throw new IllegalArgumentException("Column Family " + columnFamilyColumn + " in invalid format. Must be in <column family>:<column> format.");
         
-        ColumnFamily columnFamily = modifications_.get(values[0]);
+        ColumnFamily columnFamily = modifications_.get(cfName);
         if( values.length == 2 )
         {
             if ( columnFamily == null )
             {
-            	columnFamily = new ColumnFamily(values[0], ColumnFamily.getColumnType("Standard"));
+            	columnFamily = new ColumnFamily(cfName, ColumnFamily.getColumnType("Standard"));
             }
         	columnFamily.addColumn(values[1], value, timestamp);
         }
@@ -165,11 +165,11 @@ public class RowMutation implements Serializable
         {
             if ( columnFamily == null )
             {
-            	columnFamily = new ColumnFamily(values[0], ColumnFamily.getColumnType("Super"));
+            	columnFamily = new ColumnFamily(cfName, ColumnFamily.getColumnType("Super"));
             }
         	columnFamily.addColumn(values[1]+ ":" + values[2], value, timestamp);
         }
-        modifications_.put(values[0], columnFamily);
+        modifications_.put(cfName, columnFamily);
     }
     
     /*

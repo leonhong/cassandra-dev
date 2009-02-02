@@ -82,7 +82,7 @@ public class DatabaseDescriptor
      *  */
     
     private static boolean aggressiveCompaction_ = false;
-    public static Map<String, Set<String>> tableToColumnFamilyMap_;
+    public static final Map<String, Set<String>> tableToColumnFamilyMap_ = new HashMap<String, Set<String>>();
 
     private DatabaseDescriptor() {}
 
@@ -243,7 +243,6 @@ public class DatabaseDescriptor
             if ( value != null )
                 rackAware_ = Boolean.parseBoolean(value);
 
-            tableToColumnFamilyMap_ = new HashMap<String, Set<String>>();
             /* Read the table related stuff from config */
             NodeList tables = xmlUtils.getRequestedNodeList(rootNode, "/Storage/Tables/Table");
             int size = tables.getLength();

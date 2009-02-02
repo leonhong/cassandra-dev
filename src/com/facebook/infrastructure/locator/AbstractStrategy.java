@@ -1,17 +1,12 @@
 package com.facebook.infrastructure.locator;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.log4j.Logger;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.gms.FailureDetector;
 import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.service.StorageService;
+import org.apache.log4j.Logger;
+
+import java.math.BigInteger;
+import java.util.*;
 
 /**
  * This class contains a helper method that will be used by
@@ -20,9 +15,9 @@ import com.facebook.infrastructure.service.StorageService;
 */
 public abstract class AbstractStrategy implements IReplicaPlacementStrategy
 {
-    protected static Logger logger_ = Logger.getLogger(AbstractStrategy.class);
+    protected static final Logger logger_ = Logger.getLogger(AbstractStrategy.class);
     
-    protected TokenMetadata tokenMetadata_;
+    protected final TokenMetadata tokenMetadata_;
     
     AbstractStrategy(TokenMetadata tokenMetadata)
     {

@@ -240,6 +240,7 @@
     <testng outputDir="${test.dir}/output"
             haltOnFailure="true"
             verbose="2">
+      <jvmarg value="-Xmx1G"/>
       <jvmarg value="-Dstorage-config=conf"/>
       <classpath>
         <path refid="classpath" />

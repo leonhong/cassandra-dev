@@ -18,18 +18,19 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.*;
-import java.text.DecimalFormat;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.Logger;
-
 import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.ThreadFactoryImpl;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -84,13 +85,6 @@ public class FileUtils
         public int compare(File f, File f2)
         {
             return (int)(f.lastModified() - f2.lastModified());
-        }
-
-        public boolean equals(Object o)
-        {
-            if ( !(o instanceof FileComparator) )
-                return false;
-            return true;
         }
     }
 

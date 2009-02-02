@@ -48,21 +48,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataImporter {
 	private static final String delimiter_ = new String(",");
 
-	private static Logger logger_ = Logger.getLogger(DataImporter.class);
+	private static final Logger logger_ = Logger.getLogger(DataImporter.class);
 
 	private static final String tablename_ = new String("Mailbox");
 
-	public static EndPoint from_ = new EndPoint("172.21.211.181", 10001);
+	public static final EndPoint from_ = new EndPoint("172.21.211.181", 10001);
 
-	public static EndPoint to_ = new EndPoint("hadoop071.sf2p.facebook.com",
-			7000);
+	public static final EndPoint to_ = new EndPoint("hadoop071.sf2p.facebook.com", 7000);
 
-	public static EndPoint[] tos_ = new EndPoint[]{ new EndPoint("hadoop038.sf2p.facebook.com",	7000),
-													new EndPoint("hadoop039.sf2p.facebook.com", 7000),
-													new EndPoint("hadoop040.sf2p.facebook.com", 7000),
-													new EndPoint("hadoop041.sf2p.facebook.com",	7000)
-												};
-	private static final String columnFamily_ = new String("MailboxUserList");
+    public static final EndPoint[] tos_ = new EndPoint[] {new EndPoint("hadoop038.sf2p.facebook.com", 7000),
+                                                          new EndPoint("hadoop039.sf2p.facebook.com", 7000),
+                                                          new EndPoint("hadoop040.sf2p.facebook.com", 7000),
+                                                          new EndPoint("hadoop041.sf2p.facebook.com", 7000)};
+    
+    private static final String columnFamily_ = new String("MailboxUserList");
 
 	private Cassandra.Client peerstorageClient_ = null;
 

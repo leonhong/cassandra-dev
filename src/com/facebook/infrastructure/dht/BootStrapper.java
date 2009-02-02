@@ -18,24 +18,14 @@
 
 package com.facebook.infrastructure.dht;
 
-import java.io.IOException;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.locator.TokenMetadata;
+ import com.facebook.infrastructure.locator.TokenMetadata;
 import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.math.BigInteger;
+import java.util.*;
 
 /**
  * This class handles the boostrapping responsibilities for
@@ -135,8 +125,12 @@ public class BootStrapper implements Runnable
         Map<EndPoint, BigInteger> oldEndPointToTokenMap = tokenMetadata_.cloneEndPointTokenMap();
         Map<BigInteger, EndPoint> oldTokenToEndPointMap = tokenMetadata_.cloneTokenEndPointMap();
 
-        oldEndPointToTokenMap.remove(targets_);
-        oldTokenToEndPointMap.remove(tokens_);
+        for (EndPoint endpoint : targets_) {
+            oldEndPointToTokenMap.remove(endpoint);
+        }
+        for (BigInteger token : tokens_) {
+            oldTokenToEndPointMap.remove(token);
+        }
 
         BigInteger myToken = oldEndPointToTokenMap.get(StorageService.getLocalStorageEndPoint());
         List<BigInteger> allTokens = new ArrayList<BigInteger>(oldTokenToEndPointMap.keySet());

@@ -18,14 +18,15 @@
 
 package com.facebook.infrastructure.dht;
 
+import com.facebook.infrastructure.io.ICompactSerializer;
+import com.facebook.infrastructure.net.CompactEndPointSerializationHelper;
+import com.facebook.infrastructure.net.EndPoint;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import com.facebook.infrastructure.io.ICompactSerializer;
-import com.facebook.infrastructure.net.CompactEndPointSerializationHelper;
-import com.facebook.infrastructure.net.EndPoint;
 
 
 /**
@@ -48,11 +49,13 @@ class BootstrapMetadata
         return serializer_;
     }
     
-    protected EndPoint target_;
-    protected List<Range> ranges_;
+    protected final EndPoint target_;
+    protected final List<Range> ranges_;
     
     BootstrapMetadata(EndPoint target, List<Range> ranges)
     {
+        assert target != null;
+        assert ranges != null;
         target_ = target;
         ranges_ = ranges;
     }

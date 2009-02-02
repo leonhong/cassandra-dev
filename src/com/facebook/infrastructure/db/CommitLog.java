@@ -18,15 +18,17 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.*;
-import java.util.*;
-import org.apache.log4j.Logger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.utils.*;
+import com.facebook.infrastructure.utils.FBUtilities;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /*
  * Commit Log tracks every write operation into the system. The aim
@@ -94,13 +96,6 @@ class CommitLog
         public int compare(String f, String f2)
         {
             return (int)(getCreationTime(f) - getCreationTime(f2));
-        }
-
-        public boolean equals(Object o)
-        {
-            if ( !(o instanceof CommitLogFileComparator) )
-                return false;
-            return true;
         }
     }
 

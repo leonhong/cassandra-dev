@@ -18,31 +18,25 @@
 
 package com.facebook.infrastructure.dht;
 
+import com.facebook.infrastructure.io.ICompactSerializer;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.io.StreamContextManager;
+import com.facebook.infrastructure.service.StorageService;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.Serializable;
-import com.facebook.infrastructure.db.ColumnFamily;
-import com.facebook.infrastructure.io.ICompactSerializer;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.io.*;
-import com.facebook.infrastructure.service.StorageService;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class BootstrapInitiateMessage implements Serializable
+public class BootstrapInitiateMessage
 {
-    private static ICompactSerializer<BootstrapInitiateMessage> serializer_;
+    private static final BootstrapInitiateMessageSerializer serializer_ = new BootstrapInitiateMessageSerializer();
     
-    static
-    {
-        serializer_ = new BootstrapInitiateMessageSerializer();
-    }
-    
-    public static ICompactSerializer<BootstrapInitiateMessage> serializer()
+    public static BootstrapInitiateMessageSerializer serializer()
     {
         return serializer_;
     }
@@ -66,32 +60,32 @@ public class BootstrapInitiateMessage implements Serializable
     {
         return streamContexts_;
     }
-}
 
-class BootstrapInitiateMessageSerializer implements ICompactSerializer<BootstrapInitiateMessage>
-{
-    public void serialize(BootstrapInitiateMessage bim, DataOutputStream dos) throws IOException
+    public static class BootstrapInitiateMessageSerializer implements ICompactSerializer<BootstrapInitiateMessage>
     {
-        dos.writeInt(bim.streamContexts_.length);
-        for ( StreamContextManager.StreamContext streamContext : bim.streamContexts_ )
+        public void serialize(BootstrapInitiateMessage bim, DataOutputStream dos) throws IOException
         {
-            StreamContextManager.StreamContext.serializer().serialize(streamContext, dos);
-        }
-    }
-    
-    public BootstrapInitiateMessage deserialize(DataInputStream dis) throws IOException
-    {
-        int size = dis.readInt();
-        StreamContextManager.StreamContext[] streamContexts = new StreamContextManager.StreamContext[0];
-        if ( size > 0 )
-        {
-            streamContexts = new StreamContextManager.StreamContext[size];
-            for ( int i = 0; i < size; ++i )
+            dos.writeInt(bim.streamContexts_.length);
+            for ( StreamContextManager.StreamContext streamContext : bim.streamContexts_ )
             {
-                streamContexts[i] = StreamContextManager.StreamContext.serializer().deserialize(dis);
+                StreamContextManager.StreamContext.serializer().serialize(streamContext, dos);
             }
         }
-        return new BootstrapInitiateMessage(streamContexts);
+
+        public BootstrapInitiateMessage deserialize(DataInputStream dis) throws IOException
+        {
+            int size = dis.readInt();
+            StreamContextManager.StreamContext[] streamContexts = new StreamContextManager.StreamContext[0];
+            if ( size > 0 )
+            {
+                streamContexts = new StreamContextManager.StreamContext[size];
+                for ( int i = 0; i < size; ++i )
+                {
+                    streamContexts[i] = StreamContextManager.StreamContext.serializer().deserialize(dis);
+                }
+            }
+            return new BootstrapInitiateMessage(streamContexts);
+        }
     }
 }
 

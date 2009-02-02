@@ -18,31 +18,20 @@
 
 package com.facebook.infrastructure.net.io;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import javax.xml.bind.annotation.XmlElement;
+import com.facebook.infrastructure.io.ICompactSerializer;
+import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.service.StorageService;
 import org.apache.log4j.Logger;
 
-import com.facebook.infrastructure.db.Table;
-import com.facebook.infrastructure.dht.BootstrapInitiateMessage;
-import com.facebook.infrastructure.io.ICompactSerializer;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.service.StorageService;
-import com.facebook.infrastructure.utils.*;
+import java.io.*;
+import java.util.*;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
 public class StreamContextManager
 {
-    private static Logger logger_ = Logger.getLogger(StreamContextManager.class);
+    private static final Logger logger_ = Logger.getLogger(StreamContextManager.class);
     
     public static enum StreamCompletionAction
     {
@@ -50,17 +39,12 @@ public class StreamContextManager
         STREAM
     }
     
-    public static class StreamContext implements Serializable
+    public static class StreamContext
     {
         private static Logger logger_ = Logger.getLogger(StreamContextManager.StreamContext.class);
-        private static ICompactSerializer<StreamContext> serializer_;
-        
-        static
-        {
-            serializer_ = new StreamContextSerializer();
-        }
-        
-        public static ICompactSerializer<StreamContext> serializer()
+        private static StreamContextSerializer serializer_ = new StreamContextSerializer();
+
+        public static StreamContextSerializer serializer()
         {
             return serializer_;
         }
@@ -206,16 +190,11 @@ public class StreamContextManager
         }
     }
     
-    public static class StreamStatusMessage implements Serializable
+    public static class StreamStatusMessage
     {
-        private static ICompactSerializer<StreamStatusMessage> serializer_;
+        private static StreamStatusMessageSerializer serializer_ = new StreamStatusMessageSerializer();
         
-        static 
-        {
-            serializer_ = new StreamStatusMessageSerializer();
-        }
-        
-        public static ICompactSerializer<StreamStatusMessage> serializer()
+        public static StreamStatusMessageSerializer serializer()
         {
             return serializer_;
         }
@@ -256,11 +235,11 @@ public class StreamContextManager
     }
         
     /* Maintain a stream context per host that is the source of the stream */
-    public static Map<String, List<StreamContext>> ctxBag_ = new Hashtable<String, List<StreamContext>>();  
+    public static final Map<String, List<StreamContext>> ctxBag_ = new Hashtable<String, List<StreamContext>>();
     /* Maintain in this map the status of the streams that need to be sent back to the source */
-    public static Map<String, List<StreamStatus>> streamStatusBag_ = new Hashtable<String, List<StreamStatus>>();
+    public static final Map<String, List<StreamStatus>> streamStatusBag_ = new Hashtable<String, List<StreamStatus>>();
     /* Maintains a callback handler per endpoint to notify the app that a stream from a given endpoint has been handled */
-    public static Map<String, IStreamComplete> streamNotificationHandlers_ = new HashMap<String, IStreamComplete>();
+    public static final Map<String, IStreamComplete> streamNotificationHandlers_ = new HashMap<String, IStreamComplete>();
     
     public synchronized static StreamContext getStreamContext(String key)
     {        
