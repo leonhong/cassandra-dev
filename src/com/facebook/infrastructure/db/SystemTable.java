@@ -18,16 +18,15 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.config.DatabaseDescriptor;
+import com.facebook.infrastructure.io.*;
+import com.facebook.infrastructure.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.log4j.Logger;
-
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -156,7 +155,7 @@ public class SystemTable
             IColumn tokenColumn = new Column(SystemTable.token_, token.toByteArray(), oldTokenColumnTimestamp + 1);
             /* replace the old "Token" column with this new one. */
             logger_.debug("Replacing old token " + new BigInteger( columnFamily.getColumn(SystemTable.token_).value() ).toString() + " with token " + token.toString());
-            columnFamily.addColumn(SystemTable.token_, tokenColumn);
+            columnFamily.addColumn(tokenColumn);
             reset(systemRow_);
         }
     }

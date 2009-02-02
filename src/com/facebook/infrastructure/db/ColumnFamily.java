@@ -187,7 +187,7 @@ public final class ColumnFamily
     	return columnSerializer_;
     }
 
-    public IColumn createColumn(String name)
+    public IColumn addColumn(String name)
     {
     	IColumn column = columnFactory_.createColumn(name);
     	addColumn(column);
@@ -234,17 +234,17 @@ public final class ColumnFamily
         return DatabaseDescriptor.getColumnType(name_).equals("Super");
     }
 
-    public IColumn createColumn(String name, byte[] value)
+    public IColumn addColumn(String name, byte[] value)
     {
     	IColumn column = columnFactory_.createColumn(name, value);
-    	addColumn(column.name(), column);
+    	addColumn(column);
         return column;
     }
 
-	public IColumn createColumn(String name, byte[] value, long timestamp)
+	public IColumn addColumn(String name, byte[] value, long timestamp)
 	{
 		IColumn column = columnFactory_.createColumn(name, value, timestamp);
-		addColumn(column.name(), column);
+		addColumn(column);
         return column;
     }
 
@@ -273,13 +273,6 @@ public final class ColumnFamily
             size_.addAndGet(column.size());
             columns_.put(name, column);
         }
-    }
-
-    @Deprecated
-    void addColumn(String name, IColumn column)
-    {
-        assert name.equals(column.name());
-        addColumn(column);
     }
 
     public IColumn getColumn(String name)
@@ -384,14 +377,14 @@ public final class ColumnFamily
         	IColumn columnExternal = columns.get(cName);
         	if( columnInternal == null )
         	{
-        		cfDiff.addColumn(cName, columnExternal);
+        		cfDiff.addColumn(columnExternal);
         	}
         	else
         	{
             	IColumn columnDiff = columnInternal.diff(columnExternal);
         		if(columnDiff != null)
         		{
-        			cfDiff.addColumn(cName, columnDiff);
+        			cfDiff.addColumn(columnDiff);
         		}
         	}
         }

@@ -154,7 +154,7 @@ public class RowMutation implements Serializable
             {
             	columnFamily = new ColumnFamily(values[0], ColumnFamily.getColumnType("Standard"));
             }
-        	columnFamily.createColumn(values[1], value, timestamp);
+        	columnFamily.addColumn(values[1], value, timestamp);
         }
         if( values.length == 3 )
         {
@@ -162,7 +162,7 @@ public class RowMutation implements Serializable
             {
             	columnFamily = new ColumnFamily(values[0], ColumnFamily.getColumnType("Super"));
             }
-        	columnFamily.createColumn(values[1]+ ":" + values[2], value, timestamp);
+        	columnFamily.addColumn(values[1]+ ":" + values[2], value, timestamp);
         }
         modifications_.put(values[0], columnFamily);
     }
@@ -188,16 +188,16 @@ public class RowMutation implements Serializable
         if(values.length == 2 )
         {
             if (columnFamily.isSuper()) {
-                IColumn c = columnFamily.createColumn(values[1]);
+                IColumn c = columnFamily.addColumn(values[1]);
                 ((SuperColumn)c).markForDeleteAt(timestamp);
             } else {
-                IColumn c = columnFamily.createColumn(values[1], new byte[0], timestamp);
+                IColumn c = columnFamily.addColumn(values[1], new byte[0], timestamp);
                 c.delete();
             }
         }
         else if(values.length == 3 )
         {
-            IColumn c = columnFamily.createColumn(values[1] + ":" + values[2], new byte[0], timestamp);
+            IColumn c = columnFamily.addColumn(values[1] + ":" + values[2], new byte[0], timestamp);
             c.getSubColumns().iterator().next().delete();
         }
         else {

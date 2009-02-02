@@ -17,13 +17,14 @@
  */
 package com.facebook.infrastructure.db;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.util.*;
-
-import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.io.SSTable;
+
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 
 public class NamesFilter implements IFilter
@@ -49,7 +50,7 @@ public class NamesFilter implements IFilter
 		        if ( names_.contains(column.name()) )
 		        {
 		            names_.remove(column.name());            
-					filteredCf.addColumn(column.name(), column);
+					filteredCf.addColumn(column);
 		        }
 				if( isDone() )
 				{
@@ -64,7 +65,7 @@ public class NamesFilter implements IFilter
     		{
     			SuperColumn superColumn = (SuperColumn)column;
     			SuperColumn filteredSuperColumn = new SuperColumn(superColumn.name());
-				filteredCf.addColumn(filteredSuperColumn.name(), filteredSuperColumn);
+				filteredCf.addColumn(filteredSuperColumn);
         		Collection<IColumn> subColumns = superColumn.getSubColumns();
         		for(IColumn subColumn : subColumns)
         		{

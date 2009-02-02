@@ -334,7 +334,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
                 if(column != null )
                 {
                     columnFamily = new ColumnFamily(cfName_);
-                    columnFamily.addColumn(column.name(), column);
+                    columnFamily.addColumn(column);
                 }
         	} else {
                 assert values.length == 3;
@@ -345,7 +345,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
                     if(subColumn != null)
                     {
                         columnFamily = new ColumnFamily(cfName_);
-                        SuperColumn sc = (SuperColumn)columnFamily.createColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp());
+                        SuperColumn sc = (SuperColumn)columnFamily.addColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp());
                         if (subColumn.isMarkedForDelete()) {
                             sc.getSubColumn(subColumn.name()).delete();
                         }

@@ -125,8 +125,8 @@ public class DBManager
             String key = FBUtilities.getHostName();
             row = new Row(key);
             ColumnFamily cf = new ColumnFamily(SystemTable.cfName_);
-            cf.addColumn(SystemTable.token_, new Column(SystemTable.token_, token.toByteArray()) );
-            cf.addColumn(SystemTable.generation_, new Column(SystemTable.generation_, BasicUtilities.intToByteArray(generation)) );
+            cf.addColumn(new Column(SystemTable.token_, token.toByteArray()) );
+            cf.addColumn(new Column(SystemTable.generation_, BasicUtilities.intToByteArray(generation)) );
             row.addColumnFamily(cf);
             sysTable.apply(row);
             storageMetadata = new StorageMetadata( token, generation);
@@ -148,7 +148,7 @@ public class DBManager
                 int gen = BasicUtilities.byteArrayToInt(generation.value()) + 1;
 
                 Column generation2 = new Column("Generation", BasicUtilities.intToByteArray(gen), generation.timestamp() + 1);
-                columnFamily.addColumn("Generation", generation2);
+                columnFamily.addColumn(generation2);
                 storageMetadata = new StorageMetadata( bi, gen );
                 break;
             }

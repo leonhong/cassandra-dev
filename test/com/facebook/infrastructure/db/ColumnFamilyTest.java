@@ -22,7 +22,7 @@ public class ColumnFamilyTest
         ColumnFamily cf;
 
         cf = new ColumnFamily("Test", "Standard");
-        cf.createColumn("C", bytes, 1);
+        cf.addColumn("C", bytes, 1);
         DataOutputBuffer bufOut = new DataOutputBuffer();
         ColumnFamily.serializerWithIndexes().serialize(cf, bufOut);
 
@@ -49,7 +49,7 @@ public class ColumnFamilyTest
         DataOutputBuffer bufOut = new DataOutputBuffer();
         for (String cName: map.navigableKeySet())
         {
-            cf.createColumn(cName, map.get(cName), 314);
+            cf.addColumn(cName, map.get(cName), 314);
         }
         ColumnFamily.serializerWithIndexes().serialize(cf, bufOut);
 

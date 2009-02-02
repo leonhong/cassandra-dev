@@ -17,13 +17,12 @@
  */
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.io.DataInputBuffer;
+import com.facebook.infrastructure.io.SSTable;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Collection;
-
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.io.SSTable;
 
 /**
  * This class provides a filter for fitering out columns
@@ -56,7 +55,7 @@ class TimeFilter implements IFilter
     		{
     			if ( column.timestamp() >=  timeLimit_ )
     			{
-    				filteredCf.addColumn(column.name(), column);
+    				filteredCf.addColumn(column);
     				++i;
     			}
     			else
@@ -81,7 +80,7 @@ class TimeFilter implements IFilter
     		{
     			SuperColumn superColumn = (SuperColumn)column;
     			SuperColumn filteredSuperColumn = new SuperColumn(superColumn.name());
-				filteredCf.addColumn(filteredSuperColumn.name(), filteredSuperColumn);
+				filteredCf.addColumn(filteredSuperColumn);
         		Collection<IColumn> subColumns = superColumn.getSubColumns();
         		int i = 0;
         		for(IColumn subColumn : subColumns)

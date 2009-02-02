@@ -78,7 +78,7 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
                 column = cf.getColumnSerializer().deserialize(dis);
                 if(column != null)
                 {
-                    cf.addColumn(column.name(), column);
+                    cf.addColumn(column);
                 }
             }
         }
@@ -104,7 +104,7 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
             	column = cf.getColumnSerializer().deserialize(dis, filter);
             	if(column != null)
             	{
-            		cf.addColumn(column.name(), column);
+            		cf.addColumn(column);
             		column = null;
             		if(filter.isDone())
             		{
@@ -144,7 +144,7 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
 	            IColumn column = cf.getColumnSerializer().deserialize(dis, columnName, filter);
 	            if ( column != null )
 	            {
-	                cf.addColumn(column.name(), column);
+	                cf.addColumn(column);
 	                break;
 	            }
             }

@@ -17,13 +17,12 @@
  */
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.io.DataInputBuffer;
+import com.facebook.infrastructure.io.SSTable;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Collection;
-
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.io.SSTable;
 
 /**
  * This class provides a filter for fitering out columns
@@ -58,7 +57,7 @@ public class CountFilter implements IFilter
     		Collection<IColumn> columns = columnFamily.getAllColumns();
     		for(IColumn column : columns)
     		{
-    			filteredCf.addColumn(column.name(), column);
+    			filteredCf.addColumn(column);
     			countLimit_--;
     			if( countLimit_ <= 0 )
     			{
@@ -74,7 +73,7 @@ public class CountFilter implements IFilter
     		{
     			SuperColumn superColumn = (SuperColumn)column;
     			SuperColumn filteredSuperColumn = new SuperColumn(superColumn.name());
-				filteredCf.addColumn(filteredSuperColumn.name(), filteredSuperColumn);
+				filteredCf.addColumn(filteredSuperColumn);
         		Collection<IColumn> subColumns = superColumn.getSubColumns();
         		for(IColumn subColumn : subColumns)
         		{
