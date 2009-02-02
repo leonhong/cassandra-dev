@@ -21,19 +21,22 @@ public class ColumnFamilyStoreTest extends ServerTest {
         for (int i = 800; i < 1000; ++i)
         {
             String key = Integer.toString(i);
-            RowMutation rm = new RowMutation("Table1", key);
+            RowMutation rm;
             for ( int j = 0; j < 8; ++j )
             {
                 byte[] bytes = j % 2 == 0 ? bytes1 : bytes2;
+                rm = new RowMutation("Table1", key);
                 rm.add("Standard1:" + "Column-" + j, bytes, j);
+                rm.apply();
 
                 for ( int k = 0; k < 8; ++k )
                 {
                     bytes = (j + k) % 2 == 0 ? bytes1 : bytes2;
+                    rm = new RowMutation("Table1", key);
                     rm.add("Super1:" + "SuperColumn-" + j + ":Column-" + k, bytes, k);
+                    rm.apply();
                 }
             }
-            rm.apply();
         }
 
         for ( int i = 800; i < 1000; ++i )
