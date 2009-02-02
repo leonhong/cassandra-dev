@@ -205,21 +205,11 @@ class TestMutations(CassandraTester):
         _expect_missing(lambda: client.get_column('Table1', 'key1', 'Super1:sc2:c5'))
         actual = client.get_slice_super('Table1', 'key1', 'Super1:sc2', -1, -1)
         assert actual == [], actual
-        actual = client.get_slice_super('Table1', 'key1', 'Super1', -1, -1)
-        assert actual == \
-            [superColumn_t(name='sc1', 
-                           columns=[column_t(columnName='c4', value='value4', timestamp=0)])], actual
-        _verify_simple()
-
-        # New insert, make sure it shows up post-remove:
-        client.insert('Table1', 'key1', 'Super1:sc2:c7', 'value7', 0)
-        time.sleep(0.1)
         scs = [superColumn_t(name='sc1', 
-                             columns=[column_t(columnName='c4', value='value4', timestamp=0)]),
-               superColumn_t(name='sc2', 
-                             columns=[column_t(columnName='c7', value='value7', timestamp=0)])]
-
-        assert client.get_slice_super('Table1', 'key1', 'Super1', -1, -1) == scs
+                             columns=[column_t(columnName='c4', value='value4', timestamp=0)])]
+        actual = client.get_slice_super('Table1', 'key1', 'Super1', -1, -1)
+        assert actual == scs, actual
+        _verify_simple()
 
         # Test resurrection.  First, re-insert the value w/ older timestamp, 
         # and make sure it stays removed:
@@ -236,5 +226,4 @@ class TestMutations(CassandraTester):
             [superColumn_t(name='sc1', 
                            columns=[column_t(columnName='c4', value='value4', timestamp=0)]),
              superColumn_t(name='sc2', 
-                           columns=[column_t(columnName='c5', value='value5', timestamp=6),
-                                    column_t(columnName='c7', value='value7', timestamp=0)])], actual
+                           columns=[column_t(columnName='c5', value='value5', timestamp=6)])], actual
