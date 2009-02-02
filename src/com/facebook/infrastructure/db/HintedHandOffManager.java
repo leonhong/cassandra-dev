@@ -118,7 +118,7 @@ public class HintedHandOffManager implements IComponentShutdown
 
         private void runHints()
         {
-            logger_.debug("Started  hinted handoff " + columnFamilyStore_.columnFamily_);
+            logger_.debug("Started  hinted handoff " + columnFamilyStore_.cfName);
 
             // 1. Scan through all the keys that we need to handoff
             // 2. For each key read the list of recepients and send
@@ -137,7 +137,7 @@ public class HintedHandOffManager implements IComponentShutdown
             	if(hintedColumnFamily == null)
             	{
                     // Force flush now
-                    columnFamilyStore_.forceFlush(false);
+                    columnFamilyStore_.forceFlush();
             		return;
             	}
             	Collection<IColumn> keys = hintedColumnFamily.getAllColumns();
@@ -172,7 +172,7 @@ public class HintedHandOffManager implements IComponentShutdown
                 	}
             	}
                 // Force flush now
-                columnFamilyStore_.forceFlush(false);
+                columnFamilyStore_.forceFlush();
 
                 // Now do a major compaction
                 columnFamilyStore_.forceCompaction(null, null, 0, null);
@@ -181,7 +181,7 @@ public class HintedHandOffManager implements IComponentShutdown
             {
             	logger_.warn(ex.getMessage());
             }
-            logger_.debug("Finished hinted handoff ..."+columnFamilyStore_.columnFamily_);
+            logger_.debug("Finished hinted handoff ..."+columnFamilyStore_.cfName);
         }
 
         private void runDeliverHints(EndPoint to)

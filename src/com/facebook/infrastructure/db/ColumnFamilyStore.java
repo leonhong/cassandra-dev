@@ -81,7 +81,7 @@ public class ColumnFamilyStore
     private static Logger logger_ = Logger.getLogger(ColumnFamilyStore.class);
 
     private String table_;
-    public String columnFamily_;
+    public String cfName;
 
     /* This is used to generate the next index for a SSTable */
     private AtomicInteger fileIndexGenerator_ = new AtomicInteger(0);
@@ -103,7 +103,7 @@ public class ColumnFamilyStore
     ColumnFamilyStore(String table, String columnFamily) throws IOException
     {
         table_ = table;
-        columnFamily_ = columnFamily;
+        cfName = columnFamily;
         /*
          * Get all data files associated with old Memtables for this table.
          * These files are named as follows <Table>-1.db, ..., <Table>-n.db. Get
@@ -131,8 +131,8 @@ public class ColumnFamilyStore
         Collections.sort(indices);
         int value = (indices.size() > 0) ? (indices.get(indices.size() - 1)) : 0;
         fileIndexGenerator_.set(value);
-        memtable_ = new AtomicReference<Memtable>( new Memtable(table_, columnFamily_) );
-        binaryMemtable_ = new AtomicReference<BinaryMemtable>( new BinaryMemtable(table_, columnFamily_) );
+        memtable_ = new AtomicReference<Memtable>( new Memtable(table_, cfName) );
+        binaryMemtable_ = new AtomicReference<BinaryMemtable>( new BinaryMemtable(table_, cfName) );
     }
 
     void onStart() throws IOException
@@ -147,14 +147,14 @@ public class ColumnFamilyStore
             for (File file : files)
             {
                 String filename = file.getName();
-                if(((file.length() == 0) || (filename.indexOf("-" + SSTable.temporaryFile_) != -1) ) && (filename.indexOf(columnFamily_) != -1))
+                if(((file.length() == 0) || (filename.indexOf("-" + SSTable.temporaryFile_) != -1) ) && (filename.indexOf(cfName) != -1))
                 {
                 	file.delete();
                 	continue;
                 }
                 String[] tblCfName = getTableAndColumnFamilyName(filename);
                 if (tblCfName[0].equals(table_)
-                        && tblCfName[1].equals(columnFamily_)
+                        && tblCfName[1].equals(cfName)
                         && filename.indexOf("-Data.db") != -1)
                 {
                     ssTables.add(file.getAbsoluteFile());
@@ -174,7 +174,7 @@ public class ColumnFamilyStore
         SSTable.onStart(filenames);
         logger_.debug("Submitting a major compaction task ...");
         CompactionManager.instance().submit(this);
-        if(columnFamily_.equals(Table.hints_))
+        if(cfName.equals(Table.hints_))
         {
         	HintedHandOffManager.instance().submit(this);
         }
@@ -205,7 +205,7 @@ public class ColumnFamilyStore
         {
             return sb.toString();
         }
-        sb.append(columnFamily_ + " statistics :");
+        sb.append(cfName + " statistics :");
         sb.append(newLineSeparator);
         sb.append("Number of files on disk : " + ssTables_.size());
         sb.append(newLineSeparator);
@@ -221,6 +221,10 @@ public class ColumnFamilyStore
         sb.append("--------------------------------------");
         sb.append(newLineSeparator);
         return sb.toString();
+    }
+
+    public boolean isSuper() {
+        return DatabaseDescriptor.getColumnType(cfName).equals("Super");
     }
 
     /*
@@ -298,7 +302,7 @@ public class ColumnFamilyStore
 
     String getColumnFamilyName()
     {
-        return columnFamily_;
+        return cfName;
     }
 
     private String[] getTableAndColumnFamilyName(String filename)
@@ -346,7 +350,7 @@ public class ColumnFamilyStore
 
     String getNextFileName()
     {
-        String name = table_ + "-" + columnFamily_ + "-" + fileIndexGenerator_.incrementAndGet();
+        String name = table_ + "-" + cfName + "-" + fileIndexGenerator_.incrementAndGet();
         return name;
     }
 
@@ -355,7 +359,7 @@ public class ColumnFamilyStore
      */
     public String getTempFileName()
     {
-        String name = table_ + "-" + columnFamily_ + "-" + SSTable.temporaryFile_ + "-" + fileIndexGenerator_.incrementAndGet() ;
+        String name = table_ + "-" + cfName + "-" + SSTable.temporaryFile_ + "-" + fileIndexGenerator_.incrementAndGet() ;
         return name;
     }
 
@@ -367,8 +371,8 @@ public class ColumnFamilyStore
      */
     void switchMemtable(String key, ColumnFamily columnFamily, CommitLog.CommitLogContext cLogCtx) throws IOException
     {
-        memtable_.set( new Memtable(table_, columnFamily_) );
-        if(!key.equals(Memtable.flushKey_))
+        memtable_.set( new Memtable(table_, cfName) );
+        if(!key.equals(Memtable.FLUSH_KEY))
         	memtable_.get().put(key, columnFamily, cLogCtx);
     }
 
@@ -377,7 +381,7 @@ public class ColumnFamilyStore
      */
     void switchMemtable() throws IOException
     {
-        memtable_.set( new Memtable(table_, columnFamily_) );
+        memtable_.set( new Memtable(table_, cfName) );
     }
 
     /*
@@ -388,15 +392,19 @@ public class ColumnFamilyStore
      */
     void switchBinaryMemtable(String key, byte[] buffer) throws IOException
     {
-        binaryMemtable_.set( new BinaryMemtable(table_, columnFamily_) );
+        binaryMemtable_.set( new BinaryMemtable(table_, cfName) );
         binaryMemtable_.get().put(key, buffer);
     }
 
-    void forceFlush(boolean fRecovery) throws IOException
+    void forceFlush() throws IOException
     {
         //MemtableManager.instance().submit(getColumnFamilyName(), memtable_.get() , CommitLog.CommitLogContext.NULL);
         //memtable_.get().flush(true, CommitLog.CommitLogContext.NULL);
-        memtable_.get().forceflush(this, fRecovery);
+        memtable_.get().forceflush(this);
+    }
+
+    public void flushMemtable() throws IOException {
+        memtable_.get().flushInPlace();
     }
 
     void forceFlushBinary() throws IOException
@@ -427,39 +435,44 @@ public class ColumnFamilyStore
         binaryMemtable_.get().put(key, buffer);
     }
 
+    public ColumnFamily getColumnFamily(String key, String columnFamilyColumn, IFilter filter) throws IOException
+    {
+        List<ColumnFamily> columnFamilies = getColumnFamiliesForKey(key, columnFamilyColumn, filter);
+        return resolveAndRemoveDeleted(columnFamilies);
+    }
+
     /**
      *
      * Get the column family in the most efficient order.
      * 1. Memtable
      * 2. Sorted list of files
      */
-    public ColumnFamily getColumnFamily(String key, String cf, IFilter filter) throws IOException
-    {
-    	List<ColumnFamily> columnFamilies = new ArrayList<ColumnFamily>();
+    List<ColumnFamily> getColumnFamiliesForKey(String key, String columnFamilyColumn, IFilter filter) throws IOException {
+        List<ColumnFamily> columnFamilies = new ArrayList<ColumnFamily>();
         long start = System.currentTimeMillis();
         /* Get the ColumnFamily from Memtable */
-    	getColumnFamilyFromCurrentMemtable(key, cf, filter, columnFamilies);
+        getColumnFamilyFromCurrentMemtable(key, columnFamilyColumn, filter, columnFamilies);
         if (columnFamilies.size() == 0 || !filter.isDone()) {
             /* Check if MemtableManager has any historical information */
-            MemtableManager.instance().getColumnFamily(key, columnFamily_, cf, filter, columnFamilies);
+            MemtableFlushManager.instance().getColumnFamily(key, cfName, columnFamilyColumn, filter, columnFamilies);
         }
         if (columnFamilies.size() == 0 || !filter.isDone()) {
-            getColumnFamilyFromDisk(key, cf, columnFamilies, filter);
+            getColumnFamilyFromDisk(key, columnFamilyColumn, columnFamilies, filter);
             logger_.debug("DISK TIME: " + (System.currentTimeMillis() - start) + " ms.");
         }
-        return resolveAndRemoveDeleted(columnFamilies);
+        return columnFamilies;
     }
 
     /**
      * Fetch from disk files and go in sorted order  to be efficient
      * This fn exits as soon as the required data is found.
      * @param key
-     * @param cf
+     * @param columnFamilyColumn
      * @param columnFamilies
      * @param filter
      * @throws IOException
      */
-    private void getColumnFamilyFromDisk(String key, String cf, List<ColumnFamily> columnFamilies, IFilter filter) throws IOException
+    private void getColumnFamilyFromDisk(String key, String columnFamilyColumn, List<ColumnFamily> columnFamilies, IFilter filter) throws IOException
     {
         /* Scan the SSTables on disk first */
     	lock_.readLock().lock();
@@ -476,7 +489,7 @@ public class ColumnFamilyStore
                 boolean bVal = SSTable.isKeyInFile(key, file);
                 if ( !bVal )
                     continue;
-	            ColumnFamily columnFamily = fetchColumnFamily(key, cf, filter, file);
+	            ColumnFamily columnFamily = fetchColumnFamily(key, columnFamilyColumn, filter, file);
 	            long start = System.currentTimeMillis();
 	            if (columnFamily != null)
 	            {
@@ -504,23 +517,20 @@ public class ColumnFamilyStore
     	}
     }
 
-
-    private ColumnFamily fetchColumnFamily(String key, String cf, IFilter filter, String ssTableFile) throws IOException
+    private ColumnFamily fetchColumnFamily(String key, String columnFamilyColumn, IFilter filter, String ssTableFile) throws IOException
 	{
 		SSTable ssTable = new SSTable(ssTableFile);
 		long start = System.currentTimeMillis();
 		DataInputBuffer bufIn = null;
-		bufIn = filter.next(key, cf, ssTable);
+		bufIn = filter.next(key, columnFamilyColumn, ssTable);
 		logger_.info("DISK ssTable.next TIME: " + (System.currentTimeMillis() - start) + " ms.");
 		if (bufIn.getLength() == 0)
 			return null;
         start = System.currentTimeMillis();
-        ColumnFamily columnFamily = ColumnFamily.serializer().deserialize(bufIn, cf, filter);
+        ColumnFamily columnFamily = ColumnFamily.serializer().deserialize(bufIn, columnFamilyColumn, filter);
 		logger_.info("DISK Deserialize TIME: " + (System.currentTimeMillis() - start) + " ms.");
         return columnFamily;
 	}
-
-
 
     private void getColumnFamilyFromCurrentMemtable(String key, String cf, IFilter filter, List<ColumnFamily> columnFamilies)
     {
@@ -533,7 +543,7 @@ public class ColumnFamilyStore
     }
 
     /** merge all columnFamilies into a single instance, with only the newest versions of columns preserved. */
-    private static ColumnFamily resolve(List<ColumnFamily> columnFamilies)
+    static ColumnFamily resolve(List<ColumnFamily> columnFamilies)
     {
         int size = columnFamilies.size();
         if (size == 0)
@@ -548,6 +558,7 @@ public class ColumnFamilyStore
         {
             assert cf.name().equals(cf2.name());
             cf.addColumns(cf2);
+            cf.delete(Math.max(cf.getMarkedForDeleteAt(), cf2.getMarkedForDeleteAt()));
         }
         return cf;
     }
@@ -561,27 +572,33 @@ public class ColumnFamilyStore
     }
 
 
-    static ColumnFamily resolveAndRemoveDeleted(List<ColumnFamily> columnFamilies) {
+    public static ColumnFamily resolveAndRemoveDeleted(List<ColumnFamily> columnFamilies) {
         ColumnFamily cf = resolve(columnFamilies);
-        if (cf != null) {
-            for (String cname : new ArrayList<String>(cf.getColumns().keySet())) {
-                IColumn c = cf.getColumns().get(cname);
-                if (c.isMarkedForDelete()) {
-                    cf.remove(cname);
-                } else if (c.getObjectCount() > 1) {
-                    // don't operate directly on the supercolumn, it could be the one in the memtable
-                    cf.remove(cname);
-                    IColumn sc = cf.createColumn(c.name());
-                    for (IColumn subColumn : c.getSubColumns()) {
-                        if (!subColumn.isMarkedForDelete()) {
-                            sc.addColumn(subColumn.name(), subColumn);
-                        }
-                    }
-                    if (sc.getSubColumns().size() > 0) {
-                        cf.addColumn(cname, sc);
-                        logger_.debug("adding sc " + sc.name() + " to CF with " + sc.getSubColumns().size() + " columns: " + sc);
+        return removeDeleted(cf);
+    }
+
+    static ColumnFamily removeDeleted(ColumnFamily cf) {
+        if (cf == null) {
+            return cf;
+        }
+        for (String cname : new ArrayList<String>(cf.getColumns().keySet())) {
+            IColumn c = cf.getColumns().get(cname);
+            if (c instanceof SuperColumn) {
+                long min_timestamp = Math.max(c.getMarkedForDeleteAt(), cf.getMarkedForDeleteAt());
+                // don't operate directly on the supercolumn, it could be the one in the memtable
+                cf.remove(cname);
+                IColumn sc = new SuperColumn(cname);
+                for (IColumn subColumn : c.getSubColumns()) {
+                    if (!subColumn.isMarkedForDelete() && subColumn.timestamp() >= min_timestamp) {
+                        sc.addColumn(subColumn.name(), subColumn);
                     }
                 }
+                if (sc.getSubColumns().size() > 0) {
+                    cf.addColumn(sc);
+                    logger_.debug("adding sc " + sc.name() + " to CF with " + sc.getSubColumns().size() + " columns: " + sc);
+                }
+            } else if (c.isMarkedForDelete() || c.timestamp() < cf.getMarkedForDeleteAt()) {
+                cf.remove(cname);
             }
         }
         return cf;
@@ -599,42 +616,10 @@ public class ColumnFamilyStore
         memtable_.get().putOnRecovery(key, columnFamily);
     }
 
-    private void deleteSuperColumn(ColumnFamily columnFamily, SuperColumn c, long timestamp) {
-        for (IColumn subColumn : c.getSubColumns()) {
-            columnFamily.createColumn(c.name() + ":" + subColumn.name(), subColumn.value(), timestamp);
-        }
-        for (IColumn subColumn : columnFamily.getColumn(c.name()).getSubColumns()) {
-            subColumn.delete();
-        }
-    }
-
     void delete(String key, ColumnFamily columnFamily)
             throws IOException
     {
-        logger_.debug("deleting " + columnFamily);
-        
-        if (columnFamily.isMarkedForDelete()) {
-            // mark individual columns deleted
-            assert columnFamily.getAllColumns().size() == 0;
-            ColumnFamily cf = getColumnFamily(key, columnFamily.name(), new IdentityFilter());
-            for (IColumn c : cf.getAllColumns()) {
-                if (cf.isSuper()) {
-                    deleteSuperColumn(columnFamily, (SuperColumn)c, columnFamily.getMarkedForDeleteAt());
-                } else {
-                    columnFamily.createColumn(c.name(), c.value(), columnFamily.getMarkedForDeleteAt()).delete();
-                }
-            }
-        } else if (columnFamily.isSuper()) {
-            for (IColumn sc : columnFamily.getAllColumns()) {
-                if (sc.isMarkedForDelete()) {
-                    ColumnFamily cf = getColumnFamily(key, columnFamily.name(), new NamesFilter(Arrays.asList(new String[] { sc.name() })));
-                    for (IColumn c : cf.getAllColumns()) {
-                        deleteSuperColumn(columnFamily, (SuperColumn)c, sc.getMarkedForDeleteAt());
-                    }
-                }
-            }
-        }
-
+        // store all the individual deletes in memtable
         memtable_.get().remove(key, columnFamily);
     }
 
@@ -646,7 +631,7 @@ public class ColumnFamilyStore
     void onMemtableFlush(CommitLog.CommitLogContext cLogCtx) throws IOException
     {
         if ( cLogCtx.isValidContext() )
-            CommitLog.open(table_).onMemtableFlush(columnFamily_, cLogCtx);
+            CommitLog.open(table_).onMemtableFlush(cfName, cLogCtx);
     }
 
     /*
@@ -683,7 +668,7 @@ public class ColumnFamilyStore
     }
 
     public Filter compact(ColumnFamilyCompactor.Wrapper r) {
-        logger_.debug("Started  compaction ..." + columnFamily_);
+        logger_.debug("Started  compaction ..." + cfName);
         assert !isCompacting_.get();
         isCompacting_.set(true);
         try
@@ -697,7 +682,7 @@ public class ColumnFamilyStore
         finally
         {
             isCompacting_.set(false);
-            logger_.debug("Finished compaction ..." + columnFamily_);
+            logger_.debug("Finished compaction ..." + cfName);
         }
     }
 

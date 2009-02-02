@@ -18,18 +18,16 @@
 
 package com.facebook.infrastructure.db;
 
+import com.facebook.infrastructure.utils.FBUtilities;
+import org.apache.log4j.Logger;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
-import com.facebook.infrastructure.utils.FBUtilities;
-import com.facebook.infrastructure.utils.HashingSchemes;
-import com.facebook.infrastructure.utils.LogUtil;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -235,6 +233,7 @@ public final class SuperColumn implements IColumn, Serializable
         		columnInternal.putColumn(subColumn);
         	}
         }
+        markedForDeleteAt = Math.max(markedForDeleteAt, column.getMarkedForDeleteAt());
         return false;
     }
 

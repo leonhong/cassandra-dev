@@ -51,7 +51,7 @@ public class RowMutation implements Serializable
     private String key_;       
     protected Map<String, ColumnFamily> modifications_ = new HashMap<String, ColumnFamily>();       
     protected Map<String, ColumnFamily> deletions_ = new HashMap<String, ColumnFamily>();
-    
+
     /* Ctor for JAXB */
     private RowMutation()
     {
@@ -67,11 +67,8 @@ public class RowMutation implements Serializable
     {
         table_ = table;
         key_ = row.key();
-        Map<String, ColumnFamily> cfSet = row.getColumnFamilyMap();
-        Set<String> keyset = cfSet.keySet();
-        for(String cfName : keyset)
-        {
-        	add(cfName, cfSet.get(cfName));
+        for (ColumnFamily cf : row.getColumnFamilies()) {
+        	add(cf);
         }
     }
 
@@ -117,7 +114,7 @@ public class RowMutation implements Serializable
     void addHints(String hint) throws IOException, ColumnFamilyNotDefinedException
     {        
         String cfName = Table.hints_ + ":" + hint;
-        add(cfName, new byte[0]);
+        add(cfName, new byte[0], 0);
     }
     
     /*
@@ -126,26 +123,11 @@ public class RowMutation implements Serializable
      * param @ cf - column family name
      * param @ columnFamily - the column family.
     */
-    public void add(String cf, ColumnFamily columnFamily)
+    public void add(ColumnFamily columnFamily)
     {       
-        modifications_.put(cf, columnFamily);
+        modifications_.put(columnFamily.name(), columnFamily);
     }
-    
-    /*
-     * Specify a column name and a corresponding value for
-     * the column. Column name is specified as <column family>:column.
-     * This will result in a ColumnFamily associated with
-     * <column family> as name and a Column with <column>
-     * as name.
-     * 
-     * param @ cf - column name as <column family>:<column>
-     * param @ value - value associated with the column
-    */
-    public void add(String cf, byte[] value) throws IOException, ColumnFamilyNotDefinedException
-    {
-        add(cf, value, 0);
-    }
-    
+
     /*
      * Specify a column name and a corresponding value for
      * the column. Column name is specified as <column family>:column.
@@ -158,12 +140,12 @@ public class RowMutation implements Serializable
      * param @ value - value associated with the column
      * param @ timestamp - ts associated with this data.
     */
-    public void add(String cf, byte[] value, long timestamp)
+    public void add(String columnFamilyColumn, byte[] value, long timestamp)
     {        
-        String[] values = RowMutation.getColumnAndColumnFamily(cf);
+        String[] values = RowMutation.getColumnAndColumnFamily(columnFamilyColumn);
        
         if ( values.length == 0 || values.length == 1 || values.length > 3 )
-            throw new IllegalArgumentException("Column Family " + cf + " in invalid format. Must be in <column family>:<column> format.");
+            throw new IllegalArgumentException("Column Family " + columnFamilyColumn + " in invalid format. Must be in <column family>:<column> format.");
         
         ColumnFamily columnFamily = modifications_.get(values[0]);
         if( values.length == 2 )
@@ -193,12 +175,12 @@ public class RowMutation implements Serializable
      * marked as deleted.
      * param @ cf - column name as <column family>:<column>     
     */
-    public void delete(String cf, long timestamp)
+    public void delete(String columnFamilyColumn, long timestamp)
     {        
-        String[] values = RowMutation.getColumnAndColumnFamily(cf);
+        String[] values = RowMutation.getColumnAndColumnFamily(columnFamilyColumn);
         
         if ( values.length == 0 || values.length > 3 )
-            throw new IllegalArgumentException("Column Family " + cf + " in invalid format. Must be in <column family>:<column> format.");
+            throw new IllegalArgumentException("Column Family " + columnFamilyColumn + " in invalid format. Must be in <column family>:<column> format.");
      
         ColumnFamily columnFamily = modifications_.get(values[0]);
         if ( columnFamily == null )
@@ -251,10 +233,10 @@ public class RowMutation implements Serializable
 
         row.clear();
         for (String cfName : deletions_.keySet())
-        {    
+        {
             if ( !table.isValidColumnFamily(cfName) )
                 throw new ColumnFamilyNotDefinedException("Column Family " + cfName + " has not been defined.");
-            row.addColumnFamily( deletions_.get(cfName) );        
+            row.addColumnFamily( deletions_.get(cfName) );
         }
         if ( deletions_.size() > 0 )
             table.delete(row);

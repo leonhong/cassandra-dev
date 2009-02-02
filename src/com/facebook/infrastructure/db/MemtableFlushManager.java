@@ -36,14 +36,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class MemtableManager
+public class MemtableFlushManager
 {
-    private static MemtableManager instance_;
+    private static MemtableFlushManager instance_;
     private static Lock lock_ = new ReentrantLock();
-    private static Logger logger_ = Logger.getLogger(MemtableManager.class);
+    private static Logger logger_ = Logger.getLogger(MemtableFlushManager.class);
     private ReentrantReadWriteLock rwLock_ = new ReentrantReadWriteLock(true);
 
-    public static MemtableManager instance()
+    public static MemtableFlushManager instance()
     {
         if ( instance_ == null )
         {
@@ -51,7 +51,7 @@ public class MemtableManager
             try
             {
                 if ( instance_ == null )
-                    instance_ = new MemtableManager();
+                    instance_ = new MemtableFlushManager();
             }
             finally
             {
@@ -76,7 +76,7 @@ public class MemtableManager
         {
             try
             {
-            	memtable_.flush(cLogCtx_);
+            	memtable_.flushInPlace(cLogCtx_);
             }
             catch (IOException e)
             {
@@ -131,7 +131,7 @@ public class MemtableManager
      * submitted for flush but have not yet been flushed.
      * It also filters out unneccesary columns based on the passed in filter.
     */
-    void getColumnFamily(String key, String cfName, String cf, IFilter filter, List<ColumnFamily> columnFamilies)
+    void getColumnFamily(String key, String cfName, String columnFamilyColumn, IFilter filter, List<ColumnFamily> columnFamilies)
     {
     	rwLock_.readLock().lock();
     	try
@@ -144,7 +144,7 @@ public class MemtableManager
 	        	int size = memtables.size();
 	            for ( int i = size - 1; i >= 0; --i  )
 	            {
-	                ColumnFamily columnFamily = memtables.get(i).getLocalCopy(key, cf, filter);
+	                ColumnFamily columnFamily = memtables.get(i).getLocalCopy(key, columnFamilyColumn, filter);
 	                if ( columnFamily != null )
 	                {
 	                    columnFamilies.add(columnFamily);

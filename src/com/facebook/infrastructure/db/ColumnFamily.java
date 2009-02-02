@@ -118,15 +118,15 @@ public final class ColumnFamily
     {
     }
 
-    public ColumnFamily(String cf)
+    public ColumnFamily(String cfName)
     {
-        name_ = cf;
+        name_ = cfName;
         createColumnFactoryAndColumnSerializer();
     }
 
-    public ColumnFamily(String cf, String columnType)
+    public ColumnFamily(String cfName, String columnType)
     {
-        name_ = cf;
+        this(cfName);
         createColumnFactoryAndColumnSerializer(columnType);
     }
 
@@ -177,7 +177,7 @@ public final class ColumnFamily
     {
         for (IColumn column : cf.getColumns().values())
         {
-            addColumn(column.name(), column);
+            addColumn(column);
         }
     }
 
@@ -190,7 +190,7 @@ public final class ColumnFamily
     public IColumn createColumn(String name)
     {
     	IColumn column = columnFactory_.createColumn(name);
-    	addColumn(column.name(), column);
+    	addColumn(column);
         return column;
     }
 
@@ -257,8 +257,9 @@ public final class ColumnFamily
      * If we find an old column that has the same name
      * the ask it to resolve itself else add the new column .
     */
-    void addColumn(String name, IColumn column)
+    void addColumn(IColumn column)
     {
+        String name = column.name();
         IColumn oldColumn = columns_.get(name);
         if ( oldColumn != null )
         {
@@ -274,12 +275,19 @@ public final class ColumnFamily
         }
     }
 
+    @Deprecated
+    void addColumn(String name, IColumn column)
+    {
+        assert name.equals(column.name());
+        addColumn(column);
+    }
+
     public IColumn getColumn(String name)
     {
         return columns_.get( name );
     }
 
-    public Collection<IColumn> getAllColumns()
+    public SortedSet<IColumn> getAllColumns()
     {
         return columns_.getSortedColumns();
     }

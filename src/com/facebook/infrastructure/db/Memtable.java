@@ -42,9 +42,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Memtable implements MemtableMBean, Comparable<Memtable>
 {
-	private static Logger logger_ = Logger.getLogger( Memtable.class );
-    private static Map<String, ExecutorService> apartments_ = new HashMap<String, ExecutorService>();
-    public static final String flushKey_ = "FlushKey";
+	private static final Logger logger_ = Logger.getLogger( Memtable.class );
+    private static final Map<String, ExecutorService> apartments_ = new HashMap<String, ExecutorService>();
+    public static final String FLUSH_KEY = "__FlushKey__";
+
     public static void shutdown()
     {
     	Set<String> names = apartments_.keySet();
@@ -193,7 +194,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     boolean isThresholdViolated(String key)
     {
     	boolean bVal = false;//isLifetimeViolated();
-        if (currentSize_.get() >= threshold_ ||  currentObjectCount_.get() >= thresholdCount_ || bVal || key.equals(flushKey_))
+        if (currentSize_.get() >= threshold_ ||  currentObjectCount_.get() >= thresholdCount_ || bVal || key.equals(FLUSH_KEY))
         {
         	if ( bVal )
         		logger_.info("Memtable's lifetime for " + cfName_ + " has been violated.");
@@ -230,7 +231,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
                 if (!isFrozen_)
                 {
                     isFrozen_ = true;
-                    MemtableManager.instance().submit(cfStore.getColumnFamilyName(), this, cLogCtx);
+                    MemtableFlushManager.instance().submit(cfStore.getColumnFamilyName(), this, cLogCtx);
                     cfStore.switchMemtable(key, columnFamily, cLogCtx);
                 }
                 else
@@ -254,29 +255,28 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     /*
      * This version is used to switch memtable and force flush.
     */
-    void forceflush(ColumnFamilyStore cfStore, boolean fRecovery) throws IOException
+    public void forceflush(ColumnFamilyStore cfStore) throws IOException
     {
-        if(!fRecovery)
-        {
-	    	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), flushKey_);
+        RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), FLUSH_KEY);
 
-	        try
-	        {
-	            rm.add(cfStore.columnFamily_ + ":Column","0".getBytes());
-	            rm.apply();
-	        }
-	        catch(ColumnFamilyNotDefinedException ex)
-	        {
-	            logger_.debug(LogUtil.throwableToString(ex));
-	        }
-        }
-        else
+        try
         {
-        	flush(CommitLog.CommitLogContext.NULL);
+            if (cfStore.isSuper()) {
+                rm.add(cfStore.cfName + ":SC1:Column", "0".getBytes(), 0);
+            } else {
+                rm.add(cfStore.cfName + ":Column", "0".getBytes(), 0);
+            }
+            rm.apply();
+        }
+        catch(ColumnFamilyNotDefinedException ex)
+        {
+            logger_.debug(LogUtil.throwableToString(ex));
         }
     }
 
-
+    void flushInPlace() throws IOException {
+        flushInPlace(CommitLog.CommitLogContext.NULL);
+    }
 
     private void resolve(String key, ColumnFamily columnFamily)
     {
@@ -290,6 +290,10 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             int newObjectCount = oldCf.getColumnCount();
             resolveSize(oldSize, newSize);
             resolveCount(oldObjectCount, newObjectCount);
+            // TODO we could save compaction some work by removing all known-to-be-deleted columns from memory
+            // (but this is not high priority because chances are if you're deleting a CF or supercolumn,
+            //  it seems that having most of the data still unflushed in the memtable would be uncommon.)
+            oldCf.delete(Math.max(oldCf.getMarkedForDeleteAt(), columnFamily.getMarkedForDeleteAt()));
         }
         else
         {
@@ -306,14 +310,14 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     */
     void putOnRecovery(String key, ColumnFamily columnFamily) throws IOException
     {
-        if(!key.equals(Memtable.flushKey_))
+        if(!key.equals(Memtable.FLUSH_KEY))
         	resolve(key, columnFamily);
     }
 
     
-    ColumnFamily getLocalCopy(String key, String cfName, IFilter filter)
+    ColumnFamily getLocalCopy(String key, String columnFamilyColumn, IFilter filter)
     {
-    	String[] values = RowMutation.getColumnAndColumnFamily(cfName);
+    	String[] values = RowMutation.getColumnAndColumnFamily(columnFamilyColumn);
     	ColumnFamily columnFamily = null;
         if(values.length == 1 )
         {
@@ -350,7 +354,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         	}
         }
         /* Filter unnecessary data from the column based on the provided filter */
-        return filter.filter(cfName, columnFamily);
+        return filter.filter(columnFamilyColumn, columnFamily);
     }
 
     ColumnFamily get(String key, String cfName)
@@ -410,7 +414,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
      * param recoveryMode - indicates if this was invoked during
      *                      recovery.
     */
-    void flush(CommitLog.CommitLogContext cLogCtx) throws IOException
+    void flushInPlace(CommitLog.CommitLogContext cLogCtx) throws IOException
     {
         ColumnFamilyStore cfStore = Table.open(table_).getColumnFamilyStore(cfName_);
         if ( columnFamilies_.size() == 0 )

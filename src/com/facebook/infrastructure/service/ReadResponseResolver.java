@@ -134,14 +134,10 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 			if(diffRow == null) // no repair needs to happen
 				continue;
 			// create the row mutation message based on the diff and schedule a read repair 
-			RowMutation rowMutation = new RowMutation(table, key);            			
-	    	Map<String, ColumnFamily> columnFamilies = diffRow.getColumnFamilyMap();
-	        Set<String> cfNames = columnFamilies.keySet();
-	        
-	        for ( String cfName : cfNames )
+			RowMutation rowMutation = new RowMutation(table, key);
+	        for ( ColumnFamily cf : diffRow.getColumnFamilies() )
 	        {
-	            ColumnFamily cf = columnFamilies.get(cfName);
-	            rowMutation.add(cfName, cf);
+	            rowMutation.add(cf);
 	        }
 	        // schedule the read repair
 	        ReadRepairManager.instance().schedule(endPoints.get(i),rowMutation);

@@ -5,6 +5,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 
 public class ColumnFamilyStoreTest extends ServerTest {
@@ -23,11 +24,13 @@ public class ColumnFamilyStoreTest extends ServerTest {
             RowMutation rm = new RowMutation("Table1", key);
             for ( int j = 0; j < 8; ++j )
             {
+                byte[] bytes = j % 2 == 0 ? bytes1 : bytes2;
+                rm.add("Standard1:" + "Column-" + j, bytes, j);
+
                 for ( int k = 0; k < 8; ++k )
                 {
-                    byte[] bytes = (j + k) % 2 == 0 ? bytes1 : bytes2;
+                    bytes = (j + k) % 2 == 0 ? bytes1 : bytes2;
                     rm.add("Super1:" + "SuperColumn-" + j + ":Column-" + k, bytes, k);
-                    rm.add("Standard1:" + "Column-" + k, bytes, k);
                 }
             }
             rm.apply();
@@ -49,5 +52,60 @@ public class ColumnFamilyStoreTest extends ServerTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testRemove() throws IOException, ColumnFamilyNotDefinedException {
+        Table table = Table.open("Table1");
+        ColumnFamilyStore store = table.getColumnFamilyStore("Standard1");
+        RowMutation rm;
+
+        // add data
+        rm = new RowMutation("Table1", "key1");
+        rm.add("Standard1:Column1", "asdf".getBytes(), 0);
+        rm.apply();
+        store.forceFlush();
+
+        // remove
+        rm = new RowMutation("Table1", "key1");
+        ColumnFamily cf = new ColumnFamily("Standard1");
+        cf.delete(1);
+        rm.add(cf);
+        rm.apply();
+
+        ColumnFamily retrieved = store.getColumnFamily("key1", "Standard1", new IdentityFilter());
+        assert retrieved.getColumnCount() == 0;
+    }
+
+    @Test
+    public void testRemoveSuperColumn() throws IOException, ColumnFamilyNotDefinedException {
+        Table table = Table.open("Table1");
+        ColumnFamilyStore store = table.getColumnFamilyStore("Super1");
+        RowMutation rm;
+
+        // add data
+        rm = new RowMutation("Table1", "key1");
+        rm.add("Super1:SC1:Column1", "asdf".getBytes(), 0);
+        rm.apply();
+        store.forceFlush();
+
+        // remove
+        rm = new RowMutation("Table1", "key1");
+        ColumnFamily cf = new ColumnFamily("Super1");
+        SuperColumn sc = new SuperColumn("SC1");
+        sc.markForDeleteAt(1);
+        cf.addColumn(sc);
+        rm.add(cf);
+        rm.apply();
+
+        List<ColumnFamily> families = store.getColumnFamiliesForKey("key1", "Super1", new IdentityFilter());
+        assert families.get(0).getAllColumns().first().getMarkedForDeleteAt() == 1; // delete marker, just added
+        assert !families.get(1).getAllColumns().first().isMarkedForDelete(); // flushed old version
+        ColumnFamily resolved = ColumnFamilyStore.resolve(families);
+        assert resolved.getAllColumns().first().getMarkedForDeleteAt() == 1;
+        Collection<IColumn> subColumns = resolved.getAllColumns().first().getSubColumns();
+        assert subColumns.size() == 1;
+        assert subColumns.iterator().next().timestamp() == 0;
+        assert ColumnFamilyStore.removeDeleted(resolved).getColumnCount() == 0;
     }
 }

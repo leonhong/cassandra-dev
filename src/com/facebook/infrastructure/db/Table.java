@@ -619,19 +619,17 @@ public class Table
      * is also written to the column family store's memtable.
     */
     void apply(Row row) throws IOException
-    {        
-        String key = row.key();
+    {
         /* Add row to the commit log. */
         long start = System.currentTimeMillis();
-               
         CommitLog.CommitLogContext cLogCtx = CommitLog.open(table_).add(row);
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
-        for ( String cfName : columnFamilies.keySet())
+
+        for ( ColumnFamily columnFamily : row.getColumnFamilies() )
         {
-        	ColumnFamily columnFamily = columnFamilies.get(cfName);
             ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
-            cfStore.apply( key, columnFamily, cLogCtx);            
+            cfStore.apply(row.key(), columnFamily, cLogCtx);
         }
+
         long timeTaken = System.currentTimeMillis() - start;
         dbAnalyticsSource_.updateWriteStatistics(timeTaken);
     }
@@ -655,7 +653,11 @@ public class Table
         Set<String> cfNames = columnFamilyStores_.keySet();
         for ( String cfName : cfNames )
         {
-            columnFamilyStores_.get(cfName).forceFlush(fRecovery);
+            if (fRecovery) {
+                columnFamilyStores_.get(cfName).flushMemtable();
+            } else {
+                columnFamilyStores_.get(cfName).forceFlush();
+            }
         }
     }
 
@@ -697,7 +699,7 @@ public class Table
     	            }
     	            else if(column.timestamp() == 3)
     	            {
-    	            	cfStore.forceFlush(false);
+    	            	cfStore.forceFlush();
     	            }
     	            else if(column.timestamp() == 4)
     	            {

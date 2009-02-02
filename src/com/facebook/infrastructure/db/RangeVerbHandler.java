@@ -48,7 +48,7 @@ public class RangeVerbHandler implements IVerbHandler {
             // memtable keys: current and historical
             Iterator<Memtable> it = (Iterator<Memtable>)IteratorUtils.chainedIterator(
                                           IteratorUtils.singletonIterator(cfs.getMemtable()),
-                                          MemtableManager.instance().getUnflushedMemtables(cfName).iterator());
+                                          MemtableFlushManager.instance().getUnflushedMemtables(cfName).iterator());
             while (it.hasNext()) {
                 iterators.add(IteratorUtils.filteredIterator(it.next().sortedKeyIterator(), new Predicate() {
                     public boolean evaluate(Object key) {
