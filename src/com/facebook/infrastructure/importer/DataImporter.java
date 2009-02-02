@@ -866,7 +866,7 @@ public class DataImporter {
                 Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
 				errorCount_++;
 			} else {
-				Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+				Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 				if (cfMap == null || cfMap.size() == 0) {
 					logger_
 							.debug("ERROR ColumnFamil map is missing.....: "

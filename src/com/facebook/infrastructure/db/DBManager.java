@@ -134,7 +134,7 @@ public class DBManager
         else
         {
             /* we crashed and came back up need to bump generation # */
-        	Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        	Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
         	Set<String> cfNames = columnFamilies.keySet();
 
             for ( String cfName : cfNames )

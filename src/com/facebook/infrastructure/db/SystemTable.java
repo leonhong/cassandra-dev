@@ -18,29 +18,15 @@
 
 package com.facebook.infrastructure.db;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
-
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.apache.log4j.Logger;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.*;
 
 /**
@@ -162,7 +148,7 @@ public class SystemTable
     {
         if ( systemRow_ != null )
         {
-            Map<String, ColumnFamily> columnFamilies = systemRow_.getColumnFamilies();
+            Map<String, ColumnFamily> columnFamilies = systemRow_.getColumnFamilyMap();
             /* Retrieve the "LocationInfo" column family */
             ColumnFamily columnFamily = columnFamilies.get(SystemTable.cfName_);
             long oldTokenColumnTimestamp = columnFamily.getColumn(SystemTable.token_).timestamp();

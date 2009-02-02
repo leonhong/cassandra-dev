@@ -625,11 +625,10 @@ public class Table
         long start = System.currentTimeMillis();
                
         CommitLog.CommitLogContext cLogCtx = CommitLog.open(table_).add(row);
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
-        Set<String> cNames = columnFamilies.keySet();
-        for ( String cName : cNames )
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
+        for ( String cfName : columnFamilies.keySet())
         {
-        	ColumnFamily columnFamily = columnFamilies.get(cName);
+        	ColumnFamily columnFamily = columnFamilies.get(cfName);
             ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
             cfStore.apply( key, columnFamily, cLogCtx);            
         }
@@ -640,7 +639,7 @@ public class Table
     void applyNow(Row row) throws IOException
     {
         String key = row.key();
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
 
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )
@@ -662,18 +661,12 @@ public class Table
 
     void delete(Row row) throws IOException
     {
-        String key = row.key();
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
-
-        /* Add row to commit log */
         CommitLog.open(table_).add(row);
-        Set<String> cNames = columnFamilies.keySet();
 
-        for ( String cName : cNames )
+        for ( ColumnFamily columnFamily : row.getColumnFamilies() )
         {
-        	ColumnFamily columnFamily = columnFamilies.get(cName);
             ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
-            cfStore.delete( key, columnFamily );
+            cfStore.delete(row.key(), columnFamily );
         }
     }
 
@@ -683,7 +676,7 @@ public class Table
         /* Add row to the commit log. */
         long start = System.currentTimeMillis();
                 
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )
         {

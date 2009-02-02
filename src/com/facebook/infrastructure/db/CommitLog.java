@@ -26,7 +26,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.io.*;
-import com.facebook.infrastructure.service.StorageService;
 import com.facebook.infrastructure.utils.*;
 
 /*
@@ -363,7 +362,7 @@ class CommitLog
                     try
                     {                        
                         Row row = Row.serializer().deserialize(bufIn);
-                        Map<String, ColumnFamily> columnFamilies = new HashMap<String, ColumnFamily>(row.getColumnFamilies());
+                        Map<String, ColumnFamily> columnFamilies = new HashMap<String, ColumnFamily>(row.getColumnFamilyMap());
                         /* remove column families that have already been flushed */
                     	Set<String> cNames = columnFamilies.keySet();
 
@@ -410,7 +409,7 @@ class CommitLog
     */
     private void updateHeader(Row row) throws IOException
     {
-    	Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+    	Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
         Table table = Table.open(table_);
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )

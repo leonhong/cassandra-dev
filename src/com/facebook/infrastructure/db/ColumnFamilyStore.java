@@ -611,6 +611,8 @@ public class ColumnFamilyStore
     void delete(String key, ColumnFamily columnFamily)
             throws IOException
     {
+        logger_.debug("deleting " + columnFamily);
+        
         if (columnFamily.isMarkedForDelete()) {
             // mark individual columns deleted
             assert columnFamily.getAllColumns().size() == 0;
@@ -632,7 +634,6 @@ public class ColumnFamilyStore
                 }
             }
         }
-        logger_.debug("deleting " + columnFamily);
 
         memtable_.get().remove(key, columnFamily);
     }

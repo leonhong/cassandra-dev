@@ -67,7 +67,7 @@ public class RowMutation implements Serializable
     {
         table_ = table;
         key_ = row.key();
-        Map<String, ColumnFamily> cfSet = row.getColumnFamilies();
+        Map<String, ColumnFamily> cfSet = row.getColumnFamilyMap();
         Set<String> keyset = cfSet.keySet();
         for(String cfName : keyset)
         {
@@ -240,19 +240,17 @@ public class RowMutation implements Serializable
     */
     void apply(Row row) throws IOException, ColumnFamilyNotDefinedException
     {                
-        Table table = Table.open(table_);        
-        Set<String> cfNames = modifications_.keySet();
-        for (String cfName : cfNames )
+        Table table = Table.open(table_);
+        for (String cfName : modifications_.keySet())
         {        
             if ( !table.isValidColumnFamily(cfName) )
                 throw new ColumnFamilyNotDefinedException("Column Family " + cfName + " has not been defined.");
             row.addColumnFamily( modifications_.get(cfName) );            
         }
         table.apply(row);
+
         row.clear();
-                
-        Set<String> cfNames2 = deletions_.keySet();
-        for (String cfName : cfNames2 )
+        for (String cfName : deletions_.keySet())
         {    
             if ( !table.isValidColumnFamily(cfName) )
                 throw new ColumnFamilyNotDefinedException("Column Family " + cfName + " has not been defined.");
