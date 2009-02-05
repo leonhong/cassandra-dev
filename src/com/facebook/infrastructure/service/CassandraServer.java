@@ -28,7 +28,6 @@ import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
 import com.facebook.thrift.protocol.TProtocolFactory;
 import com.facebook.thrift.server.TThreadPoolServer;
@@ -97,7 +96,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return messageMap;
 	}
 
-    public boolean insert_blocking(String tablename, String key, String columnFamily_column, String cellData, long timestamp) throws TException {
+    public boolean insert_blocking(String tablename, String key, String columnFamily_column, String cellData, long timestamp) {
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.add(columnFamily_column, cellData.getBytes(), timestamp);
         return insertBlocking(rm);
@@ -277,7 +276,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return row;
 	}
 
-    private Collection<IColumn> getColumns(ReadParameters params) throws TException {
+    private Collection<IColumn> getColumns(ReadParameters params) throws ColumnFamilyNotDefinedException {
         ColumnFamily cf = getCF(params);
         String[] values = RowMutation.getColumnAndColumnFamily(params.columnFamily_column);
         if (cf == null) {
@@ -299,11 +298,11 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
      * Gets the ColumnFamily object for the given table, key, and cf.
      * Returns null if column family is defined, but has no columns for the given key.
      */
-    private ColumnFamily getCF(ReadParameters params) throws TException {
+    private ColumnFamily getCF(ReadParameters params) throws ColumnFamilyNotDefinedException {
         Row row;
         try {
             row = readProtocol(params, StorageService.ConsistencyLevel.WEAK);
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
         assert row != null; // should be empty row if key not present
@@ -311,9 +310,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return row.getColumnFamily(params.columnFamily_column);
     }
 
-    private ArrayList<column_t> getThriftColumns(ReadParameters params) throws TException
-    {
-
+    private ArrayList<column_t> getThriftColumns(ReadParameters params) throws ColumnFamilyNotDefinedException {
         ArrayList<column_t> retlist = new ArrayList<column_t>();
         for (IColumn column : getColumns(params)) {
             retlist.add(makeThriftColumn(column));
@@ -343,21 +340,21 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return ret;
     }
 
-    public ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException, InvalidRequestException {
+    public ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws InvalidRequestException {
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
         return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, timeStamp));
 	}
 
-    public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws TException, InvalidRequestException {
+    public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws InvalidRequestException {
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
         return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, start, count));
 	}
 
-    public column_t get_column(String tablename, String key, String columnFamily_column) throws TException, InvalidRequestException, NotFoundException {
+    public column_t get_column(String tablename, String key, String columnFamily_column) throws InvalidRequestException, NotFoundException {
         // Check format of column argument
         String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 
@@ -392,7 +389,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     public int get_column_count(String tablename, String key, String columnFamily_column)
-            throws TException, InvalidRequestException {
+            throws InvalidRequestException {
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -401,7 +398,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     public ArrayList<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count)
-            throws TException, InvalidRequestException {
+            throws InvalidRequestException {
         if (columnFamily_superColumnName.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -417,7 +414,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     public superColumn_t get_superColumn(String tablename, String key, String columnFamily_column)
-            throws TException, InvalidRequestException, NotFoundException {
+            throws InvalidRequestException, NotFoundException {
         String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
         if (values.length != 2) {
             throw new InvalidRequestException("get_superColumn expects column of form cfamily:supercol");
@@ -432,7 +429,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return makeThriftSuperColumn(column);
     }
 
-    public List<String> get_range(String tablename, final String startkey) throws TException {
+    public List<String> get_range(String tablename, final String startkey) {
         // send the request
         // for now we ignore tablename like 90% of the rest of cassandra
         Message message;
