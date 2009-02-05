@@ -36,6 +36,7 @@ import com.facebook.infrastructure.utils.CountingBloomFilter;
 import com.facebook.infrastructure.utils.FBUtilities;
 import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -282,6 +283,16 @@ public class Table
     public Set<String> getColumnFamilies()
     {
         return tableMetadata_.getColumnFamilies();
+    }
+
+    public Set<String> getApplicationColumnFamilies() {
+        Set<String> set = new HashSet<String>();
+        for (String cfName : getColumnFamilies()) {
+            if (DatabaseDescriptor.isApplicationColumnFamily(cfName)) {
+                set.add(cfName);
+            }
+        }
+        return set;
     }
 
     public ColumnFamilyStore getColumnFamilyStore(String cfName)

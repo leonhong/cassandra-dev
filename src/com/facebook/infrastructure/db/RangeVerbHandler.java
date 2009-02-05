@@ -39,10 +39,7 @@ public class RangeVerbHandler implements IVerbHandler {
 
         List<Iterator<String>> iterators = new ArrayList<Iterator<String>>();
         Table table = Table.open(DatabaseDescriptor.getTableName());
-        for (String cfName : table.getColumnFamilies()) {
-            if (!DatabaseDescriptor.isApplicationColumnFamily(cfName)) {
-                continue;
-            }
+        for (String cfName : table.getApplicationColumnFamilies()) {
             ColumnFamilyStore cfs = table.getColumnFamilyStore(cfName);
 
             // memtable keys: current and historical
@@ -72,6 +69,7 @@ public class RangeVerbHandler implements IVerbHandler {
         Iterator<String> iter = IteratorUtils.collatedIterator(STRING_COMPARATOR, iterators);
         List<String> keys = new ArrayList<String>();
         String last = null, current = null;
+
         while (keys.size() < 1000) {
             if (!iter.hasNext()) {
                 break;
@@ -79,7 +77,17 @@ public class RangeVerbHandler implements IVerbHandler {
             current = iter.next();
             if (!current.equals(last)) {
                 last = current;
-                keys.add(current);
+                for (String cfName : table.getApplicationColumnFamilies()) {
+                    ColumnFamilyStore cfs = table.getColumnFamilyStore(cfName);
+                    try {
+                        if (cfs.getColumnFamily(current, cfName, new IdentityFilter()).getColumnCount() > 0) {
+                            keys.add(current);
+                            break;
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException();
+                    }
+                }
             }
         }
 
