@@ -145,9 +145,6 @@ public class RowMutation implements Serializable
     {        
         String[] values = RowMutation.getColumnAndColumnFamily(columnFamilyColumn);
         String cfName = values[0];
-        if (modifications_.containsKey(cfName)) {
-            throw new IllegalArgumentException("ColumnFamily " + cfName + " is already being modified");
-        }
 
         if ( values.length == 0 || values.length == 1 || values.length > 3 )
             throw new IllegalArgumentException("Column Family " + columnFamilyColumn + " in invalid format. Must be in <column family>:<column> format.");
@@ -158,6 +155,10 @@ public class RowMutation implements Serializable
             if ( columnFamily == null )
             {
             	columnFamily = new ColumnFamily(cfName, ColumnFamily.getColumnType("Standard"));
+            } else {
+                if (columnFamily.getColumn(values[1]) != null) {
+                    throw new IllegalArgumentException(columnFamilyColumn + " is already being modified");
+                }
             }
         	columnFamily.addColumn(values[1], value, timestamp);
         }
@@ -166,6 +167,11 @@ public class RowMutation implements Serializable
             if ( columnFamily == null )
             {
             	columnFamily = new ColumnFamily(cfName, ColumnFamily.getColumnType("Super"));
+            } else {
+                IColumn sc = columnFamily.getColumn(values[1]);
+                if (sc != null && ((SuperColumn)sc).getSubColumn(values[2]) != null) {
+                    throw new IllegalArgumentException(columnFamilyColumn + " is already being modified");
+                }
             }
         	columnFamily.addColumn(values[1]+ ":" + values[2], value, timestamp);
         }
