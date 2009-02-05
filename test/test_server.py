@@ -230,8 +230,8 @@ class TestMutations(CassandraTester):
                            columns=[column_t(columnName='c5', value='value5', timestamp=6)])], actual
 
     def test_empty_range(self):
-        assert client.range('Table1', '') == []
+        assert client.get_range('Table1', '') == []
 
     def test_range(self):
         _insert_simple()
-        assert client.range('Table1', 'key1') == ['key1']
+        assert client.get_range('Table1', 'key1') == ['key1']
