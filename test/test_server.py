@@ -195,6 +195,7 @@ class TestMutations(CassandraTester):
                            columns=[column_t(columnName='c5', value='value5', timestamp=6), 
                                     column_t(columnName='c6', value='value6', timestamp=0), 
                                     column_t(columnName='c7', value='value7', timestamp=0)])], actual
+
     def test_super_cf_remove_supercolumn(self):
         _insert_simple()
         _insert_super()
@@ -227,3 +228,10 @@ class TestMutations(CassandraTester):
                            columns=[column_t(columnName='c4', value='value4', timestamp=0)]),
              superColumn_t(name='sc2', 
                            columns=[column_t(columnName='c5', value='value5', timestamp=6)])], actual
+
+    def test_empty_range(self):
+        assert client.range('Table1', '') == []
+
+    def test_range(self):
+        _insert_simple()
+        assert client.range('Table1', 'key1') == ['key1']
