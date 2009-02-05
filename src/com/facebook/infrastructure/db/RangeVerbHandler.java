@@ -80,7 +80,8 @@ public class RangeVerbHandler implements IVerbHandler {
                 for (String cfName : table.getApplicationColumnFamilies()) {
                     ColumnFamilyStore cfs = table.getColumnFamilyStore(cfName);
                     try {
-                        if (cfs.getColumnFamily(current, cfName, new IdentityFilter()).getColumnCount() > 0) {
+                        ColumnFamily cf = cfs.getColumnFamily(current, cfName, new IdentityFilter());
+                        if (cf != null && cf.getColumns().size() > 0) {
                             keys.add(current);
                             break;
                         }
