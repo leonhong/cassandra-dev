@@ -35,6 +35,8 @@ public class CassandraServerTest extends ServerTest {
     }
     */
 
+    /*
+    TODO also needs server reset
     @Test
     public void test_get_range() throws IOException, TException {
         CassandraServer server = new CassandraServer();
@@ -43,7 +45,7 @@ public class CassandraServerTest extends ServerTest {
         // TODO insert some data
         try {
             String last = null;
-            for (String key : server.get_range(DatabaseDescriptor.getTableName(), "")) {
+            for (String key : server.get_range(DatabaseDescriptor.getTableName(), "key1")) {
                 if (last != null) {
                     assert last.compareTo(key) < 0;
                 }
@@ -53,6 +55,7 @@ public class CassandraServerTest extends ServerTest {
             server.shutdown();
         }
     }
+    */
 
     @Test
     public void test_get_column() throws IOException, NotFoundException, InvalidRequestException {

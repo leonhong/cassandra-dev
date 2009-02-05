@@ -23,6 +23,7 @@ import com.facebook.fb303.fb_status;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.*;
 import com.facebook.infrastructure.io.DataInputBuffer;
+import com.facebook.infrastructure.io.DataOutputBuffer;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
@@ -436,14 +437,17 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         // send the request
         // for now we ignore tablename like 90% of the rest of cassandra
         Message message;
+        DataOutputBuffer dob = new DataOutputBuffer();
         try {
-            message = new Message(StorageService.getLocalStorageEndPoint(),
-                            StorageService.readStage_,
-                            StorageService.rangeVerbHandler_,
-                            new Object[] { startkey.getBytes("UTF-16") });
-        } catch (UnsupportedEncodingException e) {
+            dob.writeUTF(startkey);
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        byte[] body = Arrays.copyOf(dob.getData(), dob.getLength());
+        message = new Message(StorageService.getLocalStorageEndPoint(),
+                        StorageService.readStage_,
+                        StorageService.rangeVerbHandler_,
+                        new Object[] { body });
         EndPoint endPoint;
         try {
             endPoint = storageService_.findSuitableEndPoint(startkey);
