@@ -104,6 +104,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     private void insert(RowMutation rm)
 	{
+        assert rm.key() != null;
+        
 		// 1. Get the N nodes from storage service where the data needs to be
 		// replicated
 		// 2. Construct a message for read\write
@@ -135,6 +137,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     private Row readProtocol(ReadParameters params, StorageService.ConsistencyLevel consistencyLevel)
     throws IOException, ColumnFamilyNotDefinedException
     {
+        assert params.key != null;
 		EndPoint[] endpoints = storageService_.getNStorageEndPoint(params.key);
 
         if (consistencyLevel == StorageService.ConsistencyLevel.WEAK) {
@@ -489,6 +492,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     private boolean insertBlocking(RowMutation rm) {
+        assert rm.key() != null;
+
         try
 		{
             Message message = rm.makeRowMutationMessage();
