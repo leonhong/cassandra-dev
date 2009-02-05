@@ -235,3 +235,7 @@ class TestMutations(CassandraTester):
     def test_range(self):
         _insert_simple()
         assert client.get_range('Table1', 'key1') == ['key1']
+
+        client.remove('Table1', 'key1', 'Standard1:c1', 1)
+        client.remove('Table1', 'key1', 'Standard1:c2', 1)
+        assert client.get_range('Table1', 'key1') == []
