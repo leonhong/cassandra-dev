@@ -83,7 +83,8 @@ public class RowMutationVerbHandler implements IVerbHandler
             }
             
             long start = System.currentTimeMillis(); 
-            
+
+            rowMutationCtx.row_.clear();
             rowMutationCtx.row_.key(rm.key());
             rm.apply(rowMutationCtx.row_);
             
