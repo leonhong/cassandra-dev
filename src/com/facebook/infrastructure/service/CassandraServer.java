@@ -443,11 +443,11 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        byte[] body = Arrays.copyOf(dob.getData(), dob.getLength());
+        byte[] messageBody = Arrays.copyOf(dob.getData(), dob.getLength());
         message = new Message(StorageService.getLocalStorageEndPoint(),
                         StorageService.readStage_,
                         StorageService.rangeVerbHandler_,
-                        new Object[] { body });
+                        new Object[] { messageBody });
         EndPoint endPoint;
         try {
             endPoint = storageService_.findSuitableEndPoint(startkey);
@@ -464,13 +464,13 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }
-        byte[] body = (byte[]) result[0];
+        byte[] responseBody = (byte[]) result[0];
         DataInputBuffer bufIn = new DataInputBuffer();
-        bufIn.reset(body, body.length);
+        bufIn.reset(responseBody, responseBody.length);
 
         // turn into List
         List<String> keys = new ArrayList<String>();
-        while (bufIn.getPosition() < body.length) {
+        while (bufIn.getPosition() < responseBody.length) {
             try {
                 keys.add(bufIn.readUTF());
             } catch (IOException e) {
