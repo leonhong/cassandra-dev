@@ -26,10 +26,11 @@ public abstract class Filter {
     abstract ICompactSerializer tserializer();
     abstract int emptyBuckets();
 
-    // adapted from hadoop-hbase/src/java/org/onelab/filter/HashFunction.java.
-    // this is faster than a sha-based approach and provides as-good collision
-    // resistance.  http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
-    // does not add anything.
+    // murmur is faster than a sha-based approach and provides as-good collision
+    // resistance.  the combinatorial generation approach described in
+    // http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
+    // does prove to work in actual tests, and is obviously faster
+    // than performing further iterations of murmur.
     static int[] getHashBuckets(String key, int hashCount, int max) {
         byte[] b;
         try {
@@ -38,10 +39,10 @@ public abstract class Filter {
             throw new RuntimeException(e);
         }
         int[] result = new int[hashCount];
-        for (int i = 0, initval = 0; i < hashCount; i++) {
-            initval = hasher.hash(b, b.length, initval);
-            result[i] = Math.abs(initval % max);
+        int hash1 = hasher.hash(b, b.length, 0);
+        int hash2 = hasher.hash(b, b.length, hash1);
+        for (int i = 0; i < hashCount; i++) {
+            result[i] = Math.abs((hash1 + i * hash2) % max);
         }
         return result;
-    }
-}
+    }}
