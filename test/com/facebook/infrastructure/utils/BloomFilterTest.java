@@ -7,12 +7,12 @@ import java.io.IOException;
 
 public class BloomFilterTest {
     public BloomFilter bf;
-    public BloomCalculations.BloomSpecification spec = BloomCalculations.computeBucketsAndK(0.1);
+    public BloomCalculations.BloomSpecification spec = BloomCalculations.computeBucketsAndK(0.0001);
     static final int ELEMENTS = 10000;
 
     public BloomFilterTest() {
-        spec.bucketsPerElement = 8;
         bf = new BloomFilter(ELEMENTS, spec.bucketsPerElement);
+        assert bf != null;
     }
 
     @BeforeMethod
@@ -70,11 +70,13 @@ public class BloomFilterTest {
     }
 
     @Test
-    // run with -server -mx1G
     public void timeit() {
-        bf = new BloomFilter(300 * FilterTest.ELEMENTS, FilterTest.spec.bucketsPerElement);
-        for (int i = 0; i < 100; i++) {
-            FilterTest.testFalsePositives(bf, FilterTest.getRandomKeys(new Random(), 300 * FilterTest.ELEMENTS), FilterTest.getRandomKeys(new Random(), 300 * FilterTest.ELEMENTS));
+        int size = 300 * FilterTest.ELEMENTS;
+        bf = new BloomFilter(size, FilterTest.spec.bucketsPerElement);
+        for (int i = 0; i < 10; i++) {
+            FilterTest.testFalsePositives(bf,
+                                          new KeyGenerator.RandomStringGenerator(new Random().nextInt(), size),
+                                          new KeyGenerator.RandomStringGenerator(new Random().nextInt(), size));
             bf.clear();
         }
     }

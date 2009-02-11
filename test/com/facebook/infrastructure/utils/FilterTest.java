@@ -27,17 +27,14 @@ public class FilterTest {
     }
 
     @Test
-    public void testManyInt() {
-        testManyHashes(intKeys());
-    }
-    @Test
     public void testManyRandom() {
         testManyHashes(randomKeys());
     }
 
     // used by filter subclass tests
-    
-    public static final BloomCalculations.BloomSpecification spec = BloomCalculations.computeBucketsAndK(0.1);
+
+    static final double MAX_FAILURE_RATE = 0.1;
+    public static final BloomCalculations.BloomSpecification spec = BloomCalculations.computeBucketsAndK(MAX_FAILURE_RATE);
     static final int ELEMENTS = 10000;
 
     static final ResetableIterator<String> intKeys() {
@@ -76,7 +73,7 @@ public class FilterTest {
         synchronized (System.out) {
             System.out.println("Total/this false positives: " + total_fp + "/" + fp);
         }
-        assert fp < 1.03 * keys.size() * BloomCalculations.getFailureRate(spec.bucketsPerElement);
+        assert fp < 1.01 * keys.size() * MAX_FAILURE_RATE;
     }
 
     public static Filter testSerialize(Filter f) throws IOException {
