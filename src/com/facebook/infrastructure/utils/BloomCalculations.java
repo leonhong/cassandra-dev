@@ -115,7 +115,8 @@ public class BloomCalculations {
         }
 
         // First find the minimal required number of buckets:
-        int K = 2, bucketsPerElement = optKPerBuckets[2];
+        int bucketsPerElement = 2;
+        int K = optKPerBuckets[2];
         while(probs[bucketsPerElement][K] > maxFalsePosProb){
             bucketsPerElement++;
             K = optKPerBuckets[bucketsPerElement];
