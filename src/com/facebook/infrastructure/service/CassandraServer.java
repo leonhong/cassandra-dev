@@ -576,6 +576,12 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
 	public static void main(String[] args) throws Throwable
 	{
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            public void uncaughtException(Thread t, Throwable e) {
+                logger_.error("Fatal exception in thread " + t, e);
+            }
+        });
+
 		try
 		{
 			CassandraServer server = new CassandraServer();
