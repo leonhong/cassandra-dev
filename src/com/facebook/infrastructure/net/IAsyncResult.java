@@ -28,7 +28,7 @@ import java.util.concurrent.TimeoutException;
 
 public interface IAsyncResult
 {
-    public Object[] get();
+    public byte[] get();
     public boolean isDone();
-    public Object[] get(long timeout, TimeUnit tu) throws TimeoutException; 
+    public byte[] get(long timeout, TimeUnit tu) throws TimeoutException;
 }

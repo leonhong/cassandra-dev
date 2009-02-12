@@ -18,8 +18,6 @@
 
 package com.facebook.infrastructure.net;
 
-import java.util.List;
-import java.util.Hashtable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,8 +27,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.service.QuorumResponseHandler;
 import com.facebook.infrastructure.utils.LogUtil;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -39,7 +35,7 @@ import com.facebook.infrastructure.utils.LogUtil;
 class AsyncResult implements IAsyncResult
 {
     private static Logger logger_ = Logger.getLogger( AsyncResult.class );
-    private Object[] result_ = new Object[0];    
+    private byte[] result_;
     private AtomicBoolean done_ = new AtomicBoolean(false);
     private Lock lock_ = new ReentrantLock();
     private Condition condition_;
@@ -49,7 +45,7 @@ class AsyncResult implements IAsyncResult
         condition_ = lock_.newCondition();
     }    
     
-    public Object[] get()
+    public byte[] get()
     {
         lock_.lock();
         try
@@ -75,7 +71,7 @@ class AsyncResult implements IAsyncResult
         return done_.get();
     }
     
-    public Object[] get(long timeout, TimeUnit tu) throws TimeoutException
+    public byte[] get(long timeout, TimeUnit tu) throws TimeoutException
     {
         lock_.lock();
         try
@@ -105,7 +101,7 @@ class AsyncResult implements IAsyncResult
         return result_;
     }
     
-    void result(Object[] result)
+    void result(byte[] result)
     {        
         try
         {

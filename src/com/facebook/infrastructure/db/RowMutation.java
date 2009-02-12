@@ -90,7 +90,7 @@ public class RowMutation implements Serializable
         serializer().serialize(this, dos);
         EndPoint local = StorageService.getLocalStorageEndPoint();
         EndPoint from = ( local != null ) ? local : new EndPoint(FBUtilities.getHostName(), 7000);
-        Message message = new Message(from, StorageService.mutationStage_, verbHandlerName, new Object[]{bos.toByteArray()});
+        Message message = new Message(from, StorageService.mutationStage_, verbHandlerName, bos.toByteArray());
         return message;
     }
 

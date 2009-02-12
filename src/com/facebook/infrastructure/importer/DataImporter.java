@@ -782,12 +782,15 @@ public class DataImporter {
 			try {
 				long t = System.currentTimeMillis();
                 counter_.incrementAndGet();
+                throw new UnsupportedOperationException("Message serialization");
+/*
 				Message message = new Message(DataImporter.from_,
 						StorageService.mutationStage_,
 						StorageService.mutationVerbHandler_,
-						new Object[] {rm});
+                        null); // TODO rm
 				MessagingService.getMessagingInstance().sendOneWay(message,
 						DataImporter.to_);
+*/
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -852,14 +855,20 @@ public class DataImporter {
 			}
 
 			ReadParameters readMessage = new ReadParameters(tablename_, key);
+            if (true) {
+                throw new UnsupportedOperationException("Message serialization");
+            }
 			Message message = new Message(from_, StorageService.readStage_,
-					StorageService.readVerbHandler_,
-					new Object[] { readMessage });
+					StorageService.readVerbHandler_, null); // TODO readMessage
 			IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(
 					message, to_);
-			Object[] result = iar.get();
-			ReadResponseMessage readResponseMessage = (ReadResponseMessage) result[0];
-			Row row = readResponseMessage.row();
+
+            if (true) {
+                throw new UnsupportedOperationException("Message serialization");
+            }
+			Object[] result = null; // TODO iar.get();
+			ReadResponse readResponse = (ReadResponse) result[0];
+			Row row = readResponse.row();
 			if (row == null) {
 				logger_.debug("ERROR No row for this key .....: " + line);
                 Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
@@ -1291,14 +1300,15 @@ public class DataImporter {
             counter_.incrementAndGet();
     		columnFamilyHack_++;
             EndPoint to = new EndPoint(7000);
+            throw new UnsupportedOperationException("Message serialization");
+            /*
             Message message = new Message(to,
                     StorageService.mutationStage_,
-                    StorageService.mutationVerbHandler_, 
-                    new Object[]{ rm }
-            );                                                            
+                    StorageService.mutationVerbHandler_,
+                    null); // TODO rm
 			MessagingService.getMessagingInstance().sendRR(message, to);
             Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
-            
+            */
         }
         catch (Exception e)
         {

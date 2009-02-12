@@ -28,7 +28,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.log4j.Logger;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.db.WriteResponseMessage;
 import com.facebook.infrastructure.net.IAsyncCallback;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;

@@ -20,7 +20,7 @@ package com.facebook.infrastructure.service;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.ReadParameters;
-import com.facebook.infrastructure.db.ReadResponseMessage;
+import com.facebook.infrastructure.db.ReadResponse;
 import com.facebook.infrastructure.db.Row;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.net.EndPoint;
@@ -60,11 +60,11 @@ class ConsistencyManager implements Runnable
 			logger_.debug("Handle Digest reponses");
 			for( Message response : responses_ )
 			{
-				byte[] body = (byte[])response.getMessageBody()[0];            
+				byte[] body = response.getMessageBody();            
 	            bufIn.reset(body, body.length);
 	            try
 	            {	               
-	                ReadResponseMessage result = ReadResponseMessage.serializer().deserialize(bufIn);  
+	                ReadResponse result = ReadResponse.serializer().deserialize(bufIn);
 	                byte[] digest = result.digest();
 	                if( !Arrays.equals(row_.digest(), digest) )
 					{

@@ -23,7 +23,7 @@ public class ClusterTool
         {
         	EndPoint from = new EndPoint(InetAddress.getLocalHost().getHostName(), 7000);
         	System.out.println("Updating token of server " + serverName + " with token " + token);
-            Message message = new Message(from, "", StorageService.tokenVerbHandler_, new Object[]{ token.toByteArray() });
+            Message message = new Message(from, "", StorageService.tokenVerbHandler_, token.toByteArray());
             EndPoint ep = new EndPoint(serverName, 7000);
         	MessagingService.getMessagingInstance().sendOneWay(message, ep);
         	Thread.sleep(1000);

@@ -36,8 +36,7 @@ public class TokenUpdateVerbHandler implements IVerbHandler
 
     public void doVerb(Message message)
     {
-    	byte[] body = (byte[])message.getMessageBody()[0];
-        BigInteger token = new BigInteger(body);
+        BigInteger token = new BigInteger(message.getMessageBody());
         try
         {
         	logger_.info("Updating the token to [" + token + "]");

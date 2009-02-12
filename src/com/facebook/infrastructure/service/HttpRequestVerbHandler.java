@@ -79,7 +79,10 @@ public class HttpRequestVerbHandler implements IVerbHandler
 
     public void doVerb(Message message)
     {
-        HttpConnection.HttpRequestMessage httpRequestMessage = (HttpConnection.HttpRequestMessage)message.getMessageBody()[0];
+        if (true) {
+            throw new UnsupportedOperationException("Message serialization");
+        }
+        HttpConnection.HttpRequestMessage httpRequestMessage = null; // TODO (HttpConnection.HttpRequestMessage)message.getMessageBody();
         try
         {
             HttpRequest httpRequest = httpRequestMessage.getHttpRequest();

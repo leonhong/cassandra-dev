@@ -29,6 +29,8 @@ import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -50,7 +52,7 @@ public class RowMutationVerbHandler implements IVerbHandler
     {
         logger_.info( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
             
-        byte[] bytes = (byte[])message.getMessageBody()[0];
+        byte[] bytes = message.getMessageBody();
         /* Obtain a Row Mutation Context from TLS */
         RowMutationContext rowMutationCtx = tls_.get();
         if ( rowMutationCtx == null )
@@ -91,10 +93,10 @@ public class RowMutationVerbHandler implements IVerbHandler
             long end = System.currentTimeMillis();                       
             logger_.info("ROW MUTATION APPLY: " + (end - start) + " ms.");
             
-            WriteResponseMessage writeResponseMessage = new WriteResponseMessage(rm.table(), rm.key(), true);
-            Message response = message.getReply(StorageService.getLocalStorageEndPoint(), new Object[] { writeResponseMessage });
+            WriteResponse response = new WriteResponse(rm.table(), rm.key(), true);
+            Message responseMessage = WriteResponse.makeWriteResponseMessage(response);
             logger_.debug("Sending response to " +  message.getFrom() + " for key :" + rm.key());
-            MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
+            MessagingService.getMessagingInstance().sendOneWay(responseMessage, message.getFrom());
         }         
         catch( ColumnFamilyNotDefinedException ex )
         {

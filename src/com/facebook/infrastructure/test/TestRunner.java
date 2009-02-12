@@ -44,11 +44,10 @@ class TestVerbHandler implements IVerbHandler
     
     public void doVerb(Message message)
     {
-        Object[] body = message.getMessageBody();
-        byte[] bytes = (byte[])body[0];
+        byte[] bytes = message.getMessageBody();
         System.out.println( new String(bytes) );
         
-        Message response = message.getReply(to_, body);
+        Message response = message.getReply(to_, bytes);
         MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
     }
 }

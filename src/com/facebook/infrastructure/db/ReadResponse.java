@@ -37,26 +37,26 @@ import com.facebook.infrastructure.service.StorageService;
  * The table name is needed so that we can use it to create repairs.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
-public class ReadResponseMessage implements Serializable 
+public class ReadResponse implements Serializable 
 {
-private static ICompactSerializer<ReadResponseMessage> serializer_;	
-	
+private static ICompactSerializer<ReadResponse> serializer_;
+
     static
     {
         serializer_ = new ReadResponseMessageSerializer();
     }
 
-    public static ICompactSerializer<ReadResponseMessage> serializer()
+    public static ICompactSerializer<ReadResponse> serializer()
     {
         return serializer_;
     }
     
-	public static Message makeReadResponseMessage(ReadResponseMessage readResponseMessage) throws IOException
+	public static Message makeReadResponseMessage(ReadResponse readResponse) throws IOException
     {
     	ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream( bos );
-        ReadResponseMessage.serializer().serialize(readResponseMessage, dos);
-        Message message = new Message(StorageService.getLocalStorageEndPoint(), MessagingService.responseStage_, MessagingService.responseVerbHandler_, new Object[]{bos.toByteArray()});         
+        ReadResponse.serializer().serialize(readResponse, dos);
+        Message message = new Message(StorageService.getLocalStorageEndPoint(), MessagingService.responseStage_, MessagingService.responseVerbHandler_, bos.toByteArray());
         return message;
     }
 	
@@ -72,15 +72,15 @@ private static ICompactSerializer<ReadResponseMessage> serializer_;
     @XmlElement(name="isDigestQuery")
     private boolean isDigestQuery_ = false;
 	
-	private ReadResponseMessage() {
+	private ReadResponse() {
 	}
 
-	public ReadResponseMessage(String table, byte[] digest ) {
+	public ReadResponse(String table, byte[] digest ) {
 		table_ = table;
 		digest_= digest;
 	}
 
-	public ReadResponseMessage(String table, Row row) {
+	public ReadResponse(String table, Row row) {
 		table_ = table;
 		row_ = row;
 	}
@@ -110,9 +110,9 @@ private static ICompactSerializer<ReadResponseMessage> serializer_;
 }
 
 
-class ReadResponseMessageSerializer implements ICompactSerializer<ReadResponseMessage>
+class ReadResponseMessageSerializer implements ICompactSerializer<ReadResponse>
 {
-	public void serialize(ReadResponseMessage rm, DataOutputStream dos) throws IOException
+	public void serialize(ReadResponse rm, DataOutputStream dos) throws IOException
 	{
 		dos.writeUTF(rm.table());
         dos.writeInt(rm.digest().length);
@@ -125,7 +125,7 @@ class ReadResponseMessageSerializer implements ICompactSerializer<ReadResponseMe
         }				
 	}
 	
-    public ReadResponseMessage deserialize(DataInputStream dis) throws IOException
+    public ReadResponse deserialize(DataInputStream dis) throws IOException
     {
     	String table = dis.readUTF();
         int digestSize = dis.readInt();
@@ -139,14 +139,14 @@ class ReadResponseMessageSerializer implements ICompactSerializer<ReadResponseMe
             row = Row.serializer().deserialize(dis);
         }
 		
-		ReadResponseMessage rmsg = null;
+		ReadResponse rmsg = null;
     	if( isDigest  )
         {
-    		rmsg =  new ReadResponseMessage(table, digest);
+    		rmsg =  new ReadResponse(table, digest);
         }
     	else
         {
-    		rmsg =  new ReadResponseMessage(table, row);
+    		rmsg =  new ReadResponse(table, row);
         }
         rmsg.setIsDigestQuery(isDigest);
     	return rmsg;

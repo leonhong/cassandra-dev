@@ -47,7 +47,7 @@ public class ReadVerbHandler implements IVerbHandler
 
     public void doVerb(Message message)
     {
-        byte[] body = (byte[])message.getMessageBody()[0];
+        byte[] body = message.getMessageBody();
         /* Obtain a Read Context from TLS */
         ReadContext readCtx = tls_.get();
         if ( readCtx == null )
@@ -81,22 +81,22 @@ public class ReadVerbHandler implements IVerbHandler
             }
             logger_.info("getRow()  TIME: " + (System.currentTimeMillis() - start) + " ms.");
             start = System.currentTimeMillis();
-            ReadResponseMessage readResponseMessage = null;
+            ReadResponse readResponse = null;
             if(readMessage.isDigestQuery())
             {
-                readResponseMessage = new ReadResponseMessage(table.getTableName(), row.digest());
+                readResponse = new ReadResponse(table.getTableName(), row.digest());
 
             }
             else
             {
-                readResponseMessage = new ReadResponseMessage(table.getTableName(), row);
+                readResponse = new ReadResponse(table.getTableName(), row);
             }
-            readResponseMessage.setIsDigestQuery(readMessage.isDigestQuery());
-            /* serialize the ReadResponseMessage. */
+            readResponse.setIsDigestQuery(readMessage.isDigestQuery());
+            /* serialize the ReadResponse. */
             readCtx.bufOut_.reset();
 
             start = System.currentTimeMillis();
-            ReadResponseMessage.serializer().serialize(readResponseMessage, readCtx.bufOut_);
+            ReadResponse.serializer().serialize(readResponse, readCtx.bufOut_);
             logger_.info("serialize  TIME: " + (System.currentTimeMillis() - start) + " ms.");
 
             byte[] bytes = new byte[readCtx.bufOut_.getLength()];
@@ -104,7 +104,7 @@ public class ReadVerbHandler implements IVerbHandler
             System.arraycopy(readCtx.bufOut_.getData(), 0, bytes, 0, bytes.length);
             logger_.info("copy  TIME: " + (System.currentTimeMillis() - start) + " ms.");
 
-            Message response = message.getReply( StorageService.getLocalStorageEndPoint(), new Object[]{bytes} );
+            Message response = message.getReply( StorageService.getLocalStorageEndPoint(), bytes );
             MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
             logger_.info("ReadVerbHandler  TIME 2: " + (System.currentTimeMillis() - start)
                     + " ms.");

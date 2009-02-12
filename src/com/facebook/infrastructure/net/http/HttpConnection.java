@@ -383,8 +383,11 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
     private void handleRequest(HttpRequest request)
     {
         HttpConnection.HttpRequestMessage httpRequestMessage = new HttpConnection.HttpRequestMessage(request, this);
-        Message httpMessage = new Message(null, HttpConnection.httpStage_, HttpConnection.httpRequestVerbHandler_, new Object[]{httpRequestMessage});
+        throw new UnsupportedOperationException("Message serialization");
+        /* TODO
+        Message httpMessage = new Message(null, HttpConnection.httpStage_, HttpConnection.httpRequestVerbHandler_, httpRequestMessage);
         MessagingService.receive(httpMessage);
+        */
     }
 
     // HttpStartLineParser.Callback interface implementation

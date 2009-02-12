@@ -19,7 +19,7 @@
 package com.facebook.infrastructure.service;
 
 import com.facebook.infrastructure.db.ColumnFamily;
-import com.facebook.infrastructure.db.ReadResponseMessage;
+import com.facebook.infrastructure.db.ReadResponse;
 import com.facebook.infrastructure.db.Row;
 import com.facebook.infrastructure.db.RowMutation;
 import com.facebook.infrastructure.io.DataInputBuffer;
@@ -70,12 +70,12 @@ public class ReadResponseResolver implements IResponseResolver<Row>
         DataInputBuffer bufIn = new DataInputBuffer();
 		for (Message response : responses)
 		{					            
-            byte[] body = (byte[])response.getMessageBody()[0];            
+            byte[] body = response.getMessageBody();
             bufIn.reset(body, body.length);
             try
             {
                 long start = System.currentTimeMillis();
-                ReadResponseMessage result = ReadResponseMessage.serializer().deserialize(bufIn);            
+                ReadResponse result = ReadResponse.serializer().deserialize(bufIn);
                 logger_.debug( "Response deserialization time : " + (System.currentTimeMillis() - start) + " ms.");
     			if(!result.isDigestQuery())
     			{
@@ -152,12 +152,12 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 		boolean isDataPresent = false;
 		for (Message response : responses)
 		{
-            byte[] body = (byte[])response.getMessageBody()[0];
+            byte[] body = response.getMessageBody();
 			DataInputBuffer bufIn = new DataInputBuffer();
             bufIn.reset(body, body.length);
             try
             {
-    			ReadResponseMessage result = ReadResponseMessage.serializer().deserialize(bufIn);
+    			ReadResponse result = ReadResponse.serializer().deserialize(bufIn);
     			if(!result.isDigestQuery())
     			{
     				isDataPresent = true;

@@ -39,7 +39,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -163,17 +162,16 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         }
         Message message = ReadParameters.makeReadMessage(params);
         IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
-        Object[] result;
+        byte[] body;
         try {
-            result = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
+            body = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }
-        byte[] body = (byte[]) result[0];
         DataInputBuffer bufIn = new DataInputBuffer();
         bufIn.reset(body, body.length);
-        ReadResponseMessage responseMessage = ReadResponseMessage.serializer().deserialize(bufIn);
-        return responseMessage.row();
+        ReadResponse response = ReadResponse.serializer().deserialize(bufIn);
+        return response.row();
     }
 
     /*
@@ -447,7 +445,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         message = new Message(StorageService.getLocalStorageEndPoint(),
                         StorageService.readStage_,
                         StorageService.rangeVerbHandler_,
-                        new Object[] { messageBody });
+                        messageBody);
         EndPoint endPoint;
         try {
             endPoint = storageService_.findSuitableEndPoint(startkey);
@@ -458,13 +456,12 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
 
         // read response
-        Object[] result;
+        byte[] responseBody;
         try {
-            result = iar.get(2 * DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
+            responseBody = iar.get(2 * DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
         }
-        byte[] responseBody = (byte[]) result[0];
         DataInputBuffer bufIn = new DataInputBuffer();
         bufIn.reset(responseBody, responseBody.length);
 

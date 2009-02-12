@@ -81,13 +81,15 @@ public class StressTest
         
         public void run()
         {
+            throw new UnsupportedOperationException("Message serialization");
+            /* TODO
         	if( rm != null )
         	{
 				Message message = new Message(from_ , StorageService.mutationStage_,
 						StorageService.loadVerbHandler_, new Object[] {rm});
 				MessagingService.getMessagingInstance().sendOneWay(message, to_);
         	}
-        	
+        	*/
        	}
     }
 
@@ -103,6 +105,8 @@ public class StressTest
     public void applyLoad(RowMutation rm) throws IOException {
         try
         {
+            throw new UnsupportedOperationException("Message serialization");
+            /* TODO
             long t = System.currentTimeMillis();
             Message message = new Message(from_,
                     StorageService.mutationStage_,
@@ -111,7 +115,7 @@ public class StressTest
             );                                                            
 			MessagingService.getMessagingInstance().sendOneWay(message, to_);
             Thread.sleep(1, 1000000000/requestsPerSecond_);
-            
+            */
         }
         catch (Exception e)
         {
@@ -126,10 +130,13 @@ public class StressTest
 		QuorumResponseHandler<Row> quorumResponseHandler = new QuorumResponseHandler<Row>(
 				1,
 				readResponseResolver);
+        throw new UnsupportedOperationException("Message serialization");
+        /* TODO
 		Message message = new Message(from_, StorageService.readStage_,
 				StorageService.readVerbHandler_,
 				new Object[] { readMessage });
 		MessagingService.getMessagingInstance().sendOneWay(message, to_);
+				*/
 		/*IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, to_);
 		try
 		{

@@ -38,6 +38,9 @@ public class LoadVerbHandler implements IVerbHandler
     { 
         try
         {
+            throw new UnsupportedOperationException("Message serialization");
+            /*
+            TODO
 	        Object[] body = message.getMessageBody();
 	        RowMutation rm = (RowMutation)body[0];
 	
@@ -48,7 +51,7 @@ public class LoadVerbHandler implements IVerbHandler
 					StorageService.mutationVerbHandler_, 
 	                new Object[]{ rm }
 	        );
-            
+
             StringBuilder sb = new StringBuilder();
 			for(EndPoint endPoint : endpoints)
 			{                
@@ -56,7 +59,8 @@ public class LoadVerbHandler implements IVerbHandler
 				MessagingService.getMessagingInstance().sendOneWay(messageInternal, endPoint);
 			}
             logger_.debug("Sent data to " + sb.toString());            
-        }        
+	        */
+        }
         catch ( Exception e )
         {
             logger_.debug(LogUtil.throwableToString(e));            

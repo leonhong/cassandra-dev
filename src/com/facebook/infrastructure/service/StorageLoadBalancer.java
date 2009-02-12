@@ -126,6 +126,9 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
 
         private boolean tryThisNode(int myLoad, int threshold, EndPoint target)
         {
+            if (true) {
+                throw new UnsupportedOperationException("Message serialization");
+            }
             boolean value = false;
             LoadInfo li = loadInfo2_.get(target);
             int pLoad = li.count();
@@ -140,10 +143,13 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
                 BigInteger targetToken = BootstrapAndLbHelper.getTokenBasedOnPrimaryCount(keyCount);
                 /* Send a MoveMessage and see if this node is relocateable */
                 MoveMessage moveMessage = new MoveMessage(targetToken);
-                Message message = new Message(StorageService.getLocalStorageEndPoint(), StorageLoadBalancer.lbStage_, StorageLoadBalancer.moveMessageVerbHandler_, new Object[]{moveMessage});
+                if (true) {
+                    throw new UnsupportedOperationException("Message serialization");
+                }
+                Message message = new Message(StorageService.getLocalStorageEndPoint(), StorageLoadBalancer.lbStage_, StorageLoadBalancer.moveMessageVerbHandler_, null); // TODO moveMessage);
                 logger_.debug("Sending a move message to " + target);
                 IAsyncResult result = MessagingService.getMessagingInstance().sendRR(message, target);
-                value = (Boolean)result.get()[0];
+                value = false; //  TODO (Boolean)result.get()[0];
                 logger_.debug("Response for query to relocate " + target + " is " + value);
             }
             return value;
@@ -154,11 +160,14 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
     {
         public void doVerb(Message message)
         {
-            Message reply = message.getReply(StorageService.getLocalStorageEndPoint(), new Object[]{isMoveable_.get()});
+            if (true) {
+                throw new UnsupportedOperationException("Message serialization");
+            }
+            Message reply = message.getReply(StorageService.getLocalStorageEndPoint(), null); // TODO isMoveable_.get());
             MessagingService.getMessagingInstance().sendOneWay(reply, message.getFrom());
             if ( isMoveable_.get() )
             {
-                MoveMessage moveMessage = (MoveMessage)message.getMessageBody()[0];
+                MoveMessage moveMessage = null; // TODO (MoveMessage)message.getMessageBody()[0];
                 BigInteger targetToken = moveMessage.getTargetToken();
                 /* Start the leave operation and join the ring at the position specified */
                 isMoveable_.set(false);

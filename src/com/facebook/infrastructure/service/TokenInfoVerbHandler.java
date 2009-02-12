@@ -48,7 +48,7 @@ public class TokenInfoVerbHandler implements IVerbHandler
         try
         {
             TokenMetadata.serializer().serialize( StorageService.instance().getTokenMetadata(), dos );
-            Message response = message.getReply(StorageService.getLocalStorageEndPoint(), new Object[]{bos.toByteArray()});
+            Message response = message.getReply(StorageService.getLocalStorageEndPoint(), bos.toByteArray());
             logger_.info("Sending the token download response to " + from);
             MessagingService.getMessagingInstance().sendOneWay(response, from);
         }

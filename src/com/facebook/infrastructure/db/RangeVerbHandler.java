@@ -23,7 +23,7 @@ public class RangeVerbHandler implements IVerbHandler {
     };
 
     public void doVerb(Message message) {
-        byte[] bytes = (byte[])message.getMessageBody()[0];
+        byte[] bytes = message.getMessageBody();
         final String startkey;
         if (bytes.length == 0) {
             startkey = "";
@@ -101,7 +101,7 @@ public class RangeVerbHandler implements IVerbHandler {
             }
         }
         byte[] data = Arrays.copyOf(dob.getData(), dob.getLength());
-        Message response = message.getReply(StorageService.getLocalStorageEndPoint(), new Object[] { data });
+        Message response = message.getReply(StorageService.getLocalStorageEndPoint(), data);
         MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
     }
 }
