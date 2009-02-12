@@ -76,11 +76,10 @@ public class TokenUpdateVerbHandler implements IVerbHandler
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 DataOutputStream dos = new DataOutputStream(bos);
                 TokenInfoMessage.serializer().serialize(tiMessage, dos);
-                message.setMessageBody(new Object[]{bos.toByteArray()});
-                
+                Message updateMessage = new Message(message.getFrom(), message.getMessageType(), message.getVerb(), new Object[]{bos.toByteArray()});
                 logger_.debug("Sending a token update message to " + target + " to update it to " + token);
-                MessagingService.getMessagingInstance().sendOneWay(message, target);
-                break;
+                MessagingService.getMessagingInstance().sendOneWay(updateMessage, target);
+                break; // TODO wtf?
             }                        
         }
     	catch( IOException ex )

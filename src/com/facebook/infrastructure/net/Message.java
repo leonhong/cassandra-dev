@@ -34,45 +34,33 @@ import com.facebook.infrastructure.utils.*;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class Message implements java.io.Serializable
+public class Message
 {    
-    static final long serialVersionUID = 6329198792470413221L;
-    private static ICompactSerializer<Message> serializer_;
+    private static final MessageSerializer serializer_ = new MessageSerializer();
     
-    static
-    {
-        serializer_ = new MessageSerializer();        
-    }
-    
-    public static ICompactSerializer<Message> serializer()
+    public static MessageSerializer serializer()
     {
         return serializer_;
     }
     
-    Header header_;
-    private Object[] body_ = new Object[0];
-    
-    /* Ctor for JAXB. DO NOT DELETE */
-    private Message()
-    {
-    }
+    final Header header_;
+    private final Object[] body_;
 
     protected Message(String id, EndPoint from, String messageType, String verb, Object[] body)
     {
-        header_ = new Header(id, from, messageType, verb);
-        body_ = body;
+        this(new Header(id, from, messageType, verb), body);
     }
     
     protected Message(Header header, Object[] body)
     {
+        assert body != null;
         header_ = header;
         body_ = body;
     }
 
     public Message(EndPoint from, String messageType, String verb, Object[] body)
     {
-        header_ = new Header(from, messageType, verb);
-        body_ = body;
+        this(new Header(from, messageType, verb), body);
     }    
     
     public byte[] getHeader(Object key)
@@ -108,11 +96,6 @@ public class Message implements java.io.Serializable
     public Object[] getMessageBody()
     {
         return body_;
-    }
-    
-    public void setMessageBody(Object[] body)
-    {
-        body_ = body;
     }
 
     public EndPoint getFrom()
@@ -165,12 +148,11 @@ public class Message implements java.io.Serializable
 
     public Message getReply(EndPoint from, Object[] args)
     {        
-        Message response = new Message(getMessageId(),
-                                       from,
-                                       MessagingService.responseStage_,
-                                       MessagingService.responseVerbHandler_,
-                                       args);
-        return response;
+        return new Message(getMessageId(),
+                           from,
+                           MessagingService.responseStage_,
+                           MessagingService.responseVerbHandler_,
+                           args);
     }
     
     public String toString()
@@ -200,26 +182,25 @@ public class Message implements java.io.Serializable
             sbuf.append(" ");         
         }
         return sbuf.toString();
-    }    
-}
-
-class MessageSerializer implements ICompactSerializer<Message>
-{
-    public void serialize(Message t, DataOutputStream dos) throws IOException
-    {
-        Header.serializer().serialize( t.header_, dos);
-        byte[] bytes = (byte[])t.getMessageBody()[0];
-        dos.writeInt(bytes.length);
-        dos.write(bytes);
     }
 
-    public Message deserialize(DataInputStream dis) throws IOException
+    public static class MessageSerializer implements ICompactSerializer<Message>
     {
-        Header header = Header.serializer().deserialize(dis);
-        int size = dis.readInt();
-        byte[] bytes = new byte[size];
-        dis.readFully(bytes);
-        // return new Message(header.getMessageId(), header.getFrom(), header.getMessageType(), header.getVerb(), new Object[]{bytes});
-        return new Message(header, new Object[]{bytes});
+        public void serialize(Message t, DataOutputStream dos) throws IOException
+        {
+            Header.serializer().serialize( t.header_, dos);
+            byte[] bytes = (byte[])t.getMessageBody()[0];
+            dos.writeInt(bytes.length);
+            dos.write(bytes);
+        }
+
+        public Message deserialize(DataInputStream dis) throws IOException
+        {
+            Header header = Header.serializer().deserialize(dis);
+            int size = dis.readInt();
+            byte[] bytes = new byte[size];
+            dis.readFully(bytes);
+            return new Message(header, new Object[]{bytes});
+        }
     }
 }
