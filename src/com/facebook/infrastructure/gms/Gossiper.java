@@ -48,36 +48,34 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
     {
         public void run()
         {
-            try
+            synchronized( Gossiper.instance() )
             {
-                synchronized( Gossiper.instance() )
+                /* Update the local heartbeat counter. */
+                endPointStateMap_.get(localEndPoint_).getHeartBeatState().updateHeartBeat();
+                List<GossipDigest> gDigests = new ArrayList<GossipDigest>();
+                Gossiper.instance().makeRandomGossipDigest(gDigests);
+
+                if ( gDigests.size() > 0 )
                 {
-                	/* Update the local heartbeat counter. */
-                    endPointStateMap_.get(localEndPoint_).getHeartBeatState().updateHeartBeat();
-                    List<GossipDigest> gDigests = new ArrayList<GossipDigest>();
-                    Gossiper.instance().makeRandomGossipDigest(gDigests);
-
-                    if ( gDigests.size() > 0 )
-                    {
-                        Message message = makeGossipDigestSynMessage(gDigests);
-                        /* Gossip to some random live member */
-                        boolean bVal = doGossipToLiveMember(message);
-
-                        /* Gossip to some unreachable member with some probability to check if he is back up */
-                        doGossipToUnreachableMember(message);
-
-                        /* Gossip to the seed. */
-                        if ( !bVal )
-                            doGossipToSeed(message);
-
-                        logger_.debug("Performing status check ...");
-                        doStatusCheck();
+                    Message message = null;
+                    try {
+                        message = makeGossipDigestSynMessage(gDigests);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
+                    /* Gossip to some random live member */
+                    boolean bVal = doGossipToLiveMember(message);
+
+                    /* Gossip to some unreachable member with some probability to check if he is back up */
+                    doGossipToUnreachableMember(message);
+
+                    /* Gossip to the seed. */
+                    if ( !bVal )
+                        doGossipToSeed(message);
+
+                    logger_.debug("Performing status check ...");
+                    doStatusCheck();
                 }
-            }
-            catch ( Throwable th )
-            {
-                logger_.info( LogUtil.throwableToString(th) );
             }
         }
     }
@@ -386,7 +384,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
         }
 
         EndPoint to = eps.get(++rrIndex_);
-        logger_.info("Sending a GossipDigestSynMessage to " + to + " ...");
+        logger_.debug("Sending a GossipDigestSynMessage to " + to + " ...");
         MessagingService.getMessagingInstance().sendUdpOneWay(message, to);
         return seeds_.contains(to);
     }
@@ -405,7 +403,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
         List<EndPoint> liveEndPoints = new ArrayList<EndPoint>(epSet);
         int index = (size == 1) ? 0 : random_.nextInt(size);
         EndPoint to = liveEndPoints.get(index);
-        logger_.info("Sending a GossipDigestSynMessage to " + to + " ...");
+        logger_.debug("Sending a GossipDigestSynMessage to " + to + " ...");
         MessagingService.getMessagingInstance().sendUdpOneWay(message, to);
         return seeds_.contains(to);
     }
@@ -949,17 +947,15 @@ class JoinVerbHandler implements IVerbHandler
         byte[] bytes = (byte[])message.getMessageBody()[0];
         DataInputStream dis = new DataInputStream( new ByteArrayInputStream(bytes) );
 
-        try
-        {
-            JoinMessage joinMessage = JoinMessage.serializer().deserialize(dis);
-            if ( joinMessage.clusterId_.equals( DatabaseDescriptor.getClusterName() ) )
-            {
-                Gossiper.instance().join(from);
-            }
+        JoinMessage joinMessage = null;
+        try {
+            joinMessage = JoinMessage.serializer().deserialize(dis);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        catch ( IOException ex )
+        if ( joinMessage.clusterId_.equals( DatabaseDescriptor.getClusterName() ) )
         {
-            logger_.info( LogUtil.throwableToString(ex) );
+            Gossiper.instance().join(from);
         }
     }
 }
@@ -971,7 +967,7 @@ class GossipDigestSynVerbHandler implements IVerbHandler
     public void doVerb(Message message)
     {
         EndPoint from = message.getFrom();
-        logger_.info("Received a GossipDigestSynMessage from " + from);
+        logger_.debug("Received a GossipDigestSynMessage from " + from);
 
         byte[] bytes = (byte[])message.getMessageBody()[0];
         DataInputStream dis = new DataInputStream( new ByteArrayInputStream(bytes) );
@@ -995,12 +991,12 @@ class GossipDigestSynVerbHandler implements IVerbHandler
 
             GossipDigestAckMessage gDigestAck = new GossipDigestAckMessage(deltaGossipDigestList, deltaEpStateMap);
             Message gDigestAckMessage = Gossiper.instance().makeGossipDigestAckMessage(gDigestAck);
-            logger_.info("Sending a GossipDigestAckMessage to " + from);
+            logger_.debug("Sending a GossipDigestAckMessage to " + from);
             MessagingService.getMessagingInstance().sendUdpOneWay(gDigestAckMessage, from);
         }
         catch (IOException e)
         {
-            logger_.info( LogUtil.throwableToString(e) );
+            throw new RuntimeException(e);
         }
     }
 
@@ -1055,7 +1051,7 @@ class GossipDigestAckVerbHandler implements IVerbHandler
     public void doVerb(Message message)
     {
         EndPoint from = message.getFrom();
-        logger_.info("Received a GossipDigestAckMessage from " + from);
+        logger_.debug("Received a GossipDigestAckMessage from " + from);
 
         byte[] bytes = (byte[])message.getMessageBody()[0];
         DataInputStream dis = new DataInputStream( new ByteArrayInputStream(bytes) );
@@ -1085,12 +1081,12 @@ class GossipDigestAckVerbHandler implements IVerbHandler
 
             GossipDigestAck2Message gDigestAck2 = new GossipDigestAck2Message(deltaEpStateMap);
             Message gDigestAck2Message = Gossiper.instance().makeGossipDigestAck2Message(gDigestAck2);
-            logger_.info("Sending a GossipDigestAck2Message to " + from);
+            logger_.debug("Sending a GossipDigestAck2Message to " + from);
             MessagingService.getMessagingInstance().sendUdpOneWay(gDigestAck2Message, from);
         }
         catch ( IOException e )
         {
-            logger_.info( LogUtil.throwableToString(e) );
+            throw new RuntimeException(e);
         }
     }
 }
@@ -1102,7 +1098,7 @@ class GossipDigestAck2VerbHandler implements IVerbHandler
     public void doVerb(Message message)
     {
         EndPoint from = message.getFrom();
-        logger_.info("Received a GossipDigestAck2Message from " + from);
+        logger_.debug("Received a GossipDigestAck2Message from " + from);
 
         byte[] bytes = (byte[])message.getMessageBody()[0];
         DataInputStream dis = new DataInputStream( new ByteArrayInputStream(bytes) );
@@ -1116,8 +1112,8 @@ class GossipDigestAck2VerbHandler implements IVerbHandler
         }
         catch ( IOException e )
         {
-            logger_.info( LogUtil.throwableToString(e) );
-        }
+            throw new RuntimeException(e);
+         }
     }
 }
 
