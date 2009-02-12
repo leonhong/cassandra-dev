@@ -532,12 +532,12 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
         
         if ( stage != null )
         {
-            logger_.info("Running on stage " + stage.getName());
+            logger_.debug("Running on stage " + stage.getName());
             stage.execute(runnable);
         } 
         else
         {
-            logger_.info("Running on default stage - beware");
+            logger_.warn("Running on default stage - beware");
             messageSerializerExecutor_.execute(runnable);
         }
     }    
