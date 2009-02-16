@@ -230,6 +230,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
                 row = quorumResponseHandler.get();
             } catch (TimeoutException e) {
                 throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
             logger_.debug("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2) + " ms.");
         }

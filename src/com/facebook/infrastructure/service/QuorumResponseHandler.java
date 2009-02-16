@@ -56,23 +56,17 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
     {
         responseCount_ = responseCount;
     }
-    public T get() throws TimeoutException, DigestMismatchException
-    {
+    public T get() throws TimeoutException, DigestMismatchException, InterruptedException {
         long startTime = System.currentTimeMillis();
     	lock_.lock();
         try
         {            
             boolean bVal = true;            
-            try {
-            	if ( !done_.get() )
-                {            		
-            		bVal = condition_.await(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
-                }
+            if ( !done_.get() )
+            {
+                bVal = condition_.await(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
             }
-            catch ( InterruptedException ex ) {
-                // cool, we got a reply
-            }
-            
+
             if ( !bVal && !done_.get() )
             {
                 StringBuilder sb = new StringBuilder("");
