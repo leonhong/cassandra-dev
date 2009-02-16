@@ -42,10 +42,18 @@ public class Message
     final Header header;
     private final byte[] body;
 
-    protected Message(String id, EndPoint from, String messageType, String verb, byte[] body)
+    /**
+     * Use this constructor when creating replies!  You must give the same id as the original message!
+     */
+    public Message(String id, EndPoint from, String messageType, String verb, byte[] body)
     {
         this(new Header(id, from, messageType, verb), body);
     }
+
+    public Message(EndPoint from, String messageType, String verb, byte[] body)
+    {
+        this(new Header(from, messageType, verb), body);
+    }    
     
     protected Message(Header header, byte[] body)
     {
@@ -54,11 +62,6 @@ public class Message
         this.body = body;
     }
 
-    public Message(EndPoint from, String messageType, String verb, byte[] body)
-    {
-        this(new Header(from, messageType, verb), body);
-    }    
-    
     public byte[] getHeader(Object key)
     {
         return header.getDetail(key);

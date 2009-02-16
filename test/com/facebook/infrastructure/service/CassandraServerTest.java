@@ -73,7 +73,7 @@ public class CassandraServerTest extends ServerTest {
             cfmap.put("Standard2", columns);
 
             batch_mutation_t m = new batch_mutation_t("Table1", "key1", cfmap);
-            server.batch_insert(m);
+            server.batch_insert_blocking(m);
 
             column_t column;
             column = server.get_column("Table1", "key1", "Standard1:c2");

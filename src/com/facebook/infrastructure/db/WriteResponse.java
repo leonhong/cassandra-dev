@@ -44,13 +44,12 @@ private static WriteResponseSerializer serializer_ = new WriteResponseSerializer
         return serializer_;
     }
 	
-    public static Message makeWriteResponseMessage(WriteResponse writeResponseMessage) throws IOException
+    public static Message makeWriteResponseMessage(Message original, WriteResponse writeResponseMessage) throws IOException
     {
     	ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream( bos );
         WriteResponse.serializer().serialize(writeResponseMessage, dos);
-        Message message = new Message(StorageService.getLocalStorageEndPoint(), MessagingService.responseStage_, MessagingService.responseVerbHandler_, bos.toByteArray());
-        return message;
+        return new Message(original.getMessageId(), StorageService.getLocalStorageEndPoint(), MessagingService.responseStage_, MessagingService.responseVerbHandler_, bos.toByteArray());
     }
 
 	private final String table_;

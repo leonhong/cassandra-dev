@@ -94,17 +94,18 @@ public class RowMutationVerbHandler implements IVerbHandler
             logger_.info("ROW MUTATION APPLY: " + (end - start) + " ms.");
             
             WriteResponse response = new WriteResponse(rm.table(), rm.key(), true);
-            Message responseMessage = WriteResponse.makeWriteResponseMessage(response);
+            Message responseMessage = WriteResponse.makeWriteResponseMessage(message, response);
             logger_.debug("Sending response to " +  message.getFrom() + " for key :" + rm.key());
             MessagingService.getMessagingInstance().sendOneWay(responseMessage, message.getFrom());
         }         
         catch( ColumnFamilyNotDefinedException ex )
         {
+            // TODO shouldn't this be checked before it's sent to us?
             logger_.debug(LogUtil.throwableToString(ex));
-        }        
+        }
         catch ( IOException e )
         {
-            logger_.debug(LogUtil.throwableToString(e));            
-        }        
+            throw new RuntimeException(e);
+        }
     }
 }
