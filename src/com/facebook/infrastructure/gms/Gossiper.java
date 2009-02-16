@@ -559,7 +559,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
                 int remoteGeneration = gDigest.generation_;
                 if ( remoteGeneration > localGeneration )
                 {
-                    logger_.debug("Reporting " + gDigest.endPoint_ + " to the FD.");
+                    logger_.trace("Reporting " + gDigest.endPoint_ + " to the FD.");
                     fd.report(gDigest.endPoint_);
                     continue;
                 }
@@ -571,7 +571,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
                     int remoteVersion = gDigest.maxVersion_;
                     if ( remoteVersion > localVersion )
                     {
-                        logger_.debug("Reporting " + gDigest.endPoint_ + " to the FD.");
+                        logger_.trace("Reporting " + gDigest.endPoint_ + " to the FD.");
                         fd.report(gDigest.endPoint_);
                     }
                 }
@@ -597,7 +597,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
                 int remoteGeneration = remoteEndPointState.getHeartBeatState().generation_;
                 if ( remoteGeneration > localGeneration )
                 {
-                    logger_.debug("Reporting " + endpoint + " to the FD.");
+                    logger_.trace("Reporting " + endpoint + " to the FD.");
                     fd.report(endpoint);
                     continue;
                 }
@@ -609,7 +609,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
                     int remoteVersion = remoteEndPointState.getHeartBeatState().getHeartBeatVersion();
                     if ( remoteVersion > localVersion )
                     {
-                        logger_.debug("Reporting " + endpoint + " to the FD.");
+                        logger_.trace("Reporting " + endpoint + " to the FD.");
                         fd.report(endpoint);
                     }
                 }
@@ -619,7 +619,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
 
     void resusitate(EndPoint addr, EndPointState localState)
     {
-        logger_.debug("Attempting to resusitate " + addr);
+        logger_.trace("Attempting to resusitate " + addr);
         if ( !localState.isAlive() )
         {
             isAlive(addr, localState, true);
@@ -697,7 +697,7 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
             {
                 int oldVersion = localHbState.getHeartBeatVersion();
                 localState.setHeartBeatState(remoteHbState);
-                logger_.debug("Updating heartbeat state version to " + localState.getHeartBeatState().getHeartBeatVersion() + " from " + oldVersion + " for " + addr + " ...");
+                logger_.trace("Updating heartbeat state version to " + localState.getHeartBeatState().getHeartBeatVersion() + " from " + oldVersion + " for " + addr + " ...");
             }
         }
     }
