@@ -326,8 +326,9 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         else
         {
         	ColumnFamily cFamily = columnFamilies_.get(key);
-        	if(cFamily == null)
+        	if (cFamily == null) {
         		return null;
+            }
         	IColumn column = null;
         	if (values.length == 2) {
                 column = cFamily.getColumn(values[1]);
@@ -352,6 +353,10 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
                     }
                 }
         	}
+        }
+
+        if (columnFamily == null) {
+            return null;
         }
         /* Filter unnecessary data from the column based on the provided filter */
         return filter.filter(columnFamilyColumn, columnFamily);
