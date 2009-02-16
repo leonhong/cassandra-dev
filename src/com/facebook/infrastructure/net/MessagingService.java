@@ -22,6 +22,7 @@ import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.*;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
@@ -229,15 +230,13 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
     public byte[] hash(String type, byte data[])
     {
         byte result[] = null;
-        try
-        {
-            MessageDigest messageDigest = MessageDigest.getInstance(type);
-            result = messageDigest.digest(data);
+        MessageDigest messageDigest = null;
+        try {
+            messageDigest = MessageDigest.getInstance(type);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
-        catch(Exception e)
-        {
-            LogUtil.getLogger(MessagingService.class.getName()).debug(LogUtil.throwableToString(e));
-        }
+        result = messageDigest.digest(data);
         return result;
     }
     
@@ -532,7 +531,7 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
         
         if ( stage != null )
         {
-            logger_.debug("Running on stage " + stage.getName());
+            logger_.trace("Running on stage " + stage.getName());
             stage.execute(runnable);
         } 
         else

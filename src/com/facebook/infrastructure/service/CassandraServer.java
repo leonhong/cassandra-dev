@@ -228,7 +228,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             } catch (TimeoutException e) {
                 throw new RuntimeException(e);
             }
-            logger_.info("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2) + " ms.");
+            logger_.debug("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2) + " ms.");
         }
         catch (DigestMismatchException ex) {
             IResponseResolver<Row> readResponseResolverRepair = new ReadResponseResolver();
@@ -242,13 +242,12 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
                                                            quorumResponseHandlerRepair);
             try {
                 row = quorumResponseHandlerRepair.get();
-            }
-            catch (Exception ex2) {
-                logger_.error(LogUtil.throwableToString(ex2));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
 
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
+        logger_.debug("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
 		return row;
 	}
 
@@ -267,7 +266,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		
 		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
 		Row row = params.getRow(table);
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
+		logger_.debug("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
 
 		/*
 		 * Do the consistency checks in the background and return the
@@ -504,7 +503,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
                     DatabaseDescriptor.getReplicationFactor(),
                     writeResponseResolver);
             EndPoint[] endpoints = storageService_.getNStorageEndPoint(rm.key());
-            logger_.debug("writing to " + StringUtils.join(endpoints, ' '));
+            logger_.debug("writing to " + StringUtils.join(endpoints, ", "));
             // TODO: throw a thrift exception if we do not have N nodes
 
             MessagingService.getMessagingInstance().sendRR(message, endpoints, quorumResponseHandler);
@@ -528,17 +527,9 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public void remove(String tablename, String key, String columnFamily_column, long timestamp)
 	{
-		try
-		{
-			RowMutation rm = new RowMutation(tablename, key.trim());
-			rm.delete(columnFamily_column, timestamp);
-			insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.error( LogUtil.throwableToString(e) );
-		}
-		return;
+        RowMutation rm = new RowMutation(tablename, key.trim());
+        rm.delete(columnFamily_column, timestamp);
+        insert(rm);
 	}
 
     public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)
