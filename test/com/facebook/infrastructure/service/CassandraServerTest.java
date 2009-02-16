@@ -81,6 +81,9 @@ public class CassandraServerTest extends ServerTest {
 
             column = server.get_column("Table1", "key1", "Standard2:c2");
             assert column.value.equals("0");
+
+            ArrayList<column_t> column_ts = server.get_slice_strong("Table1", "key1", "Standard1", -1, -1);
+            assert column_ts.size() == 2;
         } finally {
             server.shutdown();
         }

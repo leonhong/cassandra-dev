@@ -28,7 +28,6 @@ import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.utils.LogUtil;
 import com.facebook.thrift.protocol.TBinaryProtocol;
 import com.facebook.thrift.protocol.TProtocolFactory;
 import com.facebook.thrift.server.TThreadPoolServer;
@@ -277,8 +276,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return row;
 	}
 
-    private Collection<IColumn> getColumns(ReadParameters params) throws ColumnFamilyNotDefinedException {
-        ColumnFamily cf = getCF(params);
+    private Collection<IColumn> getColumns(ReadParameters params, StorageService.ConsistencyLevel consistency) throws ColumnFamilyNotDefinedException {
+        ColumnFamily cf = getCF(params, consistency);
         String[] values = RowMutation.getColumnAndColumnFamily(params.columnFamily_column);
         if (cf == null) {
             return Arrays.asList(new IColumn[0]);
@@ -299,10 +298,10 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
      * Gets the ColumnFamily object for the given table, key, and cf.
      * Returns null if column family is defined, but has no columns for the given key.
      */
-    private ColumnFamily getCF(ReadParameters params) throws ColumnFamilyNotDefinedException {
+    private ColumnFamily getCF(ReadParameters params, StorageService.ConsistencyLevel consistency) throws ColumnFamilyNotDefinedException {
         Row row;
         try {
-            row = readProtocol(params, StorageService.ConsistencyLevel.WEAK);
+            row = readProtocol(params, consistency);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -311,9 +310,9 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return row.getColumnFamily(params.columnFamily_column);
     }
 
-    private ArrayList<column_t> getThriftColumns(ReadParameters params) throws ColumnFamilyNotDefinedException {
+    private ArrayList<column_t> getThriftColumns(ReadParameters params, StorageService.ConsistencyLevel consistency) throws ColumnFamilyNotDefinedException {
         ArrayList<column_t> retlist = new ArrayList<column_t>();
-        for (IColumn column : getColumns(params)) {
+        for (IColumn column : getColumns(params, consistency)) {
             retlist.add(makeThriftColumn(column));
         }
         return retlist;
@@ -345,14 +344,21 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
-        return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, timeStamp));
+        return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, timeStamp), StorageService.ConsistencyLevel.WEAK);
 	}
 
     public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws InvalidRequestException {
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
-        return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, start, count));
+        return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, start, count), StorageService.ConsistencyLevel.WEAK);
+	}
+
+    public ArrayList<column_t> get_slice_strong(String tablename, String key, String columnFamily_column, int start, int count) throws InvalidRequestException {
+        if (columnFamily_column.isEmpty()) {
+            throw new InvalidRequestException("Column family required");
+        }
+        return getThriftColumns(new ReadParameters(tablename, key, columnFamily_column, start, count), StorageService.ConsistencyLevel.STRONG);
 	}
 
     public column_t get_column(String tablename, String key, String columnFamily_column) throws InvalidRequestException, NotFoundException {
@@ -367,7 +373,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         String columnFamilyName = values[0];
         String columnName = values[1];
 
-        ColumnFamily cf = getCF(new ReadParameters(tablename, key, columnFamilyName, Arrays.asList(new String[] {columnName})));
+        ColumnFamily cf = getCF(new ReadParameters(tablename, key, columnFamilyName, Arrays.asList(new String[] {columnName})),
+                                StorageService.ConsistencyLevel.WEAK);
 
         IColumn column = cf == null ? null : cf.getColumn(columnName);
 
@@ -394,7 +401,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
-        Collection<IColumn> columns = getColumns(new ReadParameters(tablename, key, columnFamily_column));
+        Collection<IColumn> columns = getColumns(new ReadParameters(tablename, key, columnFamily_column), StorageService.ConsistencyLevel.WEAK);
         return columns.size();
     }
 
@@ -404,7 +411,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             throw new InvalidRequestException("Column family required");
         }
 
-        Collection<IColumn> columns = getColumns(new ReadParameters(tablename, key, columnFamily_superColumnName, start, count));
+        Collection<IColumn> columns = getColumns(new ReadParameters(tablename, key, columnFamily_superColumnName, start, count), StorageService.ConsistencyLevel.WEAK);
         ArrayList<superColumn_t> retlist = new ArrayList<superColumn_t>();
         for (IColumn column : columns) {
             if (column instanceof Column || column.getSubColumns().size() > 0) {
@@ -421,7 +428,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             throw new InvalidRequestException("get_superColumn expects column of form cfamily:supercol");
         }
 
-        ColumnFamily cf = getCF(new ReadParameters(tablename, key, values[0]));
+        ColumnFamily cf = getCF(new ReadParameters(tablename, key, values[0]),
+                                StorageService.ConsistencyLevel.WEAK);
         IColumn column = cf == null ? null : cf.getColumn(values[1]);
         if (column == null) {
             throw new NotFoundException();
