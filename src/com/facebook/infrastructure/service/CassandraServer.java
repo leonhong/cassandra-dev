@@ -152,6 +152,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 	}
 
     private Row weakReadRemote(ReadParameters params) throws IOException {
+        logger_.debug("weakreadremote for " + params);
         EndPoint endPoint = null;
         try {
             endPoint = storageService_.findSuitableEndPoint(params.key);
@@ -159,6 +160,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         catch (Exception e) {
             throw new RuntimeException(e);
         }
+        logger_.debug("reading from " + endPoint);
         Message message = ReadParameters.makeReadMessage(params);
         IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
         byte[] body;
@@ -186,7 +188,8 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         // 5. return success
      */
 	private Row strongRead(ReadParameters params) throws IOException {
-        long startTime = System.currentTimeMillis();		
+        logger_.debug("strongread for " + params);
+        long startTime = System.currentTimeMillis();
 		// TODO: throw a thrift exception if we do not have N nodes
         // TODO: how can we throw ColumnFamilyNotDefined here?
 
@@ -217,6 +220,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             endPoints[i] = endpointList.get(i-1);
             messages[i] = messageDigestOnly;
         }
+        logger_.debug("reading from " + StringUtils.join(endPoints, ", "));
 
         try {
             MessagingService.getMessagingInstance().sendRR(messages, endPoints, quorumResponseHandler);
@@ -257,6 +261,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     * the data we perform consistency checks and figure out if any repairs need to be done to the replicas.
     */
 	private Row weakReadLocal(ReadParameters params) throws IOException, ColumnFamilyNotDefinedException {
+        logger_.debug("weakreadlocal for " + params);
 		long startTime = System.currentTimeMillis();
 		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(params.key);
 		/* Remove the local storage endpoint from the list. */ 

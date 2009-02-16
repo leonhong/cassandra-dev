@@ -139,6 +139,16 @@ public class ReadParameters
 		}
         return table.getRow(key, columnFamily_column);
     }
+
+    public String toString() {
+        return "ReadParameters{" +
+               "sinceTimestamp=" + sinceTimestamp +
+               ", key='" + key + '\'' +
+               ", columnFamily_column='" + columnFamily_column + '\'' +
+               ", start=" + start +
+               ", count=" + count +
+               '}';
+    }
 }
 
 class ReadMessageSerializer implements ICompactSerializer<ReadParameters>
