@@ -72,27 +72,25 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 		{					            
             byte[] body = response.getMessageBody();
             bufIn.reset(body, body.length);
-            try
-            {
-                long start = System.currentTimeMillis();
-                ReadResponse result = ReadResponse.serializer().deserialize(bufIn);
-                logger_.debug( "Response deserialization time : " + (System.currentTimeMillis() - start) + " ms.");
-    			if(!result.isDigestQuery())
-    			{
-    				rowList.add(result.row());
-    				endPoints.add(response.getFrom());
-    				key = result.row().key();
-    				table = result.table();
-    			}
-    			else
-    			{
-    				digest = result.digest();
-    				isDigestQuery = true;
-    			}
+            long start = System.currentTimeMillis();
+            ReadResponse result = null;
+            try {
+                result = ReadResponse.serializer().deserialize(bufIn);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-            catch( IOException ex )
+            logger_.trace( "Response deserialization time : " + (System.currentTimeMillis() - start) + " ms.");
+            if(!result.isDigestQuery())
             {
-                logger_.info(LogUtil.throwableToString(ex));
+                rowList.add(result.row());
+                endPoints.add(response.getFrom());
+                key = result.row().key();
+                table = result.table();
+            }
+            else
+            {
+                digest = result.digest();
+                isDigestQuery = true;
             }
 		}
 		// If there was a digest query compare it withh all teh data digests 
@@ -142,8 +140,7 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 	        // schedule the read repair
 	        ReadRepairManager.instance().schedule(endPoints.get(i),rowMutation);
 		}
-        logger_.info("resolve: " + (System.currentTimeMillis() - startTime)
-                + " ms.");
+        logger_.trace("resolve: " + (System.currentTimeMillis() - startTime) + " ms.");
 		return retRow;
 	}
 

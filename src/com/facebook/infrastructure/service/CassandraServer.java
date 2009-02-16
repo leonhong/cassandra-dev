@@ -261,7 +261,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     * the data we perform consistency checks and figure out if any repairs need to be done to the replicas.
     */
 	private Row weakReadLocal(ReadParameters params) throws IOException, ColumnFamilyNotDefinedException {
-        logger_.debug("weakreadlocal for " + params);
+        logger_.debug("weakreadlocalg for " + params);
 		long startTime = System.currentTimeMillis();
 		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(params.key);
 		/* Remove the local storage endpoint from the list. */ 

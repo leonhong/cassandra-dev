@@ -176,7 +176,7 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
                 return;
             }
 
-            logger_.debug("Sending packets of size " + data.length);
+            logger_.trace("Sending packet of size " + data.length);
             socketChannel_.write(buffer);
 
             if (buffer.remaining() > 0)
@@ -232,7 +232,7 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
                 
                 /* returns the number of bytes transferred from file to the socket */
                 long bytesTransferred = fc.transferTo(startPosition, limit, socketChannel_);
-                logger_.debug("Bytes transferred " + bytesTransferred);                
+                logger_.trace("Bytes transferred " + bytesTransferred);
                 bytesWritten += bytesTransferred;
                 startPosition += bytesTransferred; 
                 /*
@@ -356,7 +356,6 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
     
     void errorClose() 
     {        
-        logger_.warn("Closing down connection " + socketChannel_);
         pendingWrites_.clear();
         cancel(key_);
         pendingWrites_.clear();        
@@ -431,7 +430,7 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
         }
         catch(IOException ex)
         {
-            logger_.warn(LogUtil.throwableToString(ex));
+            logger_.error(LogUtil.throwableToString(ex));
             // This is to fix the wierd Linux bug with NIO.
             errorClose();
         }
@@ -528,8 +527,7 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
         
         private void handleException(Throwable th)
         {
-            logger_.warn("Problem reading from socket connected to : " + socketChannel_);
-            logger_.warn(LogUtil.throwableToString(th));
+            logger_.error("Problem reading from socket connected to : " + socketChannel_, th);
             // This is to fix the wierd Linux bug with NIO.
             errorClose();
         }
