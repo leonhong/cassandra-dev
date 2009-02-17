@@ -28,36 +28,33 @@ public class RackUnawareStrategy extends AbstractStrategy
     
     public EndPoint[] getStorageEndPoints(BigInteger token, Map<BigInteger, EndPoint> tokenToEndPointMap)
     {
-        int startIndex = 0 ;
-        List<EndPoint> list = new ArrayList<EndPoint>();
-        int foundCount = 0;
-        int N = DatabaseDescriptor.getReplicationFactor();
         List<BigInteger> tokens = new ArrayList<BigInteger>(tokenToEndPointMap.keySet());
-        Collections.sort(tokens);
+        Collections.sort(tokens); // TODO can we do this only once per token update?
         int index = Collections.binarySearch(tokens, token);
+        // find "primary" endpoint
+        final int tokensSize = tokens.size();
         if(index < 0)
         {
             index = (index + 1) * (-1);
-            if (index >= tokens.size())
+            if (index >= tokensSize)
                 index = 0;
         }
-        int totalNodes = tokens.size();
-        // Add the node at the index by default
-        list.add(tokenToEndPointMap.get(tokens.get(index)));
-        foundCount++;
-        startIndex = (index + 1)%totalNodes;
-        // If we found N number of nodes we are good. This loop will just exit. Otherwise just
-        // loop through the list and add until we have N nodes.
-        for (int i = startIndex, count = 1; count < totalNodes && foundCount < N; ++count, i = (i+1)%totalNodes)
-        {
-            if( ! list.contains(tokenToEndPointMap.get(tokens.get(i))))
-            {
-                list.add(tokenToEndPointMap.get(tokens.get(i)));
-                foundCount++;
-                continue;
-            }
+
+        // how many tokens should we return?
+        int N = DatabaseDescriptor.getReplicationFactor();
+        if (N > tokensSize) {
+            logger_.warn("Replication factor is " + N + " but only " + tokensSize + " nodes available");
+            N = tokensSize;
         }
-        retrofitPorts(list);
-        return list.toArray(new EndPoint[0]);
+
+        // loop through the list, starting with the "primary" endpoint that binarysearch found, and add until we have N nodes.
+        List<EndPoint> endPoints = new ArrayList<EndPoint>();
+        for (int i = index; endPoints.size() < N; i = (i + 1) % tokensSize)
+        {
+            endPoints.add(tokenToEndPointMap.get(tokens.get(i)));
+        }
+        retrofitPorts(endPoints);
+
+        return endPoints.toArray(new EndPoint[endPoints.size()]);
     }
 }
