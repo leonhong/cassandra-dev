@@ -49,7 +49,7 @@ private static WriteResponseSerializer serializer_ = new WriteResponseSerializer
     	ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream( bos );
         WriteResponse.serializer().serialize(writeResponseMessage, dos);
-        return new Message(original.getMessageId(), StorageService.getLocalStorageEndPoint(), MessagingService.responseStage_, MessagingService.responseVerbHandler_, bos.toByteArray());
+        return original.getReply(StorageService.getLocalStorageEndPoint(), bos.toByteArray());
     }
 
 	private final String table_;
