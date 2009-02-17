@@ -329,9 +329,8 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         	if (cFamily == null) {
         		return null;
             }
-        	IColumn column = null;
         	if (values.length == 2) {
-                column = cFamily.getColumn(values[1]);
+                IColumn column = cFamily.getColumn(values[1]); // super or normal column
                 if(column != null )
                 {
                     columnFamily = new ColumnFamily(cfName_);
@@ -339,10 +338,10 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
                 }
         	} else {
                 assert values.length == 3;
-                column = cFamily.getColumn(values[1]); // supercolumn
-                if (column != null)
+                SuperColumn superColumn = (SuperColumn)cFamily.getColumn(values[1]);
+                if (superColumn != null)
                 {
-                    IColumn subColumn = ((SuperColumn)column).getSubColumn(values[2]);
+                    IColumn subColumn = superColumn.getSubColumn(values[2]);
                     if(subColumn != null)
                     {
                         columnFamily = new ColumnFamily(cfName_);
