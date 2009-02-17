@@ -50,8 +50,6 @@ public class RowMutationVerbHandler implements IVerbHandler<byte[]>
     
     public void doVerb(Message<byte[]> message)
     {
-        logger_.debug( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
-            
         byte[] bytes = message.getMessageBody();
         /* Obtain a Row Mutation Context from TLS */
         RowMutationContext rowMutationCtx = tls_.get();

@@ -79,7 +79,7 @@ public class ReadVerbHandler implements IVerbHandler<byte[]>
             		row = table.getRow(readMessage.key, readMessage.columnFamily_column, readMessage.getColumnNames());
             	}
             }
-            logger_.info("getRow()  TIME: " + (System.currentTimeMillis() - start) + " ms.");
+            logger_.debug("getRow() time: " + (System.currentTimeMillis() - start) + " ms.");
             start = System.currentTimeMillis();
             ReadResponse readResponse = null;
             if(readMessage.isDigestQuery())
@@ -97,17 +97,14 @@ public class ReadVerbHandler implements IVerbHandler<byte[]>
 
             start = System.currentTimeMillis();
             ReadResponse.serializer().serialize(readResponse, readCtx.bufOut_);
-            logger_.info("serialize  TIME: " + (System.currentTimeMillis() - start) + " ms.");
 
             byte[] bytes = new byte[readCtx.bufOut_.getLength()];
             start = System.currentTimeMillis();
             System.arraycopy(readCtx.bufOut_.getData(), 0, bytes, 0, bytes.length);
-            logger_.info("copy  TIME: " + (System.currentTimeMillis() - start) + " ms.");
 
             Message response = message.getReply( StorageService.getLocalStorageEndPoint(), bytes );
             MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
-            logger_.info("ReadVerbHandler  TIME 2: " + (System.currentTimeMillis() - start)
-                    + " ms.");
+            logger_.debug("ReadVerbHandler time 2: " + (System.currentTimeMillis() - start) + " ms.");
         }
         catch ( IOException ex)
         {

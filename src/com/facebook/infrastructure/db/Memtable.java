@@ -208,13 +208,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     	return cfName_;
     }
 
-    void printExecutorStats()
-    {
-    	DebuggableThreadPoolExecutor es = (DebuggableThreadPoolExecutor)apartments_.get(cfName_);
-    	long taskCount = (es.getTaskCount() - es.getCompletedTaskCount());
-    	logger_.debug("MEMTABLE TASKS : " + taskCount);
-    }
-
     /*
      * This version is used by the external clients to put data into
      * the memtable. This version will respect the threshold and flush
@@ -246,7 +239,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         }
         else
         {
-        	printExecutorStats();
         	Runnable putter = new Putter(key, columnFamily);
         	apartments_.get(cfName_).submit(putter);
         }
@@ -363,7 +355,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
 
     ColumnFamily get(String key, String cfName)
     {
-    	printExecutorStats();
     	Callable<ColumnFamily> call = new Getter(key, cfName);
     	ColumnFamily cf = null;
     	try
@@ -383,7 +374,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     
     ColumnFamily get(String key, String cfName, IFilter filter)
     {
-    	printExecutorStats();
     	Callable<ColumnFamily> call = new Getter(key, cfName, filter);
     	ColumnFamily cf = null;
     	try
@@ -409,7 +399,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     */
     void remove(String key, ColumnFamily columnFamily) throws IOException
     {
-    	printExecutorStats();
     	Runnable deleter = new Remover(key, columnFamily);
     	apartments_.get(cfName_).submit(deleter);
     }

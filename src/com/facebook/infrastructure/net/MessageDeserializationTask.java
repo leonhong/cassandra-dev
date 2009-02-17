@@ -48,10 +48,6 @@ class MessageDeserializationTask implements Runnable
     
     public void run()
     {
-    	/* For DEBUG only. Printing queue length */   
-    	DebuggableThreadPoolExecutor es = (DebuggableThreadPoolExecutor)MessagingService.getDeserilizationExecutor();
-        logger_.debug( "Message Deserialization Task: " + (es.getTaskCount() - es.getCompletedTaskCount()) );
-        /* END DEBUG */
         try
         {                        
             Message message = (Message)serializer_.deserialize(bytes_);                                                           
