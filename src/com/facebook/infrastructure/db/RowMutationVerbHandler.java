@@ -50,7 +50,7 @@ public class RowMutationVerbHandler implements IVerbHandler
     
     public void doVerb(Message message)
     {
-        logger_.info( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
+        logger_.debug( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
             
         byte[] bytes = message.getMessageBody();
         /* Obtain a Row Mutation Context from TLS */
@@ -72,16 +72,9 @@ public class RowMutationVerbHandler implements IVerbHandler
             {
             	EndPoint hint = EndPoint.fromBytes(hintedBytes);
                 /* add necessary hints to this mutation */
-                try
-                {
-                	RowMutation hintedMutation = new RowMutation(rm.table(), HintedHandOffManager.key_);
-                	hintedMutation.addHints(rm.key() + ":" + hint.getHost());
-                	hintedMutation.apply();
-                }
-                catch ( ColumnFamilyNotDefinedException ex )
-                {
-                    logger_.debug(LogUtil.throwableToString(ex));
-                }
+                RowMutation hintedMutation = new RowMutation(rm.table(), HintedHandOffManager.key_);
+                hintedMutation.addHints(rm.key() + ":" + hint.getHost());
+                hintedMutation.apply();
             }
             
             long start = System.currentTimeMillis(); 
@@ -91,7 +84,7 @@ public class RowMutationVerbHandler implements IVerbHandler
             rm.apply(rowMutationCtx.row_);
             
             long end = System.currentTimeMillis();                       
-            logger_.info("ROW MUTATION APPLY: " + (end - start) + " ms.");
+            logger_.debug("ROW MUTATION APPLY: " + (end - start) + " ms.");
             
             WriteResponse response = new WriteResponse(rm.table(), rm.key(), true);
             Message responseMessage = WriteResponse.makeWriteResponseMessage(message, response);
@@ -101,7 +94,7 @@ public class RowMutationVerbHandler implements IVerbHandler
         catch( ColumnFamilyNotDefinedException ex )
         {
             // TODO shouldn't this be checked before it's sent to us?
-            logger_.debug(LogUtil.throwableToString(ex));
+            logger_.warn("column family not defined, and no way to tell the client", ex);
         }
         catch ( IOException e )
         {

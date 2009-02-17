@@ -179,7 +179,7 @@ public class HintedHandOffManager implements IComponentShutdown
             }
             catch ( Exception ex)
             {
-            	logger_.warn(ex.getMessage());
+                throw new RuntimeException(ex);
             }
             logger_.debug("Finished hinted handoff ..."+columnFamilyStore_.cfName);
         }
