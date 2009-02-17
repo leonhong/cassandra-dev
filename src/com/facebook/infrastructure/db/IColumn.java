@@ -40,10 +40,7 @@ public interface IColumn
     public byte[] value(String key);
     public Collection<IColumn> getSubColumns();
     public void addColumn(String name, IColumn column);
-    public void delete();
-    public void repair(IColumn column);
     public IColumn diff(IColumn column);
-    public boolean putColumn(IColumn column);
     public int getObjectCount();
     public byte[] digest();    
 }

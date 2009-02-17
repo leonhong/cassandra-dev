@@ -237,14 +237,17 @@ public final class ColumnFamily
 
     public IColumn addColumn(String name, byte[] value)
     {
-    	IColumn column = columnFactory_.createColumn(name, value);
-    	addColumn(column);
-        return column;
+    	return addColumn(name, value, 0);
     }
 
-	public IColumn addColumn(String name, byte[] value, long timestamp)
+    public IColumn addColumn(String name, byte[] value, long timestamp)
+    {
+        return addColumn(name, value, timestamp, false);
+    }
+
+    public IColumn addColumn(String name, byte[] value, long timestamp, boolean deleted)
 	{
-		IColumn column = columnFactory_.createColumn(name, value, timestamp);
+		IColumn column = columnFactory_.createColumn(name, value, timestamp, deleted);
 		addColumn(column);
         return column;
     }
@@ -264,9 +267,15 @@ public final class ColumnFamily
         IColumn oldColumn = columns_.get(name);
         if ( oldColumn != null )
         {
-            if( oldColumn.putColumn(column))
-            {
-                size_.set(oldColumn.size());
+            if (oldColumn instanceof SuperColumn) {
+                int oldSize = oldColumn.size();
+                ((SuperColumn)oldColumn).integrate(column);
+                size_.addAndGet(oldColumn.size() - oldSize);
+            } else {
+                if (oldColumn.timestamp() <= column.timestamp()) {
+                    columns_.put(name, column);
+                    size_.addAndGet(column.size());
+                }
             }
         }
         else
@@ -335,28 +344,8 @@ public final class ColumnFamily
      */
     void repair(ColumnFamily columnFamily)
     {
-        Map<String, IColumn> columns = columnFamily.getColumns();
-        Set<String> cNames = columns.keySet();
-
-        for ( String cName : cNames )
-        {
-        	IColumn columnInternal = columns_.get(cName);
-        	IColumn columnExternal = columns.get(cName);
-
-        	if( columnInternal == null )
-        	{
-        		if(isSuper())
-        		{
-        			columnInternal = new SuperColumn(columnExternal.name());
-        			columns_.put(cName, columnInternal);
-        		}
-                else
-        		{
-        			columnInternal = columnExternal;
-        			columns_.put(cName, columnInternal);
-        		}
-        	}
-       		columnInternal.repair(columnExternal);
+        for (IColumn column : columnFamily.getAllColumns()) {
+            addColumn(column);
         }
     }
 

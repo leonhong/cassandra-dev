@@ -214,7 +214,7 @@ public final class SuperColumn implements IColumn, Serializable
      * Go through each sub column if it exists then as it to resolve itself
      * if the column does not exist then create it.
      */
-    public boolean putColumn(IColumn column)
+    public boolean integrate(IColumn column)
     {
     	if ( !(column instanceof SuperColumn))
     		throw new UnsupportedOperationException("Only Super column objects should be put here");
@@ -224,15 +224,7 @@ public final class SuperColumn implements IColumn, Serializable
 
         for ( IColumn subColumn : columns )
         {
-        	IColumn columnInternal = columns_.get(subColumn.name());
-        	if(columnInternal == null )
-        	{
-        		addColumn(subColumn.name(), subColumn);
-        	}
-        	else
-        	{
-        		columnInternal.putColumn(subColumn);
-        	}
+        	addColumn(subColumn.name(), subColumn);
         }
         markedForDeleteAt = Math.max(markedForDeleteAt, column.getMarkedForDeleteAt());
         return false;
@@ -256,21 +248,6 @@ public final class SuperColumn implements IColumn, Serializable
     {
     	return columns_.size();
     }
-
-    public void repair(IColumn column)
-    {
-    	Collection<IColumn> columns = column.getSubColumns();
-
-        for ( IColumn subColumn : columns )
-        {
-        	IColumn columnInternal = columns_.get(subColumn.name());
-        	if( columnInternal == null )
-        		columns_.put(subColumn.name(), subColumn);
-        	else
-        		columnInternal.repair(subColumn);
-        }
-    }
-
 
     public IColumn diff(IColumn column)
     {

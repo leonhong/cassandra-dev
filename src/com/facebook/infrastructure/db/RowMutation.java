@@ -208,14 +208,12 @@ public class RowMutation implements Serializable
                 IColumn c = columnFamily.addColumn(values[1]);
                 ((SuperColumn)c).markForDeleteAt(timestamp);
             } else {
-                IColumn c = columnFamily.addColumn(values[1], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp);
-                c.delete();
+                IColumn c = columnFamily.addColumn(values[1], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp, true);
             }
         }
         else if(values.length == 3 )
         {
-            IColumn c = columnFamily.addColumn(values[1] + ":" + values[2], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp);
-            c.getSubColumns().iterator().next().delete();
+            IColumn c = columnFamily.addColumn(values[1] + ":" + values[2], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp, true);
         }
         else {
             assert values.length == 1;
