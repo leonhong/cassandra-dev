@@ -557,8 +557,10 @@ public class ColumnFamilyStore
         for (ColumnFamily cf2 : columnFamilies)
         {
             assert cf.name().equals(cf2.name());
+            logger_.debug(cf + " merging " + cf2);
             cf.addColumns(cf2);
             cf.delete(Math.max(cf.getMarkedForDeleteAt(), cf2.getMarkedForDeleteAt()));
+            logger_.debug("merged as " + cf);
         }
         return cf;
     }
@@ -601,6 +603,7 @@ public class ColumnFamilyStore
                 cf.remove(cname);
             }
         }
+        logger_.debug("after removeDeleted: " + cf);
         return cf;
     }
 

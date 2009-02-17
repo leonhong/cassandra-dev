@@ -216,7 +216,6 @@ public final class Column implements IColumn, Serializable
     	sb.append(timestamp());
     	sb.append(":");
     	sb.append(value().length);
-    	sb.append(":");
     	return sb.toString();
     }
 

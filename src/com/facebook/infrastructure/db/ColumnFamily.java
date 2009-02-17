@@ -424,18 +424,19 @@ public final class ColumnFamily
     {
     	StringBuilder sb = new StringBuilder();
     	sb.append(name_);
-    	sb.append(":");
-    	sb.append(isMarkedForDelete());
-    	sb.append(":");
-    	Collection<IColumn> columns = getAllColumns();
-        sb.append(columns.size());
-        sb.append(":");
 
-        for ( IColumn column : columns )
+        if (isMarkedForDelete()) {
+            sb.append("[delete at " + getMarkedForDeleteAt() + "]");
+        }
+
+    	sb.append(" {");
+        for ( IColumn column : getAllColumns() )
         {
             sb.append(column.toString());
+            sb.append(", ");
         }
-        sb.append(":");
+        sb.append("}");
+
     	return sb.toString();
     }
 

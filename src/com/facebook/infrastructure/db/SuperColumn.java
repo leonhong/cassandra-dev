@@ -317,20 +317,19 @@ public final class SuperColumn implements IColumn, Serializable
     {
     	StringBuilder sb = new StringBuilder();
     	sb.append(name_);
-    	sb.append(":");
-        sb.append(isMarkedForDelete());
-        sb.append(":");
 
-        Collection<IColumn> columns  = getSubColumns();
-        sb.append(columns.size());
-        sb.append(":");
-        sb.append(size());
-        sb.append(":");
-        for ( IColumn subColumn : columns )
+        if (isMarkedForDelete()) {
+            sb.append("[delete at " + getMarkedForDeleteAt() + "]");
+        }
+
+        sb.append(" (");
+        for (IColumn subColumn : getSubColumns())
         {
             sb.append(subColumn.toString());
+            sb.append(", ");
         }
-        sb.append(":");
+        sb.append(")");
+
         return sb.toString();
     }
 
