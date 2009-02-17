@@ -75,10 +75,10 @@ public class HttpRequestVerbHandler implements IVerbHandler<HttpConnection.HttpR
 
     public void doVerb(Message<HttpConnection.HttpRequest> message)
     {
-        HttpConnection.HttpRequest httpRequest = message.getMessageBody();
+        HttpConnection.HttpRequest request = message.getMessageBody();
         try
         {
-            com.facebook.infrastructure.net.http.HttpRequest httpRequest = httpRequestMessage.getHttpRequest();
+            com.facebook.infrastructure.net.http.HttpRequest httpRequest = request.getHttpRequest();
             HttpWriteResponse httpServerResponse = new HttpWriteResponse(httpRequest);
             if(httpRequest.getMethod().toUpperCase().equals("GET"))
             {
@@ -93,7 +93,7 @@ public class HttpRequestVerbHandler implements IVerbHandler<HttpConnection.HttpR
 
             // write the response we have constructed into the socket
             ByteBuffer buffer = httpServerResponse.flush();
-            httpRequestMessage.getHttpConnection().write(buffer);
+            request.getHttpConnection().write(buffer);
         }
         catch(Exception e)
         {
