@@ -24,6 +24,7 @@ import com.facebook.infrastructure.utils.BloomFilter;
 import com.facebook.infrastructure.utils.LogUtil;
 import com.facebook.infrastructure.db.RowMutation;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -480,7 +481,7 @@ public class SSTable
         dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 32*1024*1024);
         // dataWriter_ = SequenceFile.checksumWriter(dataFile_);
         /* Write the block index first. This is an empty one */
-        dataWriter_.append(SSTable.blockIndexKey_, new byte[0]);
+        dataWriter_.append(SSTable.blockIndexKey_, ArrayUtils.EMPTY_BYTE_ARRAY);
         SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition();
     }
 

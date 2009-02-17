@@ -18,6 +18,8 @@
 
 package com.facebook.infrastructure.net.io;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import java.nio.channels.SocketChannel;
 import java.nio.ByteBuffer;
 import java.io.IOException;
@@ -54,6 +56,6 @@ public abstract class StartState
         {            
             throw new ReadNotCompleteException("Specified number of bytes have not been read from the Socket Channel");
         }
-        return new byte[0];
+        return ArrayUtils.EMPTY_BYTE_ARRAY;
     }
 }

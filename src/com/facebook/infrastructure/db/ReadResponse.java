@@ -30,6 +30,7 @@ import com.facebook.infrastructure.io.ICompactSerializer;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.StorageService;
+import org.apache.commons.lang.ArrayUtils;
 
 /*
  * The read response message is sent by the server when reading data 
@@ -67,7 +68,7 @@ private static ICompactSerializer<ReadResponse> serializer_;
 	private Row row_;
 
 	@XmlElement(name = "Digest")
-	private byte[] digest_ = new byte[0];
+	private byte[] digest_ = ArrayUtils.EMPTY_BYTE_ARRAY;
 
     @XmlElement(name="isDigestQuery")
     private boolean isDigestQuery_ = false;

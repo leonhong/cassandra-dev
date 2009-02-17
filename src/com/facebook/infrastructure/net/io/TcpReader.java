@@ -24,6 +24,8 @@ import java.util.*;
 
 import com.facebook.infrastructure.net.ProtocolHeader;
 import com.facebook.infrastructure.net.TcpConnection;
+import org.apache.commons.lang.ArrayUtils;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -91,7 +93,7 @@ public class TcpReader
     
     public byte[] read() throws IOException
     {
-        byte[] bytes = new byte[0];      
+        byte[] bytes = ArrayUtils.EMPTY_BYTE_ARRAY;
         while ( socketState_ != null )
         {
             try

@@ -21,6 +21,7 @@ package com.facebook.infrastructure.db;
 import com.facebook.infrastructure.io.ICompactSerializer;
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -182,8 +183,7 @@ public class Row implements Serializable
     {
         long start = System.currentTimeMillis();
     	Set<String> cfamilies = columnFamilies_.keySet();
-    	byte[] xorHash = new byte[0];
-    	byte[] tmpHash = new byte[0];
+    	byte[] xorHash = ArrayUtils.EMPTY_BYTE_ARRAY;
     	for(String cFamily : cfamilies)
     	{
     		if(xorHash.length == 0)
@@ -192,7 +192,7 @@ public class Row implements Serializable
     		}
     		else
     		{
-    			tmpHash = columnFamilies_.get(cFamily).digest();
+    			byte[] tmpHash = columnFamilies_.get(cFamily).digest();
     			xorHash = FBUtilities.xor(xorHash, tmpHash);
     		}
     	}

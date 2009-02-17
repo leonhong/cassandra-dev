@@ -20,6 +20,7 @@ package com.facebook.infrastructure.net;
 
 import java.io.IOException;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 import com.facebook.infrastructure.concurrent.DebuggableThreadPoolExecutor;
 import com.facebook.infrastructure.concurrent.StageManager;
 import com.facebook.infrastructure.net.io.FastSerializer;
@@ -37,7 +38,7 @@ class MessageDeserializationTask implements Runnable
     private static Logger logger_ = Logger.getLogger(MessageDeserializationTask.class); 
     private static ISerializer serializer_ = new FastSerializer();
     private int serializerType_;
-    private byte[] bytes_ = new byte[0];    
+    private byte[] bytes_ = ArrayUtils.EMPTY_BYTE_ARRAY;
     
     MessageDeserializationTask(int serializerType, byte[] bytes)
     {

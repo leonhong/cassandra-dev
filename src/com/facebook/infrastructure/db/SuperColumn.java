@@ -20,6 +20,7 @@ package com.facebook.infrastructure.db;
 
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -301,7 +302,7 @@ public final class SuperColumn implements IColumn, Serializable
     public byte[] digest()
     {
     	Set<IColumn> columns = columns_.getSortedColumns();
-    	byte[] xorHash = new byte[0];
+    	byte[] xorHash = ArrayUtils.EMPTY_BYTE_ARRAY;
     	if(name_ == null)
     		return xorHash;
     	xorHash = name_.getBytes();

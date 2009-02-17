@@ -24,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import com.facebook.infrastructure.io.ICompactSerializer;
+import org.apache.commons.lang.ArrayUtils;
 
 /*
  * An instance of this class represents an update to a table. 
@@ -48,7 +49,7 @@ class CommitLogEntry
     }    
     
     private int length_;
-    private byte[] value_ = new byte[0];
+    private byte[] value_ = ArrayUtils.EMPTY_BYTE_ARRAY;
     
     CommitLogEntry()
     {

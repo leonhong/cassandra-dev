@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 import com.facebook.infrastructure.concurrent.*;
 import com.facebook.infrastructure.net.io.ProtocolState;
 import com.facebook.infrastructure.net.sink.SinkManager;
@@ -110,7 +111,7 @@ public class UdpConnection extends SelectionKeyHandler
     
     private byte[] gobbleHeaderAndExtractBody(ByteBuffer buffer)
     {
-        byte[] body = new byte[0];        
+        byte[] body = ArrayUtils.EMPTY_BYTE_ARRAY;
         byte[] protocol = new byte[4];
         buffer = buffer.get(protocol, 0, protocol.length);
         int value = BasicUtilities.byteArrayToInt(protocol);

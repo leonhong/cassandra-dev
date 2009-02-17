@@ -42,6 +42,7 @@ import com.yahoo.zookeeper.data.Stat;
 import com.yahoo.zookeeper.proto.WatcherEvent;
 import org.apache.commons.math.linear.RealMatrix;
 import org.apache.commons.math.linear.RealMatrixImpl;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
 
 import javax.management.MBeanServer;
@@ -329,7 +330,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 if ( stat == null )
                 {
                     logger_.debug("Creating the Cassandra znode ...");
-                    zk_.create("/Cassandra", new byte[0], Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create("/Cassandra", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
                 }
                 
                 String path = "/Cassandra/" + DatabaseDescriptor.getClusterName();
@@ -337,7 +338,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 if ( stat == null )
                 {
                     logger_.debug("Creating the cluster znode " + path);
-                    zk_.create(path, new byte[0], Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path, ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
                 }
                 
                 /* Create the Leader, Locks and Misc znode */
@@ -345,21 +346,21 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 if ( stat == null )
                 {
                     logger_.debug("Creating the leader znode " + path);
-                    zk_.create(path + "/Leader", new byte[0], Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Leader", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
                 }
                 
                 stat = zk_.exists(path + "/Locks", false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the locks znode " + path);
-                    zk_.create(path + "/Locks", new byte[0], Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Locks", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
                 }
                                 
                 stat = zk_.exists(path + "/Misc", false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the misc znode " + path);
-                    zk_.create(path + "/Misc", new byte[0], Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Misc", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
                 }
             }
         }

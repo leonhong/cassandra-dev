@@ -18,6 +18,8 @@
 
 package com.facebook.infrastructure.net.io;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import java.nio.channels.SocketChannel;
 import java.io.IOException;
 /**
@@ -26,7 +28,7 @@ import java.io.IOException;
 
 class DoneState extends StartState
 {
-    private byte[] bytes_ = new byte[0];
+    private byte[] bytes_ = ArrayUtils.EMPTY_BYTE_ARRAY;
 
     DoneState(TcpReader stream, byte[] bytes)
     {

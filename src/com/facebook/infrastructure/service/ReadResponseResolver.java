@@ -27,6 +27,7 @@ import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -58,7 +59,7 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 		List<EndPoint> endPoints = new ArrayList<EndPoint>();
 		String key = null;
 		String table = null;
-		byte[] digest = new byte[0];
+		byte[] digest = ArrayUtils.EMPTY_BYTE_ARRAY;
 		boolean isDigestQuery = false;
         
         /*

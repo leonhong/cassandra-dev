@@ -25,6 +25,7 @@ import java.nio.channels.SocketChannel;
 import java.io.*;
 
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import com.facebook.infrastructure.db.Table;
 /**
@@ -97,7 +98,7 @@ class ContentStreamState extends StartState
             }                            
         }
         
-        return new byte[0];
+        return ArrayUtils.EMPTY_BYTE_ARRAY;
     }
     
     private void handleStreamCompletion(String remoteHost) throws IOException

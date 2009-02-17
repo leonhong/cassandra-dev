@@ -34,6 +34,7 @@ import com.facebook.infrastructure.utils.FBUtilities;
 import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -190,7 +191,7 @@ public class Table
                 StreamContextManager.registerStreamCompletionHandler(message.getFrom().getHost(), new Table.BootstrapCompletionHandler());
                 /* Send a bootstrap initiation done message to execute on default stage. */
                 logger_.debug("Sending a bootstrap initiate done message ...");                
-                Message doneMessage = new Message( StorageService.getLocalStorageEndPoint(), "", StorageService.bootStrapInitiateDoneVerbHandler_, new byte[0] );
+                Message doneMessage = new Message( StorageService.getLocalStorageEndPoint(), "", StorageService.bootStrapInitiateDoneVerbHandler_, ArrayUtils.EMPTY_BYTE_ARRAY );
                 MessagingService.getMessagingInstance().sendOneWay(doneMessage, message.getFrom());
             }
             catch ( IOException ex )

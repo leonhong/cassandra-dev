@@ -22,6 +22,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import com.facebook.infrastructure.io.*;
+import org.apache.commons.lang.ArrayUtils;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -111,7 +112,7 @@ class CommitLogHeader
         return true;
     }
     
-    private byte[] header_ = new byte[0];
+    private byte[] header_ = ArrayUtils.EMPTY_BYTE_ARRAY;
     private int[] position_ = new int[0];
     
     CommitLogHeader(int size)

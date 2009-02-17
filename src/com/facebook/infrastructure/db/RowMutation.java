@@ -27,6 +27,8 @@ import com.facebook.infrastructure.utils.FBUtilities;
 import java.io.*;
 import java.util.*;
 
+import org.apache.commons.lang.ArrayUtils;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -112,7 +114,7 @@ public class RowMutation implements Serializable
     void addHints(String hint) throws IOException, ColumnFamilyNotDefinedException
     {        
         String cfName = Table.hints_ + ":" + hint;
-        add(cfName, new byte[0], 0);
+        add(cfName, ArrayUtils.EMPTY_BYTE_ARRAY, 0);
     }
     
     /*
@@ -206,13 +208,13 @@ public class RowMutation implements Serializable
                 IColumn c = columnFamily.addColumn(values[1]);
                 ((SuperColumn)c).markForDeleteAt(timestamp);
             } else {
-                IColumn c = columnFamily.addColumn(values[1], new byte[0], timestamp);
+                IColumn c = columnFamily.addColumn(values[1], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp);
                 c.delete();
             }
         }
         else if(values.length == 3 )
         {
-            IColumn c = columnFamily.addColumn(values[1] + ":" + values[2], new byte[0], timestamp);
+            IColumn c = columnFamily.addColumn(values[1] + ":" + values[2], ArrayUtils.EMPTY_BYTE_ARRAY, timestamp);
             c.getSubColumns().iterator().next().delete();
         }
         else {
@@ -293,7 +295,7 @@ public class RowMutation implements Serializable
                                columnData.value.getBytes(), columnData.timestamp);
                     }
                 } else {
-                    rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
+                    rm.add(key.toString() + ":" + superColumnData.name, ArrayUtils.EMPTY_BYTE_ARRAY, 0);
                 }
             }
         }

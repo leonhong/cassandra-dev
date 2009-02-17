@@ -18,6 +18,8 @@
 
 package com.facebook.infrastructure.utils;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.zip.Deflater;
@@ -89,7 +91,7 @@ public class FBUtilities
     public static byte[] serializeToStream(Object o)
     {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        byte[] bytes = new byte[0];
+        byte[] bytes = ArrayUtils.EMPTY_BYTE_ARRAY;
         try
         {
     		ObjectOutputStream oos = new ObjectOutputStream(bos);

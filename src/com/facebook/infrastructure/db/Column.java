@@ -20,6 +20,7 @@ package com.facebook.infrastructure.db;
 
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -49,7 +50,7 @@ public final class Column implements IColumn, Serializable
 
     // todo make all Column fields final
     private String name_;
-    private byte[] value_ = new byte[0];
+    private byte[] value_ = ArrayUtils.EMPTY_BYTE_ARRAY;
     private long timestamp_ = 0;
 
     private volatile boolean isMarkedForDelete_;
@@ -163,7 +164,7 @@ public final class Column implements IColumn, Serializable
     public void delete()
     {
         isMarkedForDelete_ = true;
-    	value_ = new byte[0];
+    	value_ = ArrayUtils.EMPTY_BYTE_ARRAY;
     }
 
     public void repair(IColumn column)

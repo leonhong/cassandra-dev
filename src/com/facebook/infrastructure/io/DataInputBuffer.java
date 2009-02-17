@@ -18,6 +18,8 @@
 
 package com.facebook.infrastructure.io;
 
+import org.apache.commons.lang.ArrayUtils;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -78,7 +80,7 @@ public final class DataInputBuffer extends DataInputStream
         
         public FastByteArrayInputStream()
         {
-            buf = new byte[0];
+            buf = ArrayUtils.EMPTY_BYTE_ARRAY;
         }
 
         /**

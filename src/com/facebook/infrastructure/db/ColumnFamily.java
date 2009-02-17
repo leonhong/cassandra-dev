@@ -21,6 +21,7 @@ package com.facebook.infrastructure.db;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.lang.reflect.Proxy;
 import java.util.*;
@@ -443,8 +444,7 @@ public final class ColumnFamily
     public byte[] digest()
     {
     	Set<IColumn> columns = columns_.getSortedColumns();
-    	byte[] xorHash = new byte[0];
-    	byte[] tmpHash = new byte[0];
+    	byte[] xorHash = ArrayUtils.EMPTY_BYTE_ARRAY;
     	for(IColumn column : columns)
     	{
     		if(xorHash.length == 0)
@@ -453,7 +453,7 @@ public final class ColumnFamily
     		}
     		else
     		{
-    			tmpHash = column.digest();
+    			byte[] tmpHash = column.digest();
     			xorHash = FBUtilities.xor(xorHash, tmpHash);
     		}
     	}

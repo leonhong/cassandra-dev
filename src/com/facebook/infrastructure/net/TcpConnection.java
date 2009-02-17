@@ -22,6 +22,7 @@ import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.net.io.*;
 import com.facebook.infrastructure.utils.LogUtil;
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -483,7 +484,7 @@ public class TcpConnection extends SelectionKeyHandler implements Comparable
             
             try
             {           
-                byte[] bytes = new byte[0];
+                byte[] bytes;
                 while ( (bytes = tcpReader_.read()).length > 0 )
                 {                       
                     ProtocolHeader pH = tcpReader_.getProtocolHeader();                    
