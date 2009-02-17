@@ -23,7 +23,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -31,7 +30,6 @@ import org.apache.log4j.Logger;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.ColumnFamily;
-import com.facebook.infrastructure.db.IColumn;
 import com.facebook.infrastructure.db.RowMutation;
 import com.facebook.infrastructure.db.Table;
 import com.facebook.infrastructure.dht.Range;
@@ -41,9 +39,7 @@ import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.net.http.ColumnFamilyFormatter;
 import com.facebook.infrastructure.net.http.HTMLFormatter;
 import com.facebook.infrastructure.net.http.HttpConnection;
-import com.facebook.infrastructure.net.http.HttpRequest;
 import com.facebook.infrastructure.net.http.HttpWriteResponse;
-import com.facebook.infrastructure.scripts.GroovyScriptRunner;
 import com.facebook.infrastructure.utils.LogUtil;
 
 /*
@@ -51,7 +47,7 @@ import com.facebook.infrastructure.utils.LogUtil;
  * it has been parsed.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
-public class HttpRequestVerbHandler implements IVerbHandler
+public class HttpRequestVerbHandler implements IVerbHandler<HttpConnection.HttpRequest>
 {
     private static final Logger logger_ = Logger.getLogger(HttpRequestVerbHandler.class);
     /* These are the list of actions supported */
@@ -77,15 +73,12 @@ public class HttpRequestVerbHandler implements IVerbHandler
         storageService_ = storageService;
     }
 
-    public void doVerb(Message message)
+    public void doVerb(Message<HttpConnection.HttpRequest> message)
     {
-        if (true) {
-            throw new UnsupportedOperationException("Message serialization");
-        }
-        HttpConnection.HttpRequestMessage httpRequestMessage = null; // TODO (HttpConnection.HttpRequestMessage)message.getMessageBody();
+        HttpConnection.HttpRequest httpRequest = message.getMessageBody();
         try
         {
-            HttpRequest httpRequest = httpRequestMessage.getHttpRequest();
+            com.facebook.infrastructure.net.http.HttpRequest httpRequest = httpRequestMessage.getHttpRequest();
             HttpWriteResponse httpServerResponse = new HttpWriteResponse(httpRequest);
             if(httpRequest.getMethod().toUpperCase().equals("GET"))
             {
@@ -108,7 +101,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
         }
     }
 
-    private void doGet(HttpRequest httpRequest, HttpWriteResponse httpResponse)
+    private void doGet(com.facebook.infrastructure.net.http.HttpRequest httpRequest, HttpWriteResponse httpResponse)
     {
         boolean fServeSummary = true;
         HTMLFormatter formatter = new HTMLFormatter();
@@ -177,7 +170,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
      * As a result of the POST query, we currently only send back some
      * javascript that updates the data in some place on the browser.
     */
-    private void doPost(HttpRequest httpRequest, HttpWriteResponse httpResponse)
+    private void doPost(com.facebook.infrastructure.net.http.HttpRequest httpRequest, HttpWriteResponse httpResponse)
     {
         String query = httpRequest.getQuery();
 
@@ -480,7 +473,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
     /*
      * Handle the query of some data from the client.
      */
-    private String handleQuery(HttpRequest httpRequest)
+    private String handleQuery(com.facebook.infrastructure.net.http.HttpRequest httpRequest)
     {
     	boolean fQuerySuccess = false;
     	String sRetVal = "";
@@ -534,7 +527,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
     /*
      * Handle the query of some data from the client.
      */
-    private String handleInsert(HttpRequest httpRequest)
+    private String handleInsert(com.facebook.infrastructure.net.http.HttpRequest httpRequest)
     {
     	boolean fInsertSuccess = false;
     	String sRetVal = "";
@@ -576,7 +569,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
     /*
      * Handle the script to be run on the server.
      */
-    private String handleScript(HttpRequest httpRequest)
+    private String handleScript(com.facebook.infrastructure.net.http.HttpRequest httpRequest)
     {
     	boolean fQuerySuccess = false;
     	String sRetVal = "";

@@ -935,11 +935,11 @@ public class Gossiper implements IFailureDetectionEventListener, IEndPointStateC
     }
 }
 
-class JoinVerbHandler implements IVerbHandler
+class JoinVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger( JoinVerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         EndPoint from = message.getFrom();
         logger_.debug("Received a JoinMessage from " + from);
@@ -959,11 +959,11 @@ class JoinVerbHandler implements IVerbHandler
     }
 }
 
-class GossipDigestSynVerbHandler implements IVerbHandler
+class GossipDigestSynVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger( GossipDigestSynVerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         EndPoint from = message.getFrom();
         logger_.trace("Received a GossipDigestSynMessage from " + from);
@@ -1042,11 +1042,11 @@ class GossipDigestSynVerbHandler implements IVerbHandler
     }
 }
 
-class GossipDigestAckVerbHandler implements IVerbHandler
+class GossipDigestAckVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(GossipDigestAckVerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         EndPoint from = message.getFrom();
         logger_.trace("Received a GossipDigestAckMessage from " + from);
@@ -1088,11 +1088,11 @@ class GossipDigestAckVerbHandler implements IVerbHandler
     }
 }
 
-class GossipDigestAck2VerbHandler implements IVerbHandler
+class GossipDigestAck2VerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(GossipDigestAck2VerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         EndPoint from = message.getFrom();
         logger_.trace("Received a GossipDigestAck2Message from " + from);

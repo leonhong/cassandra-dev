@@ -29,13 +29,13 @@ import org.apache.log4j.Logger;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class BinaryVerbHandler implements IVerbHandler
+public class BinaryVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(BinaryVerbHandler.class);    
     /* We use this so that we can reuse the same row mutation context for the mutation. */
     private static ThreadLocal<RowMutationContext> tls_ = new InheritableThreadLocal<RowMutationContext>();
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     { 
         byte[] bytes = message.getMessageBody();
         /* Obtain a Row Mutation Context from TLS */

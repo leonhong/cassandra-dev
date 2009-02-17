@@ -30,11 +30,11 @@ import com.facebook.infrastructure.utils.LogUtil;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class TokenUpdateVerbHandler implements IVerbHandler
+public class TokenUpdateVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(TokenUpdateVerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         BigInteger token = new BigInteger(message.getMessageBody());
         try

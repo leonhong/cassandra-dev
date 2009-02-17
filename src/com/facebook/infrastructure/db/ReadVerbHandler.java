@@ -33,7 +33,7 @@ import java.io.IOException;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class ReadVerbHandler implements IVerbHandler
+public class ReadVerbHandler implements IVerbHandler<byte[]>
 {
     private static class ReadContext
     {
@@ -45,7 +45,7 @@ public class ReadVerbHandler implements IVerbHandler
     /* We use this so that we can reuse the same row mutation context for the mutation. */
     private static ThreadLocal<ReadContext> tls_ = new InheritableThreadLocal<ReadContext>();
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         byte[] body = message.getMessageBody();
         /* Obtain a Read Context from TLS */

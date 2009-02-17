@@ -25,20 +25,12 @@
 package com.facebook.infrastructure.net.http;
 
 import java.util.*;
-import java.net.*;
 import java.io.*;
 import java.nio.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import com.facebook.infrastructure.concurrent.SingleThreadedStage;
-import com.facebook.infrastructure.concurrent.StageManager;
-import com.facebook.infrastructure.db.Table;
-import com.facebook.infrastructure.net.IVerbHandler;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.net.SelectionKeyHandler;
-import com.facebook.infrastructure.net.SelectorManager;
+import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.service.*;
 import com.facebook.infrastructure.utils.LogUtil;
 
@@ -60,7 +52,7 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
      */
     public interface HttpConnectionListener
     {
-        public void onRequest(HttpRequest httpRequest);
+        public void onRequest(com.facebook.infrastructure.net.http.HttpRequest httpRequest);
         public void onResponse(HttpResponse httpResponse);
     }
 
@@ -85,7 +77,7 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
     private List<ByteBuffer> bodyBuffers_ = new LinkedList<ByteBuffer>();
     private boolean shouldClose_ = false;
     private String defaultContentType_ = "text/html";
-    private HttpRequest currentRequest_ = null;
+    private com.facebook.infrastructure.net.http.HttpRequest currentRequest_ = null;
     private HttpResponse currentResponse_ = null;
     private HttpStartLineParser startLineParser_ = new HttpStartLineParser(this);
     private HttpHeaderParser headerParser_ = new HttpHeaderParser(this);
@@ -127,18 +119,18 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
         }
     }
 
-    public static class HttpRequestMessage
+    public static class HttpRequest
     {
-        private HttpRequest httpRequest_;
+        private com.facebook.infrastructure.net.http.HttpRequest httpRequest_;
         private HttpConnection httpConnection_;
 
-        HttpRequestMessage(HttpRequest httpRequest, HttpConnection httpConnection)
+        HttpRequest(com.facebook.infrastructure.net.http.HttpRequest httpRequest, HttpConnection httpConnection)
         {
             httpRequest_ = httpRequest;
             httpConnection_ = httpConnection;
         }
 
-        public HttpRequest getHttpRequest()
+        public com.facebook.infrastructure.net.http.HttpRequest getHttpRequest()
         {
             return httpRequest_;
         }
@@ -380,14 +372,11 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
         }
     }
 
-    private void handleRequest(HttpRequest request)
+    private void handleRequest(com.facebook.infrastructure.net.http.HttpRequest request)
     {
-        HttpConnection.HttpRequestMessage httpRequestMessage = new HttpConnection.HttpRequestMessage(request, this);
-        throw new UnsupportedOperationException("Message serialization");
-        /* TODO
-        Message httpMessage = new Message(null, HttpConnection.httpStage_, HttpConnection.httpRequestVerbHandler_, httpRequestMessage);
+        HttpRequest httpRequest = new HttpRequest(request, this);
+        Message httpMessage = new Message<HttpRequest>(null, HttpConnection.httpStage_, HttpConnection.httpRequestVerbHandler_, httpRequest);
         MessagingService.receive(httpMessage);
-        */
     }
 
     // HttpStartLineParser.Callback interface implementation
@@ -406,7 +395,7 @@ public class HttpConnection extends SelectionKeyHandler implements HttpStartLine
         {
                 // request
                 currentMsgType_ = HttpMessageType.REQUEST;
-                currentRequest_ = new HttpRequest();
+                currentRequest_ = new com.facebook.infrastructure.net.http.HttpRequest();
                 currentRequest_.setStartLine(method, path, query, version);
         }
     }

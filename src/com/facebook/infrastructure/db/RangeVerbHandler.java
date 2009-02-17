@@ -15,14 +15,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
-public class RangeVerbHandler implements IVerbHandler {
+public class RangeVerbHandler implements IVerbHandler<byte[]> {
     public static final Comparator<String> STRING_COMPARATOR = new Comparator<String>() {
         public int compare(String o1, String o2) {
             return o1.compareTo(o2);
         }
     };
 
-    public void doVerb(Message message) {
+    public void doVerb(Message<byte[]> message) {
         byte[] bytes = message.getMessageBody();
         final String startkey;
         if (bytes.length == 0) {

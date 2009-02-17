@@ -121,7 +121,7 @@ public interface IMessagingService
      * @param message messages to be sent.
      * @param to endpoint to which the message needs to be sent
      */
-    public void sendOneWay(Message message, EndPoint to);
+    public void sendOneWay(Message<byte[]> message, EndPoint to);
         
     /**
      * Send a message to a given endpoint. This method adheres to the fire and forget

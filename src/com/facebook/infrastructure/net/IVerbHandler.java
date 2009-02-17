@@ -25,7 +25,7 @@ package com.facebook.infrastructure.net;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public interface IVerbHandler
+public interface IVerbHandler<T>
 {
     /**
      * This method delivers a message to the implementing class (if the implementing
@@ -35,5 +35,5 @@ public interface IVerbHandler
      * 
      * @param message - incoming message that needs handling.     
      */
-    public void doVerb(Message message);
+    public void doVerb(Message<T> message);
 }

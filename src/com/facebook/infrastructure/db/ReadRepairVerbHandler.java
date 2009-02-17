@@ -30,11 +30,11 @@ import java.io.IOException;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class ReadRepairVerbHandler implements IVerbHandler
+public class ReadRepairVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(ReadRepairVerbHandler.class);    
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {          
         byte[] body = message.getMessageBody();
         DataInputBuffer buffer = new DataInputBuffer();

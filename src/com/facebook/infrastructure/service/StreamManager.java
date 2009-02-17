@@ -41,11 +41,11 @@ public final class StreamManager
 {   
     private static Logger logger_ = Logger.getLogger( StreamManager.class );
     
-    public static class BootstrapTerminateVerbHandler implements IVerbHandler
+    public static class BootstrapTerminateVerbHandler implements IVerbHandler<byte[]>
     {
         private static Logger logger_ = Logger.getLogger( BootstrapInitiateDoneVerbHandler.class );
 
-        public void doVerb(Message message)
+        public void doVerb(Message<byte[]> message)
         {
             byte[] body = message.getMessageBody();
             DataInputBuffer bufIn = new DataInputBuffer();

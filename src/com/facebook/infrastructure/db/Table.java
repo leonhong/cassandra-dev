@@ -24,10 +24,7 @@ import com.facebook.infrastructure.dht.BootstrapInitiateMessage;
 import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.io.DataInputBuffer;
 import com.facebook.infrastructure.io.SSTable;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.IVerbHandler;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.net.io.IStreamComplete;
 import com.facebook.infrastructure.net.io.StreamContextManager;
 import com.facebook.infrastructure.service.StorageService;
@@ -151,7 +148,7 @@ public class Table
         }
     }
 
-    public static class BootStrapInitiateVerbHandler implements IVerbHandler
+    public static class BootStrapInitiateVerbHandler implements IVerbHandler<byte[]>
     {
         /*
          * Here we handle the BootstrapInitiateMessage. Here we get the
@@ -160,8 +157,8 @@ public class Table
          * file names as obtained from the column family store on the
          * receiving end.
         */
-        public void doVerb(Message message)
-        {
+
+        public void doVerb(Message<byte[]> message) {
             byte[] body = message.getMessageBody();
             DataInputBuffer bufIn = new DataInputBuffer();
             bufIn.reset(body, body.length); 
@@ -204,7 +201,7 @@ public class Table
         
         private Map<String, String> getNewNames(StreamContextManager.StreamContext[] streamContexts)
         {
-            /* 
+            /*
              * Mapping for each file with unique CF-i ---> new file name. For eg.
              * for a file with name <Table>-<CF>-<i>-Data.db there is a corresponding
              * <Table>-<CF>-<i>-Index.db. We maintain a mapping from <CF>-<i> to a newly
@@ -218,7 +215,7 @@ public class Table
                 String[] peices = FBUtilities.strip(streamContext.getTargetFile(), "-");
                 distinctEntries.add(peices[1] + "-" + peices[2]);
             }
-            
+
             /* Generate unique file names per entry */
             Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
 
@@ -229,10 +226,10 @@ public class Table
                 logger_.debug("Generating file name for " + distinctEntry + " ...");
                 fileNames.put(distinctEntry, cfStore.getNextFileName());
             }
-            
+
             return fileNames;
         }
-        
+
         private boolean isStreamContextForThisColumnFamily(StreamContextManager.StreamContext streamContext, String cf)
         {
             String[] peices = FBUtilities.strip(streamContext.getTargetFile(), "-");

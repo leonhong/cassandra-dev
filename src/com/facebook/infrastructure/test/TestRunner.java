@@ -38,11 +38,11 @@ public class TestRunner
     }
 }
 
-class TestVerbHandler implements IVerbHandler
+class TestVerbHandler implements IVerbHandler<byte[]>
 {
     private static EndPoint to_ = new EndPoint("tdsearch001.sf2p.facebook.com", 7000);
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         byte[] bytes = message.getMessageBody();
         System.out.println( new String(bytes) );

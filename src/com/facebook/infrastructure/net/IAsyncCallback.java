@@ -25,7 +25,6 @@ package com.facebook.infrastructure.net;
 public interface IAsyncCallback 
 {
 	/**
-	 * @param response responses to be returned
-	 */
-	public void response(Message msg);
+     */
+	public void response(Message<byte[]> msg);
 }

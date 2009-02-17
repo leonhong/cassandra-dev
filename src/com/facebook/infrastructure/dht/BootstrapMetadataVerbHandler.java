@@ -39,11 +39,11 @@ import com.facebook.infrastructure.utils.CountingBloomFilter;
  * This verb handler handles the BootstrapMetadataMessage that is sent
  * by the leader to the nodes that are responsible for handing off data. 
 */
-public class BootstrapMetadataVerbHandler implements IVerbHandler
+public class BootstrapMetadataVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(BootstrapMetadataVerbHandler.class);
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         logger_.debug("Received a BootstrapMetadataMessage from " + message.getFrom());
         byte[] body = message.getMessageBody();

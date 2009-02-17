@@ -40,11 +40,11 @@ import com.facebook.infrastructure.config.*;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class MembershipCleanerVerbHandler implements IVerbHandler
+public class MembershipCleanerVerbHandler implements IVerbHandler<byte[]>
 {
     private static Logger logger_ = Logger.getLogger(MembershipCleanerVerbHandler.class);
 
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         byte[] body = message.getMessageBody();
         

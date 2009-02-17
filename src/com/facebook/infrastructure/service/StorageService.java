@@ -28,10 +28,7 @@ import com.facebook.infrastructure.dht.BootstrapMetadataVerbHandler;
 import com.facebook.infrastructure.dht.Range;
 import com.facebook.infrastructure.gms.*;
 import com.facebook.infrastructure.locator.*;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.IVerbHandler;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.net.http.HttpConnection;
 import com.facebook.infrastructure.net.io.StreamContextManager;
 import com.facebook.infrastructure.tools.MembershipCleanerVerbHandler;
@@ -147,11 +144,11 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         FULL
     };
     
-    public static class BootstrapInitiateDoneVerbHandler implements IVerbHandler
+    public static class BootstrapInitiateDoneVerbHandler implements IVerbHandler<byte[]>
     {
         private static Logger logger_ = Logger.getLogger( BootstrapInitiateDoneVerbHandler.class );
 
-        public void doVerb(Message message)
+        public void doVerb(Message<byte[]> message)
         {
             logger_.debug("Received a bootstrap initiate done message ...");
             /* Let the Stream Manager do his thing. */

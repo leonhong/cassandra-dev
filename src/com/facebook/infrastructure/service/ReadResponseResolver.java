@@ -50,7 +50,7 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 	 * repair request should be scheduled.
 	 * 
 	 */
-	public Row resolve(List<Message> responses) throws DigestMismatchException
+	public Row resolve(List<Message<byte[]>> responses) throws DigestMismatchException
 	{
         long startTime = System.currentTimeMillis();
 		Row retRow = null;
@@ -68,7 +68,7 @@ public class ReadResponseResolver implements IResponseResolver<Row>
          * the digest of the data that is received.
         */
         DataInputBuffer bufIn = new DataInputBuffer();
-		for (Message response : responses)
+		for (Message<byte[]> response : responses)
 		{					            
             byte[] body = response.getMessageBody();
             bufIn.reset(body, body.length);
@@ -144,10 +144,10 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 		return retRow;
 	}
 
-	public boolean isDataPresent(List<Message> responses)
+	public boolean isDataPresent(List<Message<byte[]>> responses)
 	{
 		boolean isDataPresent = false;
-		for (Message response : responses)
+		for (Message<byte[]> response : responses)
 		{
             byte[] body = response.getMessageBody();
 			DataInputBuffer bufIn = new DataInputBuffer();

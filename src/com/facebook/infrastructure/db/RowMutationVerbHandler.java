@@ -36,7 +36,7 @@ import java.io.DataOutputStream;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class RowMutationVerbHandler implements IVerbHandler
+public class RowMutationVerbHandler implements IVerbHandler<byte[]>
 {
     protected static class RowMutationContext
     {
@@ -48,7 +48,7 @@ public class RowMutationVerbHandler implements IVerbHandler
     /* We use this so that we can reuse the same row mutation context for the mutation. */
     private static ThreadLocal<RowMutationContext> tls_ = new InheritableThreadLocal<RowMutationContext>();
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {
         logger_.debug( "ROW MUTATION STAGE: " + StageManager.getStageTaskCount(StorageService.mutationStage_) );
             

@@ -31,7 +31,8 @@ import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.net.IAsyncCallback;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.utils.*;
+import com.facebook.infrastructure.net.Message;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -42,7 +43,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
     private Lock lock_ = new ReentrantLock();
     private Condition condition_;
     private int responseCount_;
-    private List<Message> responses_ = new ArrayList<Message>();
+    private List<Message<byte[]>> responses_ = new ArrayList<Message<byte[]>>();
     private IResponseResolver<T> responseResolver_;
     private AtomicBoolean done_ = new AtomicBoolean(false);
     
@@ -90,7 +91,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
     	return responseResolver_.resolve( responses_);
     }
     
-    public void response(Message message)
+    public void response(Message<byte[]> message)
     {
         lock_.lock();
         try

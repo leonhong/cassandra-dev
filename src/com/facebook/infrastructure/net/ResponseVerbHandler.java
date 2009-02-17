@@ -24,11 +24,11 @@ import org.apache.log4j.Logger;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-class ResponseVerbHandler implements IVerbHandler
+class ResponseVerbHandler implements IVerbHandler<byte[]>
 {
     private static final Logger logger_ = Logger.getLogger( ResponseVerbHandler.class );
     
-    public void doVerb(Message message)
+    public void doVerb(Message<byte[]> message)
     {     
         String messageId = message.getMessageId();        
         IAsyncCallback cb = MessagingService.getRegisteredCallback(messageId);

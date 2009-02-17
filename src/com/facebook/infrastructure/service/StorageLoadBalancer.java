@@ -156,14 +156,14 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
         }
     }
 
-    class MoveMessageVerbHandler implements IVerbHandler
+    class MoveMessageVerbHandler implements IVerbHandler<byte[]>
     {
-        public void doVerb(Message message)
+        public void doVerb(Message<byte[]> message)
         {
             if (true) {
                 throw new UnsupportedOperationException("Message serialization");
             }
-            Message reply = message.getReply(StorageService.getLocalStorageEndPoint(), null); // TODO isMoveable_.get());
+            Message<byte[]> reply = message.getReply(StorageService.getLocalStorageEndPoint(), null); // TODO isMoveable_.get());
             MessagingService.getMessagingInstance().sendOneWay(reply, message.getFrom());
             if ( isMoveable_.get() )
             {

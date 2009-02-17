@@ -23,10 +23,7 @@ import com.facebook.infrastructure.db.ReadParameters;
 import com.facebook.infrastructure.db.ReadResponse;
 import com.facebook.infrastructure.db.Row;
 import com.facebook.infrastructure.io.DataInputBuffer;
-import com.facebook.infrastructure.net.EndPoint;
-import com.facebook.infrastructure.net.IAsyncCallback;
-import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
+import com.facebook.infrastructure.net.*;
 import com.facebook.infrastructure.utils.Cachetable;
 import com.facebook.infrastructure.utils.ICacheExpungeHook;
 import com.facebook.infrastructure.utils.ICachetable;
@@ -44,9 +41,9 @@ class ConsistencyManager implements Runnable
 	
 	class DigestResponseHandler implements IAsyncCallback
 	{
-		List<Message> responses_ = new ArrayList<Message>();
+		List<Message<byte[]>> responses_ = new ArrayList<Message<byte[]>>();
 		
-		public void response(Message msg)
+		public void response(Message<byte[]> msg)
 		{
 			logger_.debug("Received reponse : " + msg.toString());
 			responses_.add(msg);
@@ -58,7 +55,7 @@ class ConsistencyManager implements Runnable
 		{
 			DataInputBuffer bufIn = new DataInputBuffer();
 			logger_.debug("Handle Digest reponses");
-			for( Message response : responses_ )
+			for( Message<byte[]> response : responses_ )
 			{
 				byte[] body = response.getMessageBody();            
 	            bufIn.reset(body, body.length);
@@ -94,7 +91,7 @@ class ConsistencyManager implements Runnable
 	
 	class DataRepairHandler implements IAsyncCallback, ICacheExpungeHook<String, String>
 	{
-		private List<Message> responses_ = new ArrayList<Message>();
+		private List<Message<byte[]>> responses_ = new ArrayList<Message<byte[]>>();
 		private IResponseResolver<Row> readResponseResolver_;
 		private int majority_;
 		
@@ -104,7 +101,7 @@ class ConsistencyManager implements Runnable
 			majority_ = (responseCount >> 1) + 1;  
 		}
 		
-		public void response(Message message)
+		public void response(Message<byte[]> message)
 		{
 			logger_.debug("Received responses in DataRepairHandler : " + message.toString());
 			responses_.add(message);
@@ -125,7 +122,7 @@ class ConsistencyManager implements Runnable
 		{
 			try
 			{
-				readResponseResolver_.resolve(new ArrayList<Message>(responses_));
+				readResponseResolver_.resolve(new ArrayList<Message<byte[]>>(responses_));
 			}
 			catch ( DigestMismatchException ex )
 			{

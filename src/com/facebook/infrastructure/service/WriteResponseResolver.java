@@ -43,12 +43,12 @@ public class WriteResponseResolver implements IResponseResolver<Boolean> {
 	 * failed.
 	 * 
 	 */
-	public Boolean resolve(List<Message> responses) throws DigestMismatchException 
+	public Boolean resolve(List<Message<byte[]>> responses) throws DigestMismatchException
 	{
 		// TODO: We need to log error responses here for example
 		// if a write fails for a key log that the key could not be replicated
 		boolean returnValue = false;
-		for (Message response : responses) {
+		for (Message<byte[]> response : responses) {
             WriteResponse writeResponseMessage = null;
             try {
                 writeResponseMessage = WriteResponse.serializer().deserialize(new DataInputStream(new ByteArrayInputStream(response.getMessageBody())));
@@ -65,7 +65,7 @@ public class WriteResponseResolver implements IResponseResolver<Boolean> {
 		return returnValue;
 	}
 
-	public boolean isDataPresent(List<Message> responses)
+	public boolean isDataPresent(List<Message<byte[]>> responses)
 	{
 		return true;
 	}

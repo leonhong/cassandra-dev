@@ -19,7 +19,6 @@
 package com.facebook.infrastructure.net;
 
 import java.io.*;
-import java.lang.management.ManagementFactory;
 import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,12 +33,7 @@ import com.facebook.infrastructure.concurrent.*;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.net.http.HttpConnectionHandler;
 import com.facebook.infrastructure.net.io.*;
-import com.facebook.infrastructure.net.sink.SinkManager;
 import com.facebook.infrastructure.utils.*;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import javax.xml.bind.*;
 
 import org.apache.log4j.Logger;
 
@@ -413,7 +407,7 @@ public class MessagingService implements IMessagingService, MessagingServiceMBea
     /*
         Use this version for fire and forget style messaging.
     */
-    public void sendOneWay(Message message, EndPoint to)
+    public void sendOneWay(Message<byte[]> message, EndPoint to)
     {        
         // do local deliveries        
         if ( message.getFrom().equals(to) )
