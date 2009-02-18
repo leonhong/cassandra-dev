@@ -156,12 +156,11 @@ public final class Column implements IColumn
 
     public IColumn diff(IColumn column)
     {
-    	IColumn  columnDiff = null;
     	if( timestamp() < column.timestamp() )
     	{
-    		columnDiff = new Column(column.name(),column.value(),column.timestamp());
-    	}
-    	return columnDiff;
+    		return column;
+        }
+        return null;
     }
 
     public String toString()
