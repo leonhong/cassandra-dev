@@ -171,9 +171,9 @@ public final class Column implements IColumn
     	sb.append(":");
     	sb.append(isMarkedForDelete());
     	sb.append(":");
-    	sb.append(timestamp());
-    	sb.append(":");
-    	sb.append(value().length);
+        sb.append(value().length);
+    	sb.append("@");
+        sb.append(timestamp());
     	return sb.toString();
     }
 
