@@ -670,17 +670,6 @@ public class Table
         }
     }
 
-    void delete(Row row) throws IOException
-    {
-        CommitLog.open(table_).add(row);
-
-        for ( ColumnFamily columnFamily : row.getColumnFamilies() )
-        {
-            ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
-            cfStore.delete(row.key(), columnFamily );
-        }
-    }
-
     void load(Row row) throws IOException
     {
         String key = row.key();

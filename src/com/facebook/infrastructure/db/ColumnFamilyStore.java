@@ -619,13 +619,6 @@ public class ColumnFamilyStore
         memtable_.get().putOnRecovery(key, columnFamily);
     }
 
-    void delete(String key, ColumnFamily columnFamily)
-            throws IOException
-    {
-        // store all the individual deletes in memtable
-        memtable_.get().remove(key, columnFamily);
-    }
-
     /*
      * This method is called when the Memtable is frozen and ready to be flushed
      * to disk. This method informs the CommitLog that a particular ColumnFamily

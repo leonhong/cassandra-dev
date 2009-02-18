@@ -389,18 +389,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     }
 
     /*
-     * Although the method is named remove() we cannot remove the key
-     * from memtable. We add it to the memtable but mark it as deleted.
-     * The reason for this because we do not want a successive get()
-     * for the same key to scan the ColumnFamilyStore files for this key.
-    */
-    void remove(String key, ColumnFamily columnFamily) throws IOException
-    {
-    	Runnable deleter = new Remover(key, columnFamily);
-    	apartments_.get(cfName_).submit(deleter);
-    }
-
-    /*
      * param recoveryMode - indicates if this was invoked during
      *                      recovery.
     */
