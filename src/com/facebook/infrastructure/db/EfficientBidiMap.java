@@ -70,7 +70,10 @@ class EfficientBidiMap implements Serializable
 
     public void put(String key, IColumn column)
     {
-        map_.put(key, column);
+        final IColumn oldColumn = map_.put(key, column);
+        if (oldColumn != null) {
+            sortedSet_.remove(oldColumn);
+        }
         sortedSet_.add(column);
     }
 
