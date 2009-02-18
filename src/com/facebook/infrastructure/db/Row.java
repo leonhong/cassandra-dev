@@ -34,17 +34,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class Row implements Serializable
+public class Row
 {
-    private static ICompactSerializer<Row> serializer_;
+    private static RowSerializer serializer_ = new RowSerializer();
 	private static Logger logger_ = Logger.getLogger(Row.class);
 
-    static
-    {
-        serializer_ = new RowSerializer();
-    }
-
-    static ICompactSerializer<Row> serializer()
+    static RowSerializer serializer()
     {
         return serializer_;
     }
@@ -53,9 +48,6 @@ public class Row implements Serializable
     
     private Map<String, ColumnFamily> columnFamilies_ = new Hashtable<String, ColumnFamily>();
 
-    private transient AtomicInteger size_ = new AtomicInteger(0);
-
-    /* Ctor for JAXB */
     protected Row()
     {
     }
@@ -96,19 +88,12 @@ public class Row implements Serializable
     void addColumnFamily(ColumnFamily columnFamily)
     {
         columnFamilies_.put(columnFamily.name(), columnFamily);
-        size_.addAndGet(columnFamily.size());
     }
 
     void removeColumnFamily(ColumnFamily columnFamily)
     {
         columnFamilies_.remove(columnFamily.name());
         int delta = (-1) * columnFamily.size();
-        size_.addAndGet(delta);
-    }
-
-    int size()
-    {
-        return size_.get();
     }
 
     public boolean isEmpty()
