@@ -235,16 +235,17 @@ public class RowMutation implements Serializable
     /* 
      * Allows RowMutationVerbHandler to optimize by re-using a single Row object.
     */
-    void apply(Row row) throws IOException, ColumnFamilyNotDefinedException
-    {                
+    void apply(Row emptyRow) throws IOException, ColumnFamilyNotDefinedException
+    {
+        assert emptyRow.getColumnFamilies().size() == 0;
         Table table = Table.open(table_);
         for (String cfName : modifications_.keySet())
         {        
             if ( !table.isValidColumnFamily(cfName) )
                 throw new ColumnFamilyNotDefinedException("Column Family " + cfName + " has not been defined.");
-            row.addColumnFamily( modifications_.get(cfName) );            
+            emptyRow.addColumnFamily( modifications_.get(cfName) );
         }
-        table.apply(row);
+        table.apply(emptyRow);
     }
     
     /* 
