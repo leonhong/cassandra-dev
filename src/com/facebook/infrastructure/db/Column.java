@@ -64,6 +64,8 @@ public final class Column implements IColumn
 
     Column(String name, byte[] value, long timestamp, boolean isDeleted)
     {
+        assert name != null;
+        assert value != null;
         this.name = name;
         this.value = value;
         this.timestamp = timestamp;
