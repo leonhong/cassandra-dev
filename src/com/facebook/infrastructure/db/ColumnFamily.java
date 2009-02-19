@@ -22,6 +22,7 @@ import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.lang.reflect.Proxy;
 import java.util.*;
@@ -413,19 +414,16 @@ public final class ColumnFamily
     public String toString()
     {
     	StringBuilder sb = new StringBuilder();
+        sb.append("ColumnFamily(");
     	sb.append(name_);
 
         if (isMarkedForDelete()) {
-            sb.append("[delete at " + getMarkedForDeleteAt() + "]");
+            sb.append("-delete at " + getMarkedForDeleteAt() + "-");
         }
 
-    	sb.append(" {");
-        for ( IColumn column : getAllColumns() )
-        {
-            sb.append(column.toString());
-            sb.append(", ");
-        }
-        sb.append("}");
+    	sb.append(" [");
+        sb.append(StringUtils.join(getAllColumns(), ", "));
+        sb.append("])");
 
     	return sb.toString();
     }

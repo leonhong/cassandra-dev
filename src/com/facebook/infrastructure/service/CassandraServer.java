@@ -137,22 +137,27 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     throws IOException, ColumnFamilyNotDefinedException
     {
         assert params.key != null;
+        long startTime = System.currentTimeMillis();
+        Row row = null;
 		EndPoint[] endpoints = storageService_.getNStorageEndPoint(params.key);
 
         if (consistencyLevel == StorageService.ConsistencyLevel.WEAK) {
             boolean foundLocal = Arrays.asList(endpoints).contains(StorageService.getLocalStorageEndPoint());
             if (foundLocal) {
-                return weakReadLocal(params);
+                row = weakReadLocal(params);
             } else {
-                return weakReadRemote(params);
+                row = weakReadRemote(params);
             }
+        } else {
+            assert consistencyLevel == StorageService.ConsistencyLevel.STRONG;
+            row = strongRead(params);
         }
-        assert consistencyLevel == StorageService.ConsistencyLevel.STRONG;
-        return strongRead(params);
+
+        logger_.debug("read " + row + " in " + (System.currentTimeMillis() - startTime) + " ms.");
+        return row;
 	}
 
     private Row weakReadRemote(ReadParameters params) throws IOException {
-        logger_.debug("weakreadremote for " + params);
         EndPoint endPoint = null;
         try {
             endPoint = storageService_.findSuitableEndPoint(params.key);
@@ -160,7 +165,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         catch (Exception e) {
             throw new RuntimeException(e);
         }
-        logger_.debug("reading from " + endPoint);
+        logger_.debug("weakreadremote reading " + params + " from " + endPoint);
         Message message = ReadParameters.makeReadMessage(params);
         IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
         byte[] body;
@@ -188,8 +193,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         // 5. return success
      */
 	private Row strongRead(ReadParameters params) throws IOException {
-        logger_.debug("strongread for " + params);
-        long startTime = System.currentTimeMillis();
 		// TODO: throw a thrift exception if we do not have N nodes
         // TODO: how can we throw ColumnFamilyNotDefined here?
 
@@ -220,7 +223,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             endPoints[i] = endpointList.get(i-1);
             messages[i] = messageDigestOnly;
         }
-        logger_.debug("reading from " + StringUtils.join(endPoints, ", "));
+        logger_.debug("strongread reading " + params + " from " + StringUtils.join(endPoints, ", "));
 
         try {
             MessagingService.getMessagingInstance().sendRR(messages, endPoints, quorumResponseHandler);
@@ -252,7 +255,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             }
         }
 
-        logger_.debug("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
 		return row;
 	}
 
@@ -263,8 +265,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     * the data we perform consistency checks and figure out if any repairs need to be done to the replicas.
     */
 	private Row weakReadLocal(ReadParameters params) throws IOException, ColumnFamilyNotDefinedException {
-        logger_.debug("weakreadlocalg for " + params);
-		long startTime = System.currentTimeMillis();
+        logger_.debug("weakreadlocal for " + params);
 		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(params.key);
 		/* Remove the local storage endpoint from the list. */ 
 		endpoints.remove( StorageService.getLocalStorageEndPoint() );
@@ -272,7 +273,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		
 		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
 		Row row = params.getRow(table);
-		logger_.debug("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
 
 		/*
 		 * Do the consistency checks in the background and return the

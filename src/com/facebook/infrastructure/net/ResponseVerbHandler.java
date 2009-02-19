@@ -34,7 +34,7 @@ class ResponseVerbHandler implements IVerbHandler<byte[]>
         IAsyncCallback cb = MessagingService.getRegisteredCallback(messageId);
         if ( cb != null )
         {
-            logger_.info("Processing response on a callback from " + message.getFrom());
+            logger_.debug("Processing response on a callback from " + message.getFrom());
             cb.response(message);
         }
         else
@@ -42,7 +42,7 @@ class ResponseVerbHandler implements IVerbHandler<byte[]>
             AsyncResult ar = (AsyncResult)MessagingService.getAsyncResult(messageId);
             if ( ar != null )
             {
-                logger_.info("Processing response on an async result from " + message.getFrom());
+                logger_.debug("Processing response on an async result from " + message.getFrom());
                 ar.result(message.getMessageBody());
             }
         }

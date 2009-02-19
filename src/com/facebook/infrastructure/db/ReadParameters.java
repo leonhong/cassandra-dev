@@ -141,13 +141,13 @@ public class ReadParameters
     }
 
     public String toString() {
-        return "ReadParameters{" +
+        return "ReadParameters(" +
                "sinceTimestamp=" + sinceTimestamp +
                ", key='" + key + '\'' +
                ", columnFamily_column='" + columnFamily_column + '\'' +
                ", start=" + start +
                ", count=" + count +
-               '}';
+               ')';
     }
 }
 

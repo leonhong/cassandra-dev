@@ -1411,8 +1411,8 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 				return endpoints[j];
 			}
 		}
-		// We have tried to be really nice but looks like theer are no servers 
-		// in the local data center that are alive and can service this request so 
+		// We have tried to be really nice but looks like theer are no servers
+		// in the local data center that are alive and can service this request so
 		// just send it to teh first alive guy and see if we get anything.
 		j = 0;
 		for ( ; j < endpoints.length; ++j )

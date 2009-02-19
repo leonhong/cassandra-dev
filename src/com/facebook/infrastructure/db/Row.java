@@ -22,6 +22,7 @@ import com.facebook.infrastructure.io.ICompactSerializer;
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -189,6 +190,10 @@ public class Row
     void clear()
     {        
         columnFamilies_.clear();
+    }
+
+    public String toString() {
+        return "Row(" + key_ + " [" + StringUtils.join(columnFamilies_.values(), ", ") + ")]";
     }
 }
 

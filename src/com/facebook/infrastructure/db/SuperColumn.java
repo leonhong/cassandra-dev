@@ -21,6 +21,8 @@ package com.facebook.infrastructure.db;
 import com.facebook.infrastructure.utils.FBUtilities;
 import org.apache.log4j.Logger;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -294,19 +296,16 @@ public final class SuperColumn implements IColumn, Serializable
     public String toString()
     {
     	StringBuilder sb = new StringBuilder();
+        sb.append("SuperColumn(");
     	sb.append(name_);
 
         if (isMarkedForDelete()) {
-            sb.append("[delete at " + getMarkedForDeleteAt() + "]");
+            sb.append("-delete at " + getMarkedForDeleteAt() + "-");
         }
 
-        sb.append(" (");
-        for (IColumn subColumn : getSubColumns())
-        {
-            sb.append(subColumn.toString());
-            sb.append(", ");
-        }
-        sb.append(")");
+        sb.append(" [");
+        sb.append(StringUtils.join(getSubColumns(), ", "));
+        sb.append("])");
 
         return sb.toString();
     }

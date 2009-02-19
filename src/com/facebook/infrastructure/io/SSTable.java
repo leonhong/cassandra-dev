@@ -677,7 +677,7 @@ public class SSTable
             }
             catch( IOException ex )
             {
-                logger_.warn(LogUtil.throwableToString(ex));
+                logger_.info("Bloom filter false positive", ex);
             }
             return bufIn;
         }
