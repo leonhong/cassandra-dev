@@ -11,10 +11,12 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import com.facebook.thrift.*;
+import java.util.Collections;
+import org.apache.thrift.*;
+import org.apache.thrift.meta_data.*;
 
-import com.facebook.thrift.protocol.*;
-import com.facebook.thrift.transport.*;
+import org.apache.thrift.protocol.*;
+import org.apache.thrift.transport.*;
 
 public class Cassandra {
 
@@ -742,7 +744,14 @@ public class Cassandra {
 
   }
 
-  public static class get_slice_args implements TBase, java.io.Serializable   {
+  public static class get_slice_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_slice_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+    private static final TField START_FIELD_DESC = new TField("start", TType.I32, (short)-4);
+    private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)-5);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -754,13 +763,30 @@ public class Cassandra {
     public int count;
     public static final int COUNT = -5;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
       public boolean start = false;
       public boolean count = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(START, new FieldMetaData("start", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+      put(COUNT, new FieldMetaData("count", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_slice_args.class, metaDataMap);
     }
 
     public get_slice_args() {
@@ -790,6 +816,211 @@ public class Cassandra {
       this.__isset.count = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_slice_args(get_slice_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+      __isset.start = other.__isset.start;
+      this.start = other.start;
+      __isset.count = other.__isset.count;
+      this.count = other.count;
+    }
+
+    @Override
+    public get_slice_args clone() {
+      return new get_slice_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public int getStart() {
+      return this.start;
+    }
+
+    public void setStart(int start) {
+      this.start = start;
+      this.__isset.start = true;
+    }
+
+    public void unsetStart() {
+      this.__isset.start = false;
+    }
+
+    // Returns true if field start is set (has been asigned a value) and false otherwise
+    public boolean isSetStart() {
+      return this.__isset.start;
+    }
+
+    public void setStartIsSet(boolean value) {
+      this.__isset.start = value;
+    }
+
+    public int getCount() {
+      return this.count;
+    }
+
+    public void setCount(int count) {
+      this.count = count;
+      this.__isset.count = true;
+    }
+
+    public void unsetCount() {
+      this.__isset.count = false;
+    }
+
+    // Returns true if field count is set (has been asigned a value) and false otherwise
+    public boolean isSetCount() {
+      return this.__isset.count;
+    }
+
+    public void setCountIsSet(boolean value) {
+      this.__isset.count = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      case START:
+        setStart((Integer)value);
+        break;
+
+      case COUNT:
+        setCount((Integer)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      case START:
+        return new Integer(getStart());
+
+      case COUNT:
+        return new Integer(getCount());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      case START:
+        return this.__isset.start;
+      case COUNT:
+        return this.__isset.count;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -850,6 +1081,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -912,52 +1144,42 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_slice_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
-      field.name = "start";
-      field.type = TType.I32;
-      field.id = START;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(START_FIELD_DESC);
       oprot.writeI32(this.start);
       oprot.writeFieldEnd();
-      field.name = "count";
-      field.type = TType.I32;
-      field.id = COUNT;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(COUNT_FIELD_DESC);
       oprot.writeI32(this.count);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_args(");
       boolean first = true;
@@ -986,18 +1208,39 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_slice_result implements TBase, java.io.Serializable   {
+  public static class get_slice_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_slice_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+
     public List<column_t> success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
     public static final int IRE = 1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new ListMetaData(TType.LIST, 
+              new StructMetaData(TType.STRUCT, column_t.class))));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_slice_result.class, metaDataMap);
     }
 
     public get_slice_result() {
@@ -1014,6 +1257,132 @@ public class Cassandra {
       this.__isset.ire = (ire != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_slice_result(get_slice_result other) {
+      __isset.success = other.__isset.success;
+      if (other.success != null) {
+        List<column_t> __this__success = new ArrayList<column_t>();
+        for (column_t other_element : other.success) {
+          __this__success.add(new column_t(other_element));
+        }
+        this.success = __this__success;
+      }
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+    }
+
+    @Override
+    public get_slice_result clone() {
+      return new get_slice_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<column_t> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(column_t elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<column_t>();
+      }
+      this.success.add(elem);
+      this.__isset.success = true;
+    }
+
+    public List<column_t> getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(List<column_t> success) {
+      this.success = success;
+      this.__isset.success = (success != null);
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((List<column_t>)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1047,6 +1416,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1069,7 +1439,7 @@ public class Cassandra {
                 this.success = new ArrayList<column_t>(_list22.size);
                 for (int _i23 = 0; _i23 < _list22.size; ++_i23)
                 {
-                  column_t _elem24 = new column_t();
+                  column_t _elem24;
                   _elem24 = new column_t();
                   _elem24.read(iprot);
                   this.success.add(_elem24);
@@ -1097,19 +1467,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_slice_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
         if (this.success != null) {
-          field.name = "success";
-          field.type = TType.LIST;
-          field.id = SUCCESS;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
             for (column_t _iter25 : this.success)            {
@@ -1121,10 +1490,7 @@ public class Cassandra {
         }
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -1133,6 +1499,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_result(");
       boolean first = true;
@@ -1149,9 +1516,19 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_column_args implements TBase, java.io.Serializable   {
+  public static class get_column_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_column_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -1159,11 +1536,24 @@ public class Cassandra {
     public String columnFamily_column;
     public static final int COLUMNFAMILY_COLUMN = -3;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_column_args.class, metaDataMap);
     }
 
     public get_column_args() {
@@ -1183,6 +1573,145 @@ public class Cassandra {
       this.__isset.columnFamily_column = (columnFamily_column != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_column_args(get_column_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+    }
+
+    @Override
+    public get_column_args clone() {
+      return new get_column_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1225,6 +1754,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1271,33 +1801,28 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_column_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
@@ -1305,6 +1830,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_args(");
       boolean first = true;
@@ -1325,9 +1851,19 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_column_result implements TBase, java.io.Serializable   {
+  public static class get_column_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_column_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRUCT, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+    private static final TField NFE_FIELD_DESC = new TField("nfe", TType.STRUCT, (short)2);
+
     public column_t success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
@@ -1335,11 +1871,24 @@ public class Cassandra {
     public NotFoundException nfe;
     public static final int NFE = 2;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
       public boolean nfe = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, column_t.class)));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(NFE, new FieldMetaData("nfe", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_column_result.class, metaDataMap);
     }
 
     public get_column_result() {
@@ -1359,6 +1908,148 @@ public class Cassandra {
       this.__isset.nfe = (nfe != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_column_result(get_column_result other) {
+      __isset.success = other.__isset.success;
+      if (other.success != null) {
+        this.success = new column_t(other.success);
+      }
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+      __isset.nfe = other.__isset.nfe;
+      if (other.nfe != null) {
+        this.nfe = new NotFoundException(other.nfe);
+      }
+    }
+
+    @Override
+    public get_column_result clone() {
+      return new get_column_result(this);
+    }
+
+    public column_t getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(column_t success) {
+      this.success = success;
+      this.__isset.success = (success != null);
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public NotFoundException getNfe() {
+      return this.nfe;
+    }
+
+    public void setNfe(NotFoundException nfe) {
+      this.nfe = nfe;
+      this.__isset.nfe = (nfe != null);
+    }
+
+    public void unsetNfe() {
+      this.nfe = null;
+      this.__isset.nfe = false;
+    }
+
+    // Returns true if field nfe is set (has been asigned a value) and false otherwise
+    public boolean isSetNfe() {
+      return this.__isset.nfe;
+    }
+
+    public void setNfeIsSet(boolean value) {
+      this.__isset.nfe = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((column_t)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      case NFE:
+        setNfe((NotFoundException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      case NFE:
+        return getNfe();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      case NFE:
+        return this.__isset.nfe;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1401,6 +2092,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1450,37 +2142,30 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_column_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
         if (this.success != null) {
-          field.name = "success";
-          field.type = TType.STRUCT;
-          field.id = SUCCESS;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           this.success.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.nfe) {
         if (this.nfe != null) {
-          field.name = "nfe";
-          field.type = TType.STRUCT;
-          field.id = NFE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(NFE_FIELD_DESC);
           this.nfe.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -1489,6 +2174,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_result(");
       boolean first = true;
@@ -1509,9 +2195,19 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_column_count_args implements TBase, java.io.Serializable   {
+  public static class get_column_count_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_column_count_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -1519,11 +2215,24 @@ public class Cassandra {
     public String columnFamily_column;
     public static final int COLUMNFAMILY_COLUMN = -3;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_column_count_args.class, metaDataMap);
     }
 
     public get_column_count_args() {
@@ -1543,6 +2252,145 @@ public class Cassandra {
       this.__isset.columnFamily_column = (columnFamily_column != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_column_count_args(get_column_count_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+    }
+
+    @Override
+    public get_column_count_args clone() {
+      return new get_column_count_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1585,6 +2433,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1631,33 +2480,28 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_column_count_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
@@ -1665,6 +2509,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_count_args(");
       boolean first = true;
@@ -1685,18 +2530,38 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_column_count_result implements TBase, java.io.Serializable   {
+  public static class get_column_count_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_column_count_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+
     public int success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
     public static final int IRE = 1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_column_count_result.class, metaDataMap);
     }
 
     public get_column_count_result() {
@@ -1713,6 +2578,109 @@ public class Cassandra {
       this.__isset.ire = (ire != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_column_count_result(get_column_count_result other) {
+      __isset.success = other.__isset.success;
+      this.success = other.success;
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+    }
+
+    @Override
+    public get_column_count_result clone() {
+      return new get_column_count_result(this);
+    }
+
+    public int getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(int success) {
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public void unsetSuccess() {
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((Integer)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Integer(getSuccess());
+
+      case IRE:
+        return getIre();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1746,6 +2714,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1785,26 +2754,22 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_column_count_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
-        field.name = "success";
-        field.type = TType.I32;
-        field.id = SUCCESS;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         oprot.writeI32(this.success);
         oprot.writeFieldEnd();
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -1813,6 +2778,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_column_count_result(");
       boolean first = true;
@@ -1829,9 +2795,21 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class insert_args implements TBase, java.io.Serializable   {
+  public static class insert_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("insert_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+    private static final TField CELL_DATA_FIELD_DESC = new TField("cellData", TType.STRING, (short)-4);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)-5);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -1843,13 +2821,30 @@ public class Cassandra {
     public long timestamp;
     public static final int TIMESTAMP = -5;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
       public boolean cellData = false;
       public boolean timestamp = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(CELLDATA, new FieldMetaData("cellData", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(insert_args.class, metaDataMap);
     }
 
     public insert_args() {
@@ -1875,6 +2870,213 @@ public class Cassandra {
       this.__isset.timestamp = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public insert_args(insert_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+      __isset.cellData = other.__isset.cellData;
+      if (other.cellData != null) {
+        this.cellData = other.cellData;
+      }
+      __isset.timestamp = other.__isset.timestamp;
+      this.timestamp = other.timestamp;
+    }
+
+    @Override
+    public insert_args clone() {
+      return new insert_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public String getCellData() {
+      return this.cellData;
+    }
+
+    public void setCellData(String cellData) {
+      this.cellData = cellData;
+      this.__isset.cellData = (cellData != null);
+    }
+
+    public void unsetCellData() {
+      this.__isset.cellData = false;
+    }
+
+    // Returns true if field cellData is set (has been asigned a value) and false otherwise
+    public boolean isSetCellData() {
+      return this.__isset.cellData;
+    }
+
+    public void setCellDataIsSet(boolean value) {
+      this.__isset.cellData = value;
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      this.__isset.timestamp = true;
+    }
+
+    public void unsetTimestamp() {
+      this.__isset.timestamp = false;
+    }
+
+    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    public boolean isSetTimestamp() {
+      return this.__isset.timestamp;
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      this.__isset.timestamp = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      case CELLDATA:
+        setCellData((String)value);
+        break;
+
+      case TIMESTAMP:
+        setTimestamp((Long)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      case CELLDATA:
+        return getCellData();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      case CELLDATA:
+        return this.__isset.cellData;
+      case TIMESTAMP:
+        return this.__isset.timestamp;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -1935,6 +3137,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -1997,54 +3200,44 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("insert_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
       if (this.cellData != null) {
-        field.name = "cellData";
-        field.type = TType.STRING;
-        field.id = CELLDATA;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(CELL_DATA_FIELD_DESC);
         oprot.writeString(this.cellData);
         oprot.writeFieldEnd();
       }
-      field.name = "timestamp";
-      field.type = TType.I64;
-      field.id = TIMESTAMP;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
       oprot.writeI64(this.timestamp);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("insert_args(");
       boolean first = true;
@@ -2073,9 +3266,21 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class insert_blocking_args implements TBase, java.io.Serializable   {
+  public static class insert_blocking_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("insert_blocking_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+    private static final TField CELL_DATA_FIELD_DESC = new TField("cellData", TType.STRING, (short)-4);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)-5);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -2087,13 +3292,30 @@ public class Cassandra {
     public long timestamp;
     public static final int TIMESTAMP = -5;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
       public boolean cellData = false;
       public boolean timestamp = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(CELLDATA, new FieldMetaData("cellData", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(insert_blocking_args.class, metaDataMap);
     }
 
     public insert_blocking_args() {
@@ -2119,6 +3341,213 @@ public class Cassandra {
       this.__isset.timestamp = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public insert_blocking_args(insert_blocking_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+      __isset.cellData = other.__isset.cellData;
+      if (other.cellData != null) {
+        this.cellData = other.cellData;
+      }
+      __isset.timestamp = other.__isset.timestamp;
+      this.timestamp = other.timestamp;
+    }
+
+    @Override
+    public insert_blocking_args clone() {
+      return new insert_blocking_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public String getCellData() {
+      return this.cellData;
+    }
+
+    public void setCellData(String cellData) {
+      this.cellData = cellData;
+      this.__isset.cellData = (cellData != null);
+    }
+
+    public void unsetCellData() {
+      this.__isset.cellData = false;
+    }
+
+    // Returns true if field cellData is set (has been asigned a value) and false otherwise
+    public boolean isSetCellData() {
+      return this.__isset.cellData;
+    }
+
+    public void setCellDataIsSet(boolean value) {
+      this.__isset.cellData = value;
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      this.__isset.timestamp = true;
+    }
+
+    public void unsetTimestamp() {
+      this.__isset.timestamp = false;
+    }
+
+    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    public boolean isSetTimestamp() {
+      return this.__isset.timestamp;
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      this.__isset.timestamp = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      case CELLDATA:
+        setCellData((String)value);
+        break;
+
+      case TIMESTAMP:
+        setTimestamp((Long)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      case CELLDATA:
+        return getCellData();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      case CELLDATA:
+        return this.__isset.cellData;
+      case TIMESTAMP:
+        return this.__isset.timestamp;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2179,6 +3608,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2241,54 +3671,44 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("insert_blocking_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
       if (this.cellData != null) {
-        field.name = "cellData";
-        field.type = TType.STRING;
-        field.id = CELLDATA;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(CELL_DATA_FIELD_DESC);
         oprot.writeString(this.cellData);
         oprot.writeFieldEnd();
       }
-      field.name = "timestamp";
-      field.type = TType.I64;
-      field.id = TIMESTAMP;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
       oprot.writeI64(this.timestamp);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("insert_blocking_args(");
       boolean first = true;
@@ -2317,15 +3737,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class insert_blocking_result implements TBase, java.io.Serializable   {
+  public static class insert_blocking_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("insert_blocking_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
+
     public boolean success;
     public static final int SUCCESS = 0;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.BOOL)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(insert_blocking_result.class, metaDataMap);
     }
 
     public insert_blocking_result() {
@@ -2339,6 +3776,73 @@ public class Cassandra {
       this.__isset.success = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public insert_blocking_result(insert_blocking_result other) {
+      __isset.success = other.__isset.success;
+      this.success = other.success;
+    }
+
+    @Override
+    public insert_blocking_result clone() {
+      return new insert_blocking_result(this);
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(boolean success) {
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public void unsetSuccess() {
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((Boolean)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Boolean(isSuccess());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2363,6 +3867,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2393,18 +3898,17 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("insert_blocking_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
-        field.name = "success";
-        field.type = TType.BOOL;
-        field.id = SUCCESS;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
       }
@@ -2412,6 +3916,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("insert_blocking_result(");
       boolean first = true;
@@ -2424,15 +3929,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_args implements TBase, java.io.Serializable   {
+  public static class batch_insert_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_args");
+    private static final TField BATCH_MUTATION_FIELD_DESC = new TField("batchMutation", TType.STRUCT, (short)-1);
+
     public batch_mutation_t batchMutation;
     public static final int BATCHMUTATION = -1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean batchMutation = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(BATCHMUTATION, new FieldMetaData("batchMutation", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, batch_mutation_t.class)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_args.class, metaDataMap);
     }
 
     public batch_insert_args() {
@@ -2446,6 +3968,76 @@ public class Cassandra {
       this.__isset.batchMutation = (batchMutation != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_args(batch_insert_args other) {
+      __isset.batchMutation = other.__isset.batchMutation;
+      if (other.batchMutation != null) {
+        this.batchMutation = new batch_mutation_t(other.batchMutation);
+      }
+    }
+
+    @Override
+    public batch_insert_args clone() {
+      return new batch_insert_args(this);
+    }
+
+    public batch_mutation_t getBatchMutation() {
+      return this.batchMutation;
+    }
+
+    public void setBatchMutation(batch_mutation_t batchMutation) {
+      this.batchMutation = batchMutation;
+      this.__isset.batchMutation = (batchMutation != null);
+    }
+
+    public void unsetBatchMutation() {
+      this.batchMutation = null;
+      this.__isset.batchMutation = false;
+    }
+
+    // Returns true if field batchMutation is set (has been asigned a value) and false otherwise
+    public boolean isSetBatchMutation() {
+      return this.__isset.batchMutation;
+    }
+
+    public void setBatchMutationIsSet(boolean value) {
+      this.__isset.batchMutation = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        setBatchMutation((batch_mutation_t)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        return getBatchMutation();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        return this.__isset.batchMutation;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2470,6 +4062,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2501,17 +4094,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.batchMutation != null) {
-        field.name = "batchMutation";
-        field.type = TType.STRUCT;
-        field.id = BATCHMUTATION;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(BATCH_MUTATION_FIELD_DESC);
         this.batchMutation.write(oprot);
         oprot.writeFieldEnd();
       }
@@ -2519,6 +4113,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_args(");
       boolean first = true;
@@ -2531,15 +4126,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_blocking_args implements TBase, java.io.Serializable   {
+  public static class batch_insert_blocking_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_blocking_args");
+    private static final TField BATCH_MUTATION_FIELD_DESC = new TField("batchMutation", TType.STRUCT, (short)-1);
+
     public batch_mutation_t batchMutation;
     public static final int BATCHMUTATION = -1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean batchMutation = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(BATCHMUTATION, new FieldMetaData("batchMutation", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, batch_mutation_t.class)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_blocking_args.class, metaDataMap);
     }
 
     public batch_insert_blocking_args() {
@@ -2553,6 +4165,76 @@ public class Cassandra {
       this.__isset.batchMutation = (batchMutation != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_blocking_args(batch_insert_blocking_args other) {
+      __isset.batchMutation = other.__isset.batchMutation;
+      if (other.batchMutation != null) {
+        this.batchMutation = new batch_mutation_t(other.batchMutation);
+      }
+    }
+
+    @Override
+    public batch_insert_blocking_args clone() {
+      return new batch_insert_blocking_args(this);
+    }
+
+    public batch_mutation_t getBatchMutation() {
+      return this.batchMutation;
+    }
+
+    public void setBatchMutation(batch_mutation_t batchMutation) {
+      this.batchMutation = batchMutation;
+      this.__isset.batchMutation = (batchMutation != null);
+    }
+
+    public void unsetBatchMutation() {
+      this.batchMutation = null;
+      this.__isset.batchMutation = false;
+    }
+
+    // Returns true if field batchMutation is set (has been asigned a value) and false otherwise
+    public boolean isSetBatchMutation() {
+      return this.__isset.batchMutation;
+    }
+
+    public void setBatchMutationIsSet(boolean value) {
+      this.__isset.batchMutation = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        setBatchMutation((batch_mutation_t)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        return getBatchMutation();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATION:
+        return this.__isset.batchMutation;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2577,6 +4259,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2608,17 +4291,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_blocking_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.batchMutation != null) {
-        field.name = "batchMutation";
-        field.type = TType.STRUCT;
-        field.id = BATCHMUTATION;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(BATCH_MUTATION_FIELD_DESC);
         this.batchMutation.write(oprot);
         oprot.writeFieldEnd();
       }
@@ -2626,6 +4310,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_blocking_args(");
       boolean first = true;
@@ -2638,15 +4323,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_blocking_result implements TBase, java.io.Serializable   {
+  public static class batch_insert_blocking_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_blocking_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
+
     public boolean success;
     public static final int SUCCESS = 0;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.BOOL)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_blocking_result.class, metaDataMap);
     }
 
     public batch_insert_blocking_result() {
@@ -2660,6 +4362,73 @@ public class Cassandra {
       this.__isset.success = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_blocking_result(batch_insert_blocking_result other) {
+      __isset.success = other.__isset.success;
+      this.success = other.success;
+    }
+
+    @Override
+    public batch_insert_blocking_result clone() {
+      return new batch_insert_blocking_result(this);
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(boolean success) {
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public void unsetSuccess() {
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((Boolean)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Boolean(isSuccess());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2684,6 +4453,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2714,18 +4484,17 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_blocking_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
-        field.name = "success";
-        field.type = TType.BOOL;
-        field.id = SUCCESS;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
       }
@@ -2733,6 +4502,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_blocking_result(");
       boolean first = true;
@@ -2745,9 +4515,20 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class remove_args implements TBase, java.io.Serializable   {
+  public static class remove_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("remove_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_COLUMN_FIELD_DESC = new TField("columnFamily_column", TType.STRING, (short)-3);
+    private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)-4);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -2757,12 +4538,27 @@ public class Cassandra {
     public long timestamp;
     public static final int TIMESTAMP = -4;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_column = false;
       public boolean timestamp = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_COLUMN, new FieldMetaData("columnFamily_column", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I64)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(remove_args.class, metaDataMap);
     }
 
     public remove_args() {
@@ -2785,6 +4581,178 @@ public class Cassandra {
       this.__isset.timestamp = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public remove_args(remove_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_column = other.__isset.columnFamily_column;
+      if (other.columnFamily_column != null) {
+        this.columnFamily_column = other.columnFamily_column;
+      }
+      __isset.timestamp = other.__isset.timestamp;
+      this.timestamp = other.timestamp;
+    }
+
+    @Override
+    public remove_args clone() {
+      return new remove_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_column() {
+      return this.columnFamily_column;
+    }
+
+    public void setColumnFamily_column(String columnFamily_column) {
+      this.columnFamily_column = columnFamily_column;
+      this.__isset.columnFamily_column = (columnFamily_column != null);
+    }
+
+    public void unsetColumnFamily_column() {
+      this.__isset.columnFamily_column = false;
+    }
+
+    // Returns true if field columnFamily_column is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_column() {
+      return this.__isset.columnFamily_column;
+    }
+
+    public void setColumnFamily_columnIsSet(boolean value) {
+      this.__isset.columnFamily_column = value;
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      this.__isset.timestamp = true;
+    }
+
+    public void unsetTimestamp() {
+      this.__isset.timestamp = false;
+    }
+
+    // Returns true if field timestamp is set (has been asigned a value) and false otherwise
+    public boolean isSetTimestamp() {
+      return this.__isset.timestamp;
+    }
+
+    public void setTimestampIsSet(boolean value) {
+      this.__isset.timestamp = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_COLUMN:
+        setColumnFamily_column((String)value);
+        break;
+
+      case TIMESTAMP:
+        setTimestamp((Long)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_COLUMN:
+        return getColumnFamily_column();
+
+      case TIMESTAMP:
+        return new Long(getTimestamp());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_COLUMN:
+        return this.__isset.columnFamily_column;
+      case TIMESTAMP:
+        return this.__isset.timestamp;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -2836,6 +4804,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -2890,46 +4859,39 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("remove_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_column != null) {
-        field.name = "columnFamily_column";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_COLUMN;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_COLUMN_FIELD_DESC);
         oprot.writeString(this.columnFamily_column);
         oprot.writeFieldEnd();
       }
-      field.name = "timestamp";
-      field.type = TType.I64;
-      field.id = TIMESTAMP;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
       oprot.writeI64(this.timestamp);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("remove_args(");
       boolean first = true;
@@ -2954,9 +4916,21 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_slice_super_args implements TBase, java.io.Serializable   {
+  public static class get_slice_super_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_slice_super_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_SUPER_COLUMN_NAME_FIELD_DESC = new TField("columnFamily_superColumnName", TType.STRING, (short)-3);
+    private static final TField START_FIELD_DESC = new TField("start", TType.I32, (short)-4);
+    private static final TField COUNT_FIELD_DESC = new TField("count", TType.I32, (short)-5);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -2968,13 +4942,30 @@ public class Cassandra {
     public int count;
     public static final int COUNT = -5;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_superColumnName = false;
       public boolean start = false;
       public boolean count = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_SUPERCOLUMNNAME, new FieldMetaData("columnFamily_superColumnName", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(START, new FieldMetaData("start", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+      put(COUNT, new FieldMetaData("count", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.I32)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_slice_super_args.class, metaDataMap);
     }
 
     public get_slice_super_args() {
@@ -3004,6 +4995,211 @@ public class Cassandra {
       this.__isset.count = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_slice_super_args(get_slice_super_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_superColumnName = other.__isset.columnFamily_superColumnName;
+      if (other.columnFamily_superColumnName != null) {
+        this.columnFamily_superColumnName = other.columnFamily_superColumnName;
+      }
+      __isset.start = other.__isset.start;
+      this.start = other.start;
+      __isset.count = other.__isset.count;
+      this.count = other.count;
+    }
+
+    @Override
+    public get_slice_super_args clone() {
+      return new get_slice_super_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_superColumnName() {
+      return this.columnFamily_superColumnName;
+    }
+
+    public void setColumnFamily_superColumnName(String columnFamily_superColumnName) {
+      this.columnFamily_superColumnName = columnFamily_superColumnName;
+      this.__isset.columnFamily_superColumnName = (columnFamily_superColumnName != null);
+    }
+
+    public void unsetColumnFamily_superColumnName() {
+      this.__isset.columnFamily_superColumnName = false;
+    }
+
+    // Returns true if field columnFamily_superColumnName is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_superColumnName() {
+      return this.__isset.columnFamily_superColumnName;
+    }
+
+    public void setColumnFamily_superColumnNameIsSet(boolean value) {
+      this.__isset.columnFamily_superColumnName = value;
+    }
+
+    public int getStart() {
+      return this.start;
+    }
+
+    public void setStart(int start) {
+      this.start = start;
+      this.__isset.start = true;
+    }
+
+    public void unsetStart() {
+      this.__isset.start = false;
+    }
+
+    // Returns true if field start is set (has been asigned a value) and false otherwise
+    public boolean isSetStart() {
+      return this.__isset.start;
+    }
+
+    public void setStartIsSet(boolean value) {
+      this.__isset.start = value;
+    }
+
+    public int getCount() {
+      return this.count;
+    }
+
+    public void setCount(int count) {
+      this.count = count;
+      this.__isset.count = true;
+    }
+
+    public void unsetCount() {
+      this.__isset.count = false;
+    }
+
+    // Returns true if field count is set (has been asigned a value) and false otherwise
+    public boolean isSetCount() {
+      return this.__isset.count;
+    }
+
+    public void setCountIsSet(boolean value) {
+      this.__isset.count = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        setColumnFamily_superColumnName((String)value);
+        break;
+
+      case START:
+        setStart((Integer)value);
+        break;
+
+      case COUNT:
+        setCount((Integer)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        return getColumnFamily_superColumnName();
+
+      case START:
+        return new Integer(getStart());
+
+      case COUNT:
+        return new Integer(getCount());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        return this.__isset.columnFamily_superColumnName;
+      case START:
+        return this.__isset.start;
+      case COUNT:
+        return this.__isset.count;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3064,6 +5260,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3126,52 +5323,42 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_slice_super_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_superColumnName != null) {
-        field.name = "columnFamily_superColumnName";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_SUPERCOLUMNNAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_SUPER_COLUMN_NAME_FIELD_DESC);
         oprot.writeString(this.columnFamily_superColumnName);
         oprot.writeFieldEnd();
       }
-      field.name = "start";
-      field.type = TType.I32;
-      field.id = START;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(START_FIELD_DESC);
       oprot.writeI32(this.start);
       oprot.writeFieldEnd();
-      field.name = "count";
-      field.type = TType.I32;
-      field.id = COUNT;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(COUNT_FIELD_DESC);
       oprot.writeI32(this.count);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_super_args(");
       boolean first = true;
@@ -3200,18 +5387,39 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_slice_super_result implements TBase, java.io.Serializable   {
+  public static class get_slice_super_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_slice_super_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+
     public List<superColumn_t> success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
     public static final int IRE = 1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new ListMetaData(TType.LIST, 
+              new StructMetaData(TType.STRUCT, superColumn_t.class))));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_slice_super_result.class, metaDataMap);
     }
 
     public get_slice_super_result() {
@@ -3228,6 +5436,132 @@ public class Cassandra {
       this.__isset.ire = (ire != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_slice_super_result(get_slice_super_result other) {
+      __isset.success = other.__isset.success;
+      if (other.success != null) {
+        List<superColumn_t> __this__success = new ArrayList<superColumn_t>();
+        for (superColumn_t other_element : other.success) {
+          __this__success.add(new superColumn_t(other_element));
+        }
+        this.success = __this__success;
+      }
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+    }
+
+    @Override
+    public get_slice_super_result clone() {
+      return new get_slice_super_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<superColumn_t> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(superColumn_t elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<superColumn_t>();
+      }
+      this.success.add(elem);
+      this.__isset.success = true;
+    }
+
+    public List<superColumn_t> getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(List<superColumn_t> success) {
+      this.success = success;
+      this.__isset.success = (success != null);
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((List<superColumn_t>)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3261,6 +5595,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3283,7 +5618,7 @@ public class Cassandra {
                 this.success = new ArrayList<superColumn_t>(_list26.size);
                 for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                 {
-                  superColumn_t _elem28 = new superColumn_t();
+                  superColumn_t _elem28;
                   _elem28 = new superColumn_t();
                   _elem28.read(iprot);
                   this.success.add(_elem28);
@@ -3311,19 +5646,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_slice_super_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
         if (this.success != null) {
-          field.name = "success";
-          field.type = TType.LIST;
-          field.id = SUCCESS;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
             for (superColumn_t _iter29 : this.success)            {
@@ -3335,10 +5669,7 @@ public class Cassandra {
         }
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -3347,6 +5678,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_slice_super_result(");
       boolean first = true;
@@ -3363,9 +5695,19 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_superColumn_args implements TBase, java.io.Serializable   {
+  public static class get_superColumn_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_superColumn_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)-2);
+    private static final TField COLUMN_FAMILY_SUPER_COLUMN_NAME_FIELD_DESC = new TField("columnFamily_superColumnName", TType.STRING, (short)-3);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String key;
@@ -3373,11 +5715,24 @@ public class Cassandra {
     public String columnFamily_superColumnName;
     public static final int COLUMNFAMILY_SUPERCOLUMNNAME = -3;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean key = false;
       public boolean columnFamily_superColumnName = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(COLUMNFAMILY_SUPERCOLUMNNAME, new FieldMetaData("columnFamily_superColumnName", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_superColumn_args.class, metaDataMap);
     }
 
     public get_superColumn_args() {
@@ -3397,6 +5752,145 @@ public class Cassandra {
       this.__isset.columnFamily_superColumnName = (columnFamily_superColumnName != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_superColumn_args(get_superColumn_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.key = other.__isset.key;
+      if (other.key != null) {
+        this.key = other.key;
+      }
+      __isset.columnFamily_superColumnName = other.__isset.columnFamily_superColumnName;
+      if (other.columnFamily_superColumnName != null) {
+        this.columnFamily_superColumnName = other.columnFamily_superColumnName;
+      }
+    }
+
+    @Override
+    public get_superColumn_args clone() {
+      return new get_superColumn_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getKey() {
+      return this.key;
+    }
+
+    public void setKey(String key) {
+      this.key = key;
+      this.__isset.key = (key != null);
+    }
+
+    public void unsetKey() {
+      this.__isset.key = false;
+    }
+
+    // Returns true if field key is set (has been asigned a value) and false otherwise
+    public boolean isSetKey() {
+      return this.__isset.key;
+    }
+
+    public void setKeyIsSet(boolean value) {
+      this.__isset.key = value;
+    }
+
+    public String getColumnFamily_superColumnName() {
+      return this.columnFamily_superColumnName;
+    }
+
+    public void setColumnFamily_superColumnName(String columnFamily_superColumnName) {
+      this.columnFamily_superColumnName = columnFamily_superColumnName;
+      this.__isset.columnFamily_superColumnName = (columnFamily_superColumnName != null);
+    }
+
+    public void unsetColumnFamily_superColumnName() {
+      this.__isset.columnFamily_superColumnName = false;
+    }
+
+    // Returns true if field columnFamily_superColumnName is set (has been asigned a value) and false otherwise
+    public boolean isSetColumnFamily_superColumnName() {
+      return this.__isset.columnFamily_superColumnName;
+    }
+
+    public void setColumnFamily_superColumnNameIsSet(boolean value) {
+      this.__isset.columnFamily_superColumnName = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case KEY:
+        setKey((String)value);
+        break;
+
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        setColumnFamily_superColumnName((String)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case KEY:
+        return getKey();
+
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        return getColumnFamily_superColumnName();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case KEY:
+        return this.__isset.key;
+      case COLUMNFAMILY_SUPERCOLUMNNAME:
+        return this.__isset.columnFamily_superColumnName;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3439,6 +5933,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3485,33 +5980,28 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_superColumn_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.key != null) {
-        field.name = "key";
-        field.type = TType.STRING;
-        field.id = KEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(KEY_FIELD_DESC);
         oprot.writeString(this.key);
         oprot.writeFieldEnd();
       }
       if (this.columnFamily_superColumnName != null) {
-        field.name = "columnFamily_superColumnName";
-        field.type = TType.STRING;
-        field.id = COLUMNFAMILY_SUPERCOLUMNNAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(COLUMN_FAMILY_SUPER_COLUMN_NAME_FIELD_DESC);
         oprot.writeString(this.columnFamily_superColumnName);
         oprot.writeFieldEnd();
       }
@@ -3519,6 +6009,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_superColumn_args(");
       boolean first = true;
@@ -3539,9 +6030,19 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_superColumn_result implements TBase, java.io.Serializable   {
+  public static class get_superColumn_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_superColumn_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.STRUCT, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+    private static final TField NFE_FIELD_DESC = new TField("nfe", TType.STRUCT, (short)2);
+
     public superColumn_t success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
@@ -3549,11 +6050,24 @@ public class Cassandra {
     public NotFoundException nfe;
     public static final int NFE = 2;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
       public boolean nfe = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, superColumn_t.class)));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+      put(NFE, new FieldMetaData("nfe", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_superColumn_result.class, metaDataMap);
     }
 
     public get_superColumn_result() {
@@ -3573,6 +6087,148 @@ public class Cassandra {
       this.__isset.nfe = (nfe != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_superColumn_result(get_superColumn_result other) {
+      __isset.success = other.__isset.success;
+      if (other.success != null) {
+        this.success = new superColumn_t(other.success);
+      }
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+      __isset.nfe = other.__isset.nfe;
+      if (other.nfe != null) {
+        this.nfe = new NotFoundException(other.nfe);
+      }
+    }
+
+    @Override
+    public get_superColumn_result clone() {
+      return new get_superColumn_result(this);
+    }
+
+    public superColumn_t getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(superColumn_t success) {
+      this.success = success;
+      this.__isset.success = (success != null);
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public NotFoundException getNfe() {
+      return this.nfe;
+    }
+
+    public void setNfe(NotFoundException nfe) {
+      this.nfe = nfe;
+      this.__isset.nfe = (nfe != null);
+    }
+
+    public void unsetNfe() {
+      this.nfe = null;
+      this.__isset.nfe = false;
+    }
+
+    // Returns true if field nfe is set (has been asigned a value) and false otherwise
+    public boolean isSetNfe() {
+      return this.__isset.nfe;
+    }
+
+    public void setNfeIsSet(boolean value) {
+      this.__isset.nfe = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((superColumn_t)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      case NFE:
+        setNfe((NotFoundException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      case NFE:
+        return getNfe();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      case NFE:
+        return this.__isset.nfe;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3615,6 +6271,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3664,37 +6321,30 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_superColumn_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
         if (this.success != null) {
-          field.name = "success";
-          field.type = TType.STRUCT;
-          field.id = SUCCESS;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           this.success.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
       } else if (this.__isset.nfe) {
         if (this.nfe != null) {
-          field.name = "nfe";
-          field.type = TType.STRUCT;
-          field.id = NFE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(NFE_FIELD_DESC);
           this.nfe.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -3703,6 +6353,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_superColumn_result(");
       boolean first = true;
@@ -3723,15 +6374,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_superColumn_args implements TBase, java.io.Serializable   {
+  public static class batch_insert_superColumn_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_superColumn_args");
+    private static final TField BATCH_MUTATION_SUPER_FIELD_DESC = new TField("batchMutationSuper", TType.STRUCT, (short)-1);
+
     public batch_mutation_super_t batchMutationSuper;
     public static final int BATCHMUTATIONSUPER = -1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean batchMutationSuper = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(BATCHMUTATIONSUPER, new FieldMetaData("batchMutationSuper", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, batch_mutation_super_t.class)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_superColumn_args.class, metaDataMap);
     }
 
     public batch_insert_superColumn_args() {
@@ -3745,6 +6413,76 @@ public class Cassandra {
       this.__isset.batchMutationSuper = (batchMutationSuper != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_superColumn_args(batch_insert_superColumn_args other) {
+      __isset.batchMutationSuper = other.__isset.batchMutationSuper;
+      if (other.batchMutationSuper != null) {
+        this.batchMutationSuper = new batch_mutation_super_t(other.batchMutationSuper);
+      }
+    }
+
+    @Override
+    public batch_insert_superColumn_args clone() {
+      return new batch_insert_superColumn_args(this);
+    }
+
+    public batch_mutation_super_t getBatchMutationSuper() {
+      return this.batchMutationSuper;
+    }
+
+    public void setBatchMutationSuper(batch_mutation_super_t batchMutationSuper) {
+      this.batchMutationSuper = batchMutationSuper;
+      this.__isset.batchMutationSuper = (batchMutationSuper != null);
+    }
+
+    public void unsetBatchMutationSuper() {
+      this.batchMutationSuper = null;
+      this.__isset.batchMutationSuper = false;
+    }
+
+    // Returns true if field batchMutationSuper is set (has been asigned a value) and false otherwise
+    public boolean isSetBatchMutationSuper() {
+      return this.__isset.batchMutationSuper;
+    }
+
+    public void setBatchMutationSuperIsSet(boolean value) {
+      this.__isset.batchMutationSuper = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        setBatchMutationSuper((batch_mutation_super_t)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        return getBatchMutationSuper();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        return this.__isset.batchMutationSuper;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3769,6 +6507,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3800,17 +6539,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_superColumn_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.batchMutationSuper != null) {
-        field.name = "batchMutationSuper";
-        field.type = TType.STRUCT;
-        field.id = BATCHMUTATIONSUPER;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(BATCH_MUTATION_SUPER_FIELD_DESC);
         this.batchMutationSuper.write(oprot);
         oprot.writeFieldEnd();
       }
@@ -3818,6 +6558,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_args(");
       boolean first = true;
@@ -3830,15 +6571,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_superColumn_blocking_args implements TBase, java.io.Serializable   {
+  public static class batch_insert_superColumn_blocking_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_superColumn_blocking_args");
+    private static final TField BATCH_MUTATION_SUPER_FIELD_DESC = new TField("batchMutationSuper", TType.STRUCT, (short)-1);
+
     public batch_mutation_super_t batchMutationSuper;
     public static final int BATCHMUTATIONSUPER = -1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean batchMutationSuper = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(BATCHMUTATIONSUPER, new FieldMetaData("batchMutationSuper", TFieldRequirementType.DEFAULT, 
+          new StructMetaData(TType.STRUCT, batch_mutation_super_t.class)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_superColumn_blocking_args.class, metaDataMap);
     }
 
     public batch_insert_superColumn_blocking_args() {
@@ -3852,6 +6610,76 @@ public class Cassandra {
       this.__isset.batchMutationSuper = (batchMutationSuper != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_superColumn_blocking_args(batch_insert_superColumn_blocking_args other) {
+      __isset.batchMutationSuper = other.__isset.batchMutationSuper;
+      if (other.batchMutationSuper != null) {
+        this.batchMutationSuper = new batch_mutation_super_t(other.batchMutationSuper);
+      }
+    }
+
+    @Override
+    public batch_insert_superColumn_blocking_args clone() {
+      return new batch_insert_superColumn_blocking_args(this);
+    }
+
+    public batch_mutation_super_t getBatchMutationSuper() {
+      return this.batchMutationSuper;
+    }
+
+    public void setBatchMutationSuper(batch_mutation_super_t batchMutationSuper) {
+      this.batchMutationSuper = batchMutationSuper;
+      this.__isset.batchMutationSuper = (batchMutationSuper != null);
+    }
+
+    public void unsetBatchMutationSuper() {
+      this.batchMutationSuper = null;
+      this.__isset.batchMutationSuper = false;
+    }
+
+    // Returns true if field batchMutationSuper is set (has been asigned a value) and false otherwise
+    public boolean isSetBatchMutationSuper() {
+      return this.__isset.batchMutationSuper;
+    }
+
+    public void setBatchMutationSuperIsSet(boolean value) {
+      this.__isset.batchMutationSuper = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        setBatchMutationSuper((batch_mutation_super_t)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        return getBatchMutationSuper();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case BATCHMUTATIONSUPER:
+        return this.__isset.batchMutationSuper;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3876,6 +6704,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -3907,17 +6736,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_superColumn_blocking_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.batchMutationSuper != null) {
-        field.name = "batchMutationSuper";
-        field.type = TType.STRUCT;
-        field.id = BATCHMUTATIONSUPER;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(BATCH_MUTATION_SUPER_FIELD_DESC);
         this.batchMutationSuper.write(oprot);
         oprot.writeFieldEnd();
       }
@@ -3925,6 +6755,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_blocking_args(");
       boolean first = true;
@@ -3937,15 +6768,32 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class batch_insert_superColumn_blocking_result implements TBase, java.io.Serializable   {
+  public static class batch_insert_superColumn_blocking_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("batch_insert_superColumn_blocking_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.BOOL, (short)0);
+
     public boolean success;
     public static final int SUCCESS = 0;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.BOOL)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(batch_insert_superColumn_blocking_result.class, metaDataMap);
     }
 
     public batch_insert_superColumn_blocking_result() {
@@ -3959,6 +6807,73 @@ public class Cassandra {
       this.__isset.success = true;
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public batch_insert_superColumn_blocking_result(batch_insert_superColumn_blocking_result other) {
+      __isset.success = other.__isset.success;
+      this.success = other.success;
+    }
+
+    @Override
+    public batch_insert_superColumn_blocking_result clone() {
+      return new batch_insert_superColumn_blocking_result(this);
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(boolean success) {
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public void unsetSuccess() {
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((Boolean)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Boolean(isSuccess());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -3983,6 +6898,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -4013,18 +6929,17 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("batch_insert_superColumn_blocking_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
-        field.name = "success";
-        field.type = TType.BOOL;
-        field.id = SUCCESS;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
       }
@@ -4032,6 +6947,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_blocking_result(");
       boolean first = true;
@@ -4044,18 +6960,38 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_range_args implements TBase, java.io.Serializable   {
+  public static class get_range_args implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_range_args");
+    private static final TField TABLENAME_FIELD_DESC = new TField("tablename", TType.STRING, (short)-1);
+    private static final TField STARTKEY_FIELD_DESC = new TField("startkey", TType.STRING, (short)-2);
+
     public String tablename;
     public static final int TABLENAME = -1;
     public String startkey;
     public static final int STARTKEY = -2;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean tablename = false;
       public boolean startkey = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(TABLENAME, new FieldMetaData("tablename", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+      put(STARTKEY, new FieldMetaData("startkey", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRING)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_range_args.class, metaDataMap);
     }
 
     public get_range_args() {
@@ -4072,6 +7008,110 @@ public class Cassandra {
       this.__isset.startkey = (startkey != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_range_args(get_range_args other) {
+      __isset.tablename = other.__isset.tablename;
+      if (other.tablename != null) {
+        this.tablename = other.tablename;
+      }
+      __isset.startkey = other.__isset.startkey;
+      if (other.startkey != null) {
+        this.startkey = other.startkey;
+      }
+    }
+
+    @Override
+    public get_range_args clone() {
+      return new get_range_args(this);
+    }
+
+    public String getTablename() {
+      return this.tablename;
+    }
+
+    public void setTablename(String tablename) {
+      this.tablename = tablename;
+      this.__isset.tablename = (tablename != null);
+    }
+
+    public void unsetTablename() {
+      this.__isset.tablename = false;
+    }
+
+    // Returns true if field tablename is set (has been asigned a value) and false otherwise
+    public boolean isSetTablename() {
+      return this.__isset.tablename;
+    }
+
+    public void setTablenameIsSet(boolean value) {
+      this.__isset.tablename = value;
+    }
+
+    public String getStartkey() {
+      return this.startkey;
+    }
+
+    public void setStartkey(String startkey) {
+      this.startkey = startkey;
+      this.__isset.startkey = (startkey != null);
+    }
+
+    public void unsetStartkey() {
+      this.__isset.startkey = false;
+    }
+
+    // Returns true if field startkey is set (has been asigned a value) and false otherwise
+    public boolean isSetStartkey() {
+      return this.__isset.startkey;
+    }
+
+    public void setStartkeyIsSet(boolean value) {
+      this.__isset.startkey = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case TABLENAME:
+        setTablename((String)value);
+        break;
+
+      case STARTKEY:
+        setStartkey((String)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return getTablename();
+
+      case STARTKEY:
+        return getStartkey();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case TABLENAME:
+        return this.__isset.tablename;
+      case STARTKEY:
+        return this.__isset.startkey;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -4105,6 +7145,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -4143,25 +7184,23 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_range_args");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
       if (this.tablename != null) {
-        field.name = "tablename";
-        field.type = TType.STRING;
-        field.id = TABLENAME;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(TABLENAME_FIELD_DESC);
         oprot.writeString(this.tablename);
         oprot.writeFieldEnd();
       }
       if (this.startkey != null) {
-        field.name = "startkey";
-        field.type = TType.STRING;
-        field.id = STARTKEY;
-        oprot.writeFieldBegin(field);
+        oprot.writeFieldBegin(STARTKEY_FIELD_DESC);
         oprot.writeString(this.startkey);
         oprot.writeFieldEnd();
       }
@@ -4169,6 +7208,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_range_args(");
       boolean first = true;
@@ -4185,18 +7225,39 @@ public class Cassandra {
       return sb.toString();
     }
 
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
   }
 
-  public static class get_range_result implements TBase, java.io.Serializable   {
+  public static class get_range_result implements TBase, java.io.Serializable, Cloneable   {
+    private static final TStruct STRUCT_DESC = new TStruct("get_range_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.LIST, (short)0);
+    private static final TField IRE_FIELD_DESC = new TField("ire", TType.STRUCT, (short)1);
+
     public List<String> success;
     public static final int SUCCESS = 0;
     public InvalidRequestException ire;
     public static final int IRE = 1;
 
-    public final Isset __isset = new Isset();
-    public static final class Isset implements java.io.Serializable {
+    private final Isset __isset = new Isset();
+    private static final class Isset implements java.io.Serializable {
       public boolean success = false;
       public boolean ire = false;
+    }
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new ListMetaData(TType.LIST, 
+              new FieldValueMetaData(TType.STRING))));
+      put(IRE, new FieldMetaData("ire", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.STRUCT)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(get_range_result.class, metaDataMap);
     }
 
     public get_range_result() {
@@ -4213,6 +7274,132 @@ public class Cassandra {
       this.__isset.ire = (ire != null);
     }
 
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public get_range_result(get_range_result other) {
+      __isset.success = other.__isset.success;
+      if (other.success != null) {
+        List<String> __this__success = new ArrayList<String>();
+        for (String other_element : other.success) {
+          __this__success.add(other_element);
+        }
+        this.success = __this__success;
+      }
+      __isset.ire = other.__isset.ire;
+      if (other.ire != null) {
+        this.ire = new InvalidRequestException(other.ire);
+      }
+    }
+
+    @Override
+    public get_range_result clone() {
+      return new get_range_result(this);
+    }
+
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<String> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(String elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<String>();
+      }
+      this.success.add(elem);
+      this.__isset.success = true;
+    }
+
+    public List<String> getSuccess() {
+      return this.success;
+    }
+
+    public void setSuccess(List<String> success) {
+      this.success = success;
+      this.__isset.success = (success != null);
+    }
+
+    public void unsetSuccess() {
+      this.success = null;
+      this.__isset.success = false;
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return this.__isset.success;
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      this.__isset.success = value;
+    }
+
+    public InvalidRequestException getIre() {
+      return this.ire;
+    }
+
+    public void setIre(InvalidRequestException ire) {
+      this.ire = ire;
+      this.__isset.ire = (ire != null);
+    }
+
+    public void unsetIre() {
+      this.ire = null;
+      this.__isset.ire = false;
+    }
+
+    // Returns true if field ire is set (has been asigned a value) and false otherwise
+    public boolean isSetIre() {
+      return this.__isset.ire;
+    }
+
+    public void setIreIsSet(boolean value) {
+      this.__isset.ire = value;
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        setSuccess((List<String>)value);
+        break;
+
+      case IRE:
+        setIre((InvalidRequestException)value);
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return getSuccess();
+
+      case IRE:
+        return getIre();
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return this.__isset.success;
+      case IRE:
+        return this.__isset.ire;
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
     public boolean equals(Object that) {
       if (that == null)
         return false;
@@ -4246,6 +7433,7 @@ public class Cassandra {
       return true;
     }
 
+    @Override
     public int hashCode() {
       return 0;
     }
@@ -4268,7 +7456,7 @@ public class Cassandra {
                 this.success = new ArrayList<String>(_list30.size);
                 for (int _i31 = 0; _i31 < _list30.size; ++_i31)
                 {
-                  String _elem32 = null;
+                  String _elem32;
                   _elem32 = iprot.readString();
                   this.success.add(_elem32);
                 }
@@ -4295,19 +7483,18 @@ public class Cassandra {
         iprot.readFieldEnd();
       }
       iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
     }
 
     public void write(TProtocol oprot) throws TException {
-      TStruct struct = new TStruct("get_range_result");
-      oprot.writeStructBegin(struct);
-      TField field = new TField();
+      oprot.writeStructBegin(STRUCT_DESC);
 
       if (this.__isset.success) {
         if (this.success != null) {
-          field.name = "success";
-          field.type = TType.LIST;
-          field.id = SUCCESS;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
             for (String _iter33 : this.success)            {
@@ -4319,10 +7506,7 @@ public class Cassandra {
         }
       } else if (this.__isset.ire) {
         if (this.ire != null) {
-          field.name = "ire";
-          field.type = TType.STRUCT;
-          field.id = IRE;
-          oprot.writeFieldBegin(field);
+          oprot.writeFieldBegin(IRE_FIELD_DESC);
           this.ire.write(oprot);
           oprot.writeFieldEnd();
         }
@@ -4331,6 +7515,7 @@ public class Cassandra {
       oprot.writeStructEnd();
     }
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("get_range_result(");
       boolean first = true;
@@ -4345,6 +7530,11 @@ public class Cassandra {
       first = false;
       sb.append(")");
       return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
     }
 
   }

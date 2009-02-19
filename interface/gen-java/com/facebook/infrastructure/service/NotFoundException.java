@@ -11,15 +11,60 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import com.facebook.thrift.*;
+import java.util.Collections;
+import org.apache.thrift.*;
+import org.apache.thrift.meta_data.*;
 
-import com.facebook.thrift.protocol.*;
-import com.facebook.thrift.transport.*;
+import org.apache.thrift.protocol.*;
+import org.apache.thrift.transport.*;
 
-public class NotFoundException extends Exception implements TBase, java.io.Serializable {
+public class NotFoundException extends Exception implements TBase, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("NotFoundException");
+
+  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+  }});
+
+  static {
+    FieldMetaData.addStructMetaDataMap(NotFoundException.class, metaDataMap);
+  }
+
   public NotFoundException() {
   }
 
+  /**
+   * Performs a deep copy on <i>other</i>.
+   */
+  public NotFoundException(NotFoundException other) {
+  }
+
+  @Override
+  public NotFoundException clone() {
+    return new NotFoundException(this);
+  }
+
+  public void setFieldValue(int fieldID, Object value) {
+    switch (fieldID) {
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  public Object getFieldValue(int fieldID) {
+    switch (fieldID) {
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+  public boolean isSet(int fieldID) {
+    switch (fieldID) {
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  @Override
   public boolean equals(Object that) {
     if (that == null)
       return false;
@@ -35,6 +80,7 @@ public class NotFoundException extends Exception implements TBase, java.io.Seria
     return true;
   }
 
+  @Override
   public int hashCode() {
     return 0;
   }
@@ -57,21 +103,32 @@ public class NotFoundException extends Exception implements TBase, java.io.Seria
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
+
+
+    // check for required fields of primitive type, which can't be checked in the validate method
+    validate();
   }
 
   public void write(TProtocol oprot) throws TException {
-    TStruct struct = new TStruct("NotFoundException");
-    oprot.writeStructBegin(struct);
+    validate();
+
+    oprot.writeStructBegin(STRUCT_DESC);
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("NotFoundException(");
     boolean first = true;
 
     sb.append(")");
     return sb.toString();
+  }
+
+  public void validate() throws TException {
+    // check for required fields
+    // check that fields of type enum have valid values
   }
 
 }

@@ -11,12 +11,19 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import com.facebook.thrift.*;
+import java.util.Collections;
+import org.apache.thrift.*;
+import org.apache.thrift.meta_data.*;
 
-import com.facebook.thrift.protocol.*;
-import com.facebook.thrift.transport.*;
+import org.apache.thrift.protocol.*;
+import org.apache.thrift.transport.*;
 
-public class batch_mutation_t implements TBase, java.io.Serializable {
+public class batch_mutation_t implements TBase, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("batch_mutation_t");
+  private static final TField TABLE_FIELD_DESC = new TField("table", TType.STRING, (short)1);
+  private static final TField KEY_FIELD_DESC = new TField("key", TType.STRING, (short)2);
+  private static final TField CFMAP_FIELD_DESC = new TField("cfmap", TType.MAP, (short)3);
+
   public String table;
   public static final int TABLE = 1;
   public String key;
@@ -24,11 +31,24 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
   public Map<String,List<column_t>> cfmap;
   public static final int CFMAP = 3;
 
-  public final Isset __isset = new Isset();
-  public static final class Isset implements java.io.Serializable {
+  private final Isset __isset = new Isset();
+  private static final class Isset implements java.io.Serializable {
     public boolean table = false;
     public boolean key = false;
     public boolean cfmap = false;
+  }
+
+  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+    put(TABLE, new FieldMetaData("table", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
+    put(KEY, new FieldMetaData("key", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
+    put(CFMAP, new FieldMetaData("cfmap", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.MAP)));
+  }});
+
+  static {
+    FieldMetaData.addStructMetaDataMap(batch_mutation_t.class, metaDataMap);
   }
 
   public batch_mutation_t() {
@@ -48,6 +68,158 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     this.__isset.cfmap = (cfmap != null);
   }
 
+  /**
+   * Performs a deep copy on <i>other</i>.
+   */
+  public batch_mutation_t(batch_mutation_t other) {
+    __isset.table = other.__isset.table;
+    if (other.table != null) {
+      this.table = other.table;
+    }
+    __isset.key = other.__isset.key;
+    if (other.key != null) {
+      this.key = other.key;
+    }
+    __isset.cfmap = other.__isset.cfmap;
+    if (other.cfmap != null) {
+      this.cfmap = other.cfmap;
+    }
+  }
+
+  @Override
+  public batch_mutation_t clone() {
+    return new batch_mutation_t(this);
+  }
+
+  public String getTable() {
+    return this.table;
+  }
+
+  public void setTable(String table) {
+    this.table = table;
+    this.__isset.table = (table != null);
+  }
+
+  public void unsetTable() {
+    this.__isset.table = false;
+  }
+
+  // Returns true if field table is set (has been asigned a value) and false otherwise
+  public boolean isSetTable() {
+    return this.__isset.table;
+  }
+
+  public void setTableIsSet(boolean value) {
+    this.__isset.table = value;
+  }
+
+  public String getKey() {
+    return this.key;
+  }
+
+  public void setKey(String key) {
+    this.key = key;
+    this.__isset.key = (key != null);
+  }
+
+  public void unsetKey() {
+    this.__isset.key = false;
+  }
+
+  // Returns true if field key is set (has been asigned a value) and false otherwise
+  public boolean isSetKey() {
+    return this.__isset.key;
+  }
+
+  public void setKeyIsSet(boolean value) {
+    this.__isset.key = value;
+  }
+
+  public int getCfmapSize() {
+    return (this.cfmap == null) ? 0 : this.cfmap.size();
+  }
+
+  public void putToCfmap(String key, List<column_t> val) {
+    if (this.cfmap == null) {
+      this.cfmap = new HashMap<String,List<column_t>>();
+    }
+    this.cfmap.put(key, val);
+    this.__isset.cfmap = true;
+  }
+
+  public Map<String,List<column_t>> getCfmap() {
+    return this.cfmap;
+  }
+
+  public void setCfmap(Map<String,List<column_t>> cfmap) {
+    this.cfmap = cfmap;
+    this.__isset.cfmap = (cfmap != null);
+  }
+
+  public void unsetCfmap() {
+    this.cfmap = null;
+    this.__isset.cfmap = false;
+  }
+
+  // Returns true if field cfmap is set (has been asigned a value) and false otherwise
+  public boolean isSetCfmap() {
+    return this.__isset.cfmap;
+  }
+
+  public void setCfmapIsSet(boolean value) {
+    this.__isset.cfmap = value;
+  }
+
+  public void setFieldValue(int fieldID, Object value) {
+    switch (fieldID) {
+    case TABLE:
+      setTable((String)value);
+      break;
+
+    case KEY:
+      setKey((String)value);
+      break;
+
+    case CFMAP:
+      setCfmap((Map<String,List<column_t>>)value);
+      break;
+
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  public Object getFieldValue(int fieldID) {
+    switch (fieldID) {
+    case TABLE:
+      return getTable();
+
+    case KEY:
+      return getKey();
+
+    case CFMAP:
+      return getCfmap();
+
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+  public boolean isSet(int fieldID) {
+    switch (fieldID) {
+    case TABLE:
+      return this.__isset.table;
+    case KEY:
+      return this.__isset.key;
+    case CFMAP:
+      return this.__isset.cfmap;
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  @Override
   public boolean equals(Object that) {
     if (that == null)
       return false;
@@ -90,6 +262,7 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     return true;
   }
 
+  @Override
   public int hashCode() {
     return 0;
   }
@@ -136,7 +309,7 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
                   _val3 = new ArrayList<column_t>(_list4.size);
                   for (int _i5 = 0; _i5 < _list4.size; ++_i5)
                   {
-                    column_t _elem6 = new column_t();
+                    column_t _elem6;
                     _elem6 = new column_t();
                     _elem6.read(iprot);
                     _val3.add(_elem6);
@@ -159,40 +332,35 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
+
+
+    // check for required fields of primitive type, which can't be checked in the validate method
+    validate();
   }
 
   public void write(TProtocol oprot) throws TException {
-    TStruct struct = new TStruct("batch_mutation_t");
-    oprot.writeStructBegin(struct);
-    TField field = new TField();
+    validate();
+
+    oprot.writeStructBegin(STRUCT_DESC);
     if (this.table != null) {
-      field.name = "table";
-      field.type = TType.STRING;
-      field.id = TABLE;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(TABLE_FIELD_DESC);
       oprot.writeString(this.table);
       oprot.writeFieldEnd();
     }
     if (this.key != null) {
-      field.name = "key";
-      field.type = TType.STRING;
-      field.id = KEY;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(KEY_FIELD_DESC);
       oprot.writeString(this.key);
       oprot.writeFieldEnd();
     }
     if (this.cfmap != null) {
-      field.name = "cfmap";
-      field.type = TType.MAP;
-      field.id = CFMAP;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(CFMAP_FIELD_DESC);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmap.size()));
-        for (String _iter7 : this.cfmap.keySet())        {
-          oprot.writeString(_iter7);
+        for (Map.Entry<String, List<column_t>> _iter7 : this.cfmap.entrySet())        {
+          oprot.writeString(_iter7.getKey());
           {
-            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmap.get(_iter7).size()));
-            for (column_t _iter8 : this.cfmap.get(_iter7))            {
+            oprot.writeListBegin(new TList(TType.STRUCT, _iter7.getValue().size()));
+            for (column_t _iter8 : _iter7.getValue())            {
               _iter8.write(oprot);
             }
             oprot.writeListEnd();
@@ -206,6 +374,7 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     oprot.writeStructEnd();
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("batch_mutation_t(");
     boolean first = true;
@@ -224,6 +393,11 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     first = false;
     sb.append(")");
     return sb.toString();
+  }
+
+  public void validate() throws TException {
+    // check for required fields
+    // check that fields of type enum have valid values
   }
 
 }

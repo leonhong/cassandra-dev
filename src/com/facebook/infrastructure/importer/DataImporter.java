@@ -26,20 +26,21 @@ import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.*;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.transport.TTransport;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.protocol.TBinaryProtocol;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.net.SocketException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -156,7 +157,7 @@ public class DataImporter {
 		}
 	}
 	TTransport transport_ = null;
-	public Cassandra.Client connect() {
+	public Cassandra.Client connect() throws SocketException {
 //		String host = "hadoop034.sf2p.facebook.com";
 		String[] hosts = new String[] { "hadoop038.sf2p.facebook.com",
 				"hadoop039.sf2p.facebook.com",
@@ -166,7 +167,7 @@ public class DataImporter {
 		int port = 9160;
             
 		//TNonBlockingSocket socket = new TNonBlockingSocket(hosts[roundRobin_], port);
-		TSocket socket = new TSocket("hadoop071.sf2p.facebook.com", port); 
+		TSocket socket = new TSocket("hadoop071.sf2p.facebook.com", port);
 		roundRobin_ = (roundRobin_+1)%4;
 		if(transport_ != null)
 			transport_.close();

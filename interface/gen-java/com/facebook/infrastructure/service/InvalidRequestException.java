@@ -11,18 +11,32 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.HashSet;
-import com.facebook.thrift.*;
+import java.util.Collections;
+import org.apache.thrift.*;
+import org.apache.thrift.meta_data.*;
 
-import com.facebook.thrift.protocol.*;
-import com.facebook.thrift.transport.*;
+import org.apache.thrift.protocol.*;
+import org.apache.thrift.transport.*;
 
-public class InvalidRequestException extends Exception implements TBase, java.io.Serializable {
+public class InvalidRequestException extends Exception implements TBase, java.io.Serializable, Cloneable {
+  private static final TStruct STRUCT_DESC = new TStruct("InvalidRequestException");
+  private static final TField WHY_FIELD_DESC = new TField("why", TType.STRING, (short)1);
+
   public String why;
   public static final int WHY = 1;
 
-  public final Isset __isset = new Isset();
-  public static final class Isset implements java.io.Serializable {
+  private final Isset __isset = new Isset();
+  private static final class Isset implements java.io.Serializable {
     public boolean why = false;
+  }
+
+  public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+    put(WHY, new FieldMetaData("why", TFieldRequirementType.DEFAULT, 
+        new FieldValueMetaData(TType.STRING)));
+  }});
+
+  static {
+    FieldMetaData.addStructMetaDataMap(InvalidRequestException.class, metaDataMap);
   }
 
   public InvalidRequestException() {
@@ -36,6 +50,75 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     this.__isset.why = (why != null);
   }
 
+  /**
+   * Performs a deep copy on <i>other</i>.
+   */
+  public InvalidRequestException(InvalidRequestException other) {
+    __isset.why = other.__isset.why;
+    if (other.why != null) {
+      this.why = other.why;
+    }
+  }
+
+  @Override
+  public InvalidRequestException clone() {
+    return new InvalidRequestException(this);
+  }
+
+  public String getWhy() {
+    return this.why;
+  }
+
+  public void setWhy(String why) {
+    this.why = why;
+    this.__isset.why = (why != null);
+  }
+
+  public void unsetWhy() {
+    this.__isset.why = false;
+  }
+
+  // Returns true if field why is set (has been asigned a value) and false otherwise
+  public boolean isSetWhy() {
+    return this.__isset.why;
+  }
+
+  public void setWhyIsSet(boolean value) {
+    this.__isset.why = value;
+  }
+
+  public void setFieldValue(int fieldID, Object value) {
+    switch (fieldID) {
+    case WHY:
+      setWhy((String)value);
+      break;
+
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  public Object getFieldValue(int fieldID) {
+    switch (fieldID) {
+    case WHY:
+      return getWhy();
+
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+  public boolean isSet(int fieldID) {
+    switch (fieldID) {
+    case WHY:
+      return this.__isset.why;
+    default:
+      throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+    }
+  }
+
+  @Override
   public boolean equals(Object that) {
     if (that == null)
       return false;
@@ -60,6 +143,7 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     return true;
   }
 
+  @Override
   public int hashCode() {
     return 0;
   }
@@ -90,17 +174,18 @@ public class InvalidRequestException extends Exception implements TBase, java.io
       iprot.readFieldEnd();
     }
     iprot.readStructEnd();
+
+
+    // check for required fields of primitive type, which can't be checked in the validate method
+    validate();
   }
 
   public void write(TProtocol oprot) throws TException {
-    TStruct struct = new TStruct("InvalidRequestException");
-    oprot.writeStructBegin(struct);
-    TField field = new TField();
+    validate();
+
+    oprot.writeStructBegin(STRUCT_DESC);
     if (this.why != null) {
-      field.name = "why";
-      field.type = TType.STRING;
-      field.id = WHY;
-      oprot.writeFieldBegin(field);
+      oprot.writeFieldBegin(WHY_FIELD_DESC);
       oprot.writeString(this.why);
       oprot.writeFieldEnd();
     }
@@ -108,6 +193,7 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     oprot.writeStructEnd();
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("InvalidRequestException(");
     boolean first = true;
@@ -118,6 +204,11 @@ public class InvalidRequestException extends Exception implements TBase, java.io
     first = false;
     sb.append(")");
     return sb.toString();
+  }
+
+  public void validate() throws TException {
+    // check for required fields
+    // check that fields of type enum have valid values
   }
 
 }

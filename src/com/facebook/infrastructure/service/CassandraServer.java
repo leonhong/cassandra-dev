@@ -28,14 +28,14 @@ import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.net.IAsyncResult;
 import com.facebook.infrastructure.net.Message;
 import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.protocol.TProtocolFactory;
-import com.facebook.thrift.server.TThreadPoolServer;
-import com.facebook.thrift.server.TThreadPoolServer.Options;
-import com.facebook.thrift.transport.TServerSocket;
-import com.facebook.thrift.transport.TTransportException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.transport.TServerSocket;
+import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.TException;
 
 import java.io.IOException;
 import java.util.*;
@@ -607,9 +607,12 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         // Protocol factory
         TProtocolFactory tProtocolFactory = new TBinaryProtocol.Factory();
         // ThreadPool Server
-        Options options = new Options();
+        TThreadPoolServer.Options options = new TThreadPoolServer.Options();
         options.minWorkerThreads = 64;
         return new TThreadPoolServer(processor, tServerSocket, tProtocolFactory);
     }
 
+    public String getCpuProfile(int i) throws TException {
+        return null;
+    }
 }

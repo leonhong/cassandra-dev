@@ -29,9 +29,9 @@ import com.facebook.infrastructure.net.MessagingService;
 import com.facebook.infrastructure.service.*;
 import com.facebook.infrastructure.utils.FBUtilities;
 import com.facebook.infrastructure.utils.LogUtil;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.transport.TTransport;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 import com.martiansoftware.jsap.*;
 import org.apache.log4j.Logger;
 
@@ -43,6 +43,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.net.SocketException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -381,7 +382,7 @@ public class StressTest
 
 	//  Stress the server using the thrift API 
 	
-	public Cassandra.Client connect() {
+	public Cassandra.Client connect() throws SocketException {
 		int port = 9160;
 		TSocket socket = new TSocket(server_, port); 
 		if(transport_ != null)
@@ -443,8 +444,7 @@ public class StressTest
 		}
 	}
 	
-	public void readLoadColumn(String tableName, String key, String cf)
-	{
+	public void readLoadColumn(String tableName, String key, String cf) throws SocketException {
 		try
 		{
 			column_t column = peerstorageClient_.get_column(tableName, key, cf);
