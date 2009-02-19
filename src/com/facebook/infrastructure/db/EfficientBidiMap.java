@@ -20,6 +20,9 @@ package com.facebook.infrastructure.db;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.facebook.infrastructure.db.ColumnComparatorFactory.ComparatorType;
 import com.facebook.infrastructure.service.StorageService;
 
@@ -29,7 +32,7 @@ import com.facebook.infrastructure.service.StorageService;
 
 class EfficientBidiMap implements Serializable
 {
-    private Map<String, IColumn> map_ = new HashMap<String, IColumn>();
+    private Map<String, IColumn> map_ = new ConcurrentHashMap<String, IColumn>();
     private SortedSet<IColumn> sortedSet_;
     private Comparator<IColumn> columnComparator_;
 
@@ -41,7 +44,7 @@ class EfficientBidiMap implements Serializable
     EfficientBidiMap(Comparator<IColumn> columnComparator)
     {
     	columnComparator_ = columnComparator;
-    	sortedSet_ = new TreeSet<IColumn>(columnComparator);
+    	sortedSet_ = new ConcurrentSkipListSet<IColumn>(columnComparator);
     }
 
     EfficientBidiMap(Map<String, IColumn> map, SortedSet<IColumn> set, Comparator<IColumn> comparator)
