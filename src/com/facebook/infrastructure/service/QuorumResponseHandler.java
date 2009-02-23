@@ -69,7 +69,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
 
             if ( !bVal && !done_.get() )
             {
-                throw new TimeoutException("Operation timed out - received only " +  responses_.size() + " responses from [" + StringUtils.join(responders()) + "]");
+                throw new TimeoutException("Operation timed out - received only " +  responses_.size() + " responses from [" + StringUtils.join(responders(), ", ") + "]");
             }
         }
         finally
@@ -80,7 +80,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
             	MessagingService.removeRegisteredCallback( response.getMessageId() );
             }
         }
-        logger_.debug("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime) + " ms; " + " responses from [" + StringUtils.join(responders()) + "]");
+        logger_.debug("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime) + " ms; " + " responses from [" + StringUtils.join(responders(), ", ") + "]");
 
     	return responseResolver_.resolve( responses_);
     }

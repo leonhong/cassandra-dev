@@ -28,6 +28,7 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 
 
 /**
@@ -299,6 +300,13 @@ public class RowMutation implements Serializable
             }
         }
         return rm;
+    }
+
+    public String toString() {
+        return "RowMutation(" +
+               ", key='" + key_ + '\'' +
+               ", modifications=[" + StringUtils.join(modifications_.values(), ", ") + "]" +
+               ')';
     }
 }
 

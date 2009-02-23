@@ -64,11 +64,14 @@ public class RowMutationVerbHandler implements IVerbHandler<byte[]>
         try
         {
             RowMutation rm = RowMutation.serializer().deserialize(rowMutationCtx.buffer_);
+            logger_.debug("Applying " + rm);
+
             /* Check if there were any hints in this message */
             byte[] hintedBytes = message.getHeader(RowMutation.HINT);            
             if ( hintedBytes != null && hintedBytes.length > 0 )
             {
             	EndPoint hint = EndPoint.fromBytes(hintedBytes);
+                logger_.debug("Adding hint for " + hint);
                 /* add necessary hints to this mutation */
                 RowMutation hintedMutation = new RowMutation(rm.table(), HintedHandOffManager.key_);
                 hintedMutation.addHints(rm.key() + ":" + hint.getHost());
@@ -81,12 +84,11 @@ public class RowMutationVerbHandler implements IVerbHandler<byte[]>
             rowMutationCtx.row_.key(rm.key());
             rm.apply(rowMutationCtx.row_);
             
-            long end = System.currentTimeMillis();                       
-            logger_.debug("ROW MUTATION APPLY: " + (end - start) + " ms.");
+            long end = System.currentTimeMillis();
             
             WriteResponse response = new WriteResponse(rm.table(), rm.key(), true);
             Message responseMessage = WriteResponse.makeWriteResponseMessage(message, response);
-            logger_.debug("Sending response to " +  message.getFrom() + " for key :" + rm.key());
+            logger_.debug("Mutation applied in " + (end - start) + "ms.  Sending response to " +  message.getFrom() + " for key :" + rm.key());
             MessagingService.getMessagingInstance().sendOneWay(responseMessage, message.getFrom());
         }         
         catch( ColumnFamilyNotDefinedException ex )
