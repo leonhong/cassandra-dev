@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+
 import org.apache.log4j.Logger;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.Table;
@@ -73,9 +75,13 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler<byte[]>
                         " msecs.");
             }
         }
-        catch ( IOException ex )
+        catch ( IOException e )
         {
-            logger_.info(LogUtil.throwableToString(ex));
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
     
@@ -84,8 +90,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler<byte[]>
      * locally for each range and then stream them using
      * the Bootstrap protocol to the target endpoint.
     */
-    private void doTransfer(EndPoint target, List<Range> ranges) throws IOException
-    {
+    private void doTransfer(EndPoint target, List<Range> ranges) throws IOException, ExecutionException, InterruptedException {
         if ( ranges.size() == 0 )
         {
             logger_.debug("No ranges to give scram ...");

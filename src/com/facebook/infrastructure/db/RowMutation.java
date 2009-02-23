@@ -26,6 +26,7 @@ import com.facebook.infrastructure.utils.FBUtilities;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -253,8 +254,7 @@ public class RowMutation implements Serializable
      * This is equivalent to calling commit. Applies the changes to
      * to the table that is obtained by calling Table.open().
     */
-    void load(Row row) throws IOException, ColumnFamilyNotDefinedException
-    {                
+    void load(Row row) throws IOException, ColumnFamilyNotDefinedException, ExecutionException, InterruptedException {
         Table table = Table.open(table_);        
         Set<String> cfNames = modifications_.keySet();
         for (String cfName : cfNames )

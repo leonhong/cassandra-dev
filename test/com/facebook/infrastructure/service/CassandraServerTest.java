@@ -3,7 +3,6 @@ package com.facebook.infrastructure.service;
 import com.facebook.infrastructure.ServerTest;
 import com.facebook.infrastructure.config.DatabaseDescriptor;
 import com.facebook.infrastructure.db.RangeVerbHandler;
-import com.facebook.thrift.TException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.IteratorUtils;
 import org.testng.annotations.Test;

@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -389,8 +390,7 @@ public class Table
      * do a complete compaction since we can figure out based on the ranges
      * whether the files need to be split.
     */
-    public CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
-    {
+    public CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException, ExecutionException, InterruptedException {
         /* Counting Bloom Filter for the entire table */
         CountingBloomFilter cbf = null;
         Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
@@ -670,8 +670,7 @@ public class Table
         }
     }
 
-    void load(Row row) throws IOException
-    {
+    void load(Row row) throws IOException, ExecutionException, InterruptedException {
         String key = row.key();
         /* Add row to the commit log. */
         long start = System.currentTimeMillis();
