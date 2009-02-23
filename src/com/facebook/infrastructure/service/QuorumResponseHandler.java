@@ -26,12 +26,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
+import org.apache.commons.lang.StringUtils;
 
 import com.facebook.infrastructure.config.DatabaseDescriptor;
-import com.facebook.infrastructure.net.IAsyncCallback;
 import com.facebook.infrastructure.net.Message;
-import com.facebook.infrastructure.net.MessagingService;
-import com.facebook.infrastructure.net.Message;
+import com.facebook.infrastructure.net.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -70,12 +69,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
 
             if ( !bVal && !done_.get() )
             {
-                StringBuilder sb = new StringBuilder("");
-                for ( Message message : responses_ )
-                {
-                    sb.append(message.getFrom());                    
-                }
-                throw new TimeoutException("Operation timed out - received only " +  responses_.size() + " responses from " + sb.toString() + " .");
+                throw new TimeoutException("Operation timed out - received only " +  responses_.size() + " responses from [" + StringUtils.join(responders()) + "]");
             }
         }
         finally
@@ -86,9 +80,17 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
             	MessagingService.removeRegisteredCallback( response.getMessageId() );
             }
         }
-        logger_.debug("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime) + " ms.");
+        logger_.debug("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime) + " ms; " + " responses from [" + StringUtils.join(responders()) + "]");
 
     	return responseResolver_.resolve( responses_);
+    }
+
+    private EndPoint[] responders() {
+        EndPoint[] a = new EndPoint[responses_.size()];
+        for (int i = 0; i < responses_.size(); i++) {
+            a[i] = responses_.get(i).getFrom();
+        }
+        return a;
     }
     
     public void response(Message<byte[]> message)

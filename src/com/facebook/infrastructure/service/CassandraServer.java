@@ -173,6 +173,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             body = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
+            // TODO retry to a different endpoint
         }
         DataInputBuffer bufIn = new DataInputBuffer();
         bufIn.reset(body, body.length);
