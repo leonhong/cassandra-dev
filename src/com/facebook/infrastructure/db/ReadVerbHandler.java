@@ -79,13 +79,11 @@ public class ReadVerbHandler implements IVerbHandler<byte[]>
             		row = table.getRow(readMessage.key, readMessage.columnFamily_column, readMessage.getColumnNames());
             	}
             }
-            logger_.debug("getRow() time: " + (System.currentTimeMillis() - start) + " ms.");
-            start = System.currentTimeMillis();
+            long rowfetchTime = System.currentTimeMillis();
             ReadResponse readResponse = null;
             if(readMessage.isDigestQuery())
             {
                 readResponse = new ReadResponse(table.getTableName(), row.digest());
-
             }
             else
             {
@@ -95,16 +93,13 @@ public class ReadVerbHandler implements IVerbHandler<byte[]>
             /* serialize the ReadResponse. */
             readCtx.bufOut_.reset();
 
-            start = System.currentTimeMillis();
             ReadResponse.serializer().serialize(readResponse, readCtx.bufOut_);
-
             byte[] bytes = new byte[readCtx.bufOut_.getLength()];
-            start = System.currentTimeMillis();
             System.arraycopy(readCtx.bufOut_.getData(), 0, bytes, 0, bytes.length);
-
             Message response = message.getReply( StorageService.getLocalStorageEndPoint(), bytes );
             MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
-            logger_.debug("ReadVerbHandler time 2: " + (System.currentTimeMillis() - start) + " ms.");
+
+            logger_.debug("Read " + row + " in " + (rowfetchTime - start) + "ms, " + (System.currentTimeMillis() - start) + "ms total");
         }
         catch ( IOException ex)
         {

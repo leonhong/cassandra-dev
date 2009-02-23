@@ -349,6 +349,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     public ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws InvalidRequestException {
+        logger_.debug("get_columns_since");
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -356,6 +357,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 	}
 
     public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws InvalidRequestException {
+        logger_.debug("get_slice");
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -363,6 +365,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 	}
 
     public ArrayList<column_t> get_slice_strong(String tablename, String key, String columnFamily_column, int start, int count) throws InvalidRequestException {
+        logger_.debug("get_slice_strong");
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -370,6 +373,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 	}
 
     public column_t get_column(String tablename, String key, String columnFamily_column) throws InvalidRequestException, NotFoundException {
+        logger_.debug("get_column");
         // Check format of column argument
         String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 
@@ -406,6 +410,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public int get_column_count(String tablename, String key, String columnFamily_column)
             throws InvalidRequestException {
+        logger_.debug("get_column_count");
         if (columnFamily_column.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -415,6 +420,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public ArrayList<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count)
             throws InvalidRequestException {
+        logger_.debug("get_slice_super");
         if (columnFamily_superColumnName.isEmpty()) {
             throw new InvalidRequestException("Column family required");
         }
@@ -431,6 +437,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public superColumn_t get_superColumn(String tablename, String key, String columnFamily_column)
             throws InvalidRequestException, NotFoundException {
+        logger_.debug("get_superColumn");
         String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
         if (values.length != 2) {
             throw new InvalidRequestException("get_superColumn expects column of form cfamily:supercol");
@@ -447,6 +454,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     public List<String> get_range(String tablename, final String startkey) {
+        logger_.debug("get_range");
         // send the request
         // for now we ignore tablename like 90% of the rest of cassandra
         Message message;
@@ -495,6 +503,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp)
 	{
+        logger_.debug("insert");
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.add(columnFamily_column, cellData.getBytes(), timestamp);
         insert(rm);
@@ -508,6 +517,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     private boolean insertBlocking(RowMutation rm) {
+        logger_.debug("insertBlocking");
         assert rm.key() != null;
 
         try
@@ -543,6 +553,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public void remove(String tablename, String key, String columnFamily_column, long timestamp)
 	{
+        logger_.debug("remove");
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.delete(columnFamily_column, timestamp);
         insert(rm);
@@ -557,26 +568,28 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper)
     {
-        logger_.debug("batch_insert_SuperColumn_blocking");
+        logger_.debug("batch_insert_SuperColumn");
         RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
     	insert(rm);
     }
-    
-    
+
+
+    // methods thrift wants
 	public String getVersion()
 	{
 		return "1";
 	}
-
 	public int getStatus()
 	{
 		return fb_status.ALIVE;
 	}
-
 	public String getStatusDetails()
 	{
 		return null;
 	}
+    public String getCpuProfile(int i) throws TException {
+        return null;
+    }
 
 	public static void main(String[] args) throws Throwable
 	{
@@ -611,9 +624,5 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         TThreadPoolServer.Options options = new TThreadPoolServer.Options();
         options.minWorkerThreads = 64;
         return new TThreadPoolServer(processor, tServerSocket, tProtocolFactory);
-    }
-
-    public String getCpuProfile(int i) throws TException {
-        return null;
     }
 }

@@ -274,8 +274,7 @@ public class ColumnFamilyStore
      * This method forces a compaction of the SSTables on disk. We wait
      * for the process to complete by waiting on a future pointer.
     */
-    CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, long skip, List<String> fileList)
-    {
+    CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, long skip, List<String> fileList) throws ExecutionException, InterruptedException {
         CountingBloomFilter cbf = null;
     	Future<CountingBloomFilter> futurePtr = null;
     	if( ranges != null)
@@ -283,20 +282,9 @@ public class ColumnFamilyStore
     	else
     		futurePtr = CompactionManager.instance().submitMajor(this, ranges, skip);
 
-        try
-        {
-            /* Waiting for the compaction to complete. */
-            cbf = futurePtr.get();
-            logger_.debug("Done forcing compaction ...");
-        }
-        catch (ExecutionException ex)
-        {
-            logger_.debug(LogUtil.throwableToString(ex));
-        }
-        catch ( InterruptedException ex2 )
-        {
-            logger_.debug(LogUtil.throwableToString(ex2));
-        }
+        /* Waiting for the compaction to complete. */
+        cbf = futurePtr.get();
+        logger_.debug("Done forcing compaction ...");
         return cbf;
     }
 
@@ -458,7 +446,7 @@ public class ColumnFamilyStore
         }
         if (columnFamilies.size() == 0 || !filter.isDone()) {
             getColumnFamilyFromDisk(key, columnFamilyColumn, columnFamilies, filter);
-            logger_.debug("DISK TIME: " + (System.currentTimeMillis() - start) + " ms.");
+            logger_.trace("DISK TIME: " + (System.currentTimeMillis() - start) + " ms.");
         }
         return columnFamilies;
     }
@@ -557,10 +545,10 @@ public class ColumnFamilyStore
         for (ColumnFamily cf2 : columnFamilies)
         {
             assert cf.name().equals(cf2.name());
-            logger_.debug(cf + " merging " + cf2);
+            logger_.trace(cf + " merging " + cf2);
             cf.addColumns(cf2);
             cf.delete(Math.max(cf.getMarkedForDeleteAt(), cf2.getMarkedForDeleteAt()));
-            logger_.debug("merged as " + cf);
+            logger_.trace("merged as " + cf);
         }
         return cf;
     }
@@ -597,13 +585,13 @@ public class ColumnFamilyStore
                 }
                 if (sc.getSubColumns().size() > 0) {
                     cf.addColumn(sc);
-                    logger_.debug("adding sc " + sc.name() + " to CF with " + sc.getSubColumns().size() + " columns: " + sc);
+                    logger_.trace("adding sc " + sc.name() + " to CF with " + sc.getSubColumns().size() + " columns: " + sc);
                 }
             } else if (c.isMarkedForDelete() || c.timestamp() < cf.getMarkedForDeleteAt()) {
                 cf.remove(cname);
             }
         }
-        logger_.debug("after removeDeleted: " + cf);
+        logger_.trace("after removeDeleted: " + cf);
         return cf;
     }
 
@@ -659,7 +647,6 @@ public class ColumnFamilyStore
         {
             logger_.debug("Submitting for  compaction ...");
             CompactionManager.instance().submit(this);
-            logger_.debug("Submitted for compaction ...");
         }
     }
 

@@ -1407,7 +1407,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 		{
 			if ( StorageService.instance().isInSameDataCenter(endpoints[j]) && FailureDetector.instance().isAlive(endpoints[j]) )
 			{
-				logger_.debug("EndPoint " + endpoints[j] + " is in the same data center as local storage endpoint.");
+				logger_.trace("EndPoint " + endpoints[j] + " is in the same data center as local storage endpoint.");
 				return endpoints[j];
 			}
 		}
@@ -1419,7 +1419,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 		{
 			if ( FailureDetector.instance().isAlive(endpoints[j]) )
 			{
-				logger_.debug("EndPoint " + endpoints[j] + " is alive so get data from it.");
+				logger_.trace("No local endpoints alive.  EndPoint " + endpoints[j] + " is alive so get data from it.");
 				return endpoints[j];
 			}
 		}
