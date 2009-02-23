@@ -40,15 +40,13 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
         /* write if this cf is marked for delete */
         dos.writeLong(columnFamily.getMarkedForDeleteAt());
 
-        if (!columnFamily.isMarkedForDelete()) {
-            /* write the size is the number of columns */
-            dos.writeInt(columns.size());
+        /* write the size is the number of columns */
+        dos.writeInt(columns.size());
 
-            /* write the column data */
-            for ( IColumn column : columns )
-            {
-                columnFamily.getColumnSerializer().serialize(column, dos);
-            }
+        /* write the column data */
+        for ( IColumn column : columns )
+        {
+            columnFamily.getColumnSerializer().serialize(column, dos);
         }
     }
 
@@ -70,16 +68,14 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
             return null;
 
         ColumnFamily cf = defreezeColumnFamily(dis);
-        if ( !cf.isMarkedForDelete() ) {
-            int size = dis.readInt();
-            IColumn column = null;
-            for ( int i = 0; i < size; ++i )
+        int size = dis.readInt();
+        IColumn column = null;
+        for ( int i = 0; i < size; ++i )
+        {
+            column = cf.getColumnSerializer().deserialize(dis);
+            if(column != null)
             {
-                column = cf.getColumnSerializer().deserialize(dis);
-                if(column != null)
-                {
-                    cf.addColumn(column);
-                }
+                cf.addColumn(column);
             }
         }
         return cf;
@@ -95,22 +91,19 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
             return null;
 
         ColumnFamily cf = defreezeColumnFamily(dis);
-        if ( !cf.isMarkedForDelete() )
+        int size = dis.readInt();
+        IColumn column = null;
+        for ( int i = 0; i < size; ++i )
         {
-            int size = dis.readInt();
-        	IColumn column = null;
-            for ( int i = 0; i < size; ++i )
+            column = cf.getColumnSerializer().deserialize(dis, filter);
+            if(column != null)
             {
-            	column = cf.getColumnSerializer().deserialize(dis, filter);
-            	if(column != null)
-            	{
-            		cf.addColumn(column);
-            		column = null;
-            		if(filter.isDone())
-            		{
-            			break;
-            		}
-            	}
+                cf.addColumn(column);
+                column = null;
+                if(filter.isDone())
+                {
+                    break;
+                }
             }
         }
         return cf;
@@ -135,18 +128,15 @@ public class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
             columnName = names[1]+ ":" + names[2];
 
         ColumnFamily cf = defreezeColumnFamily(dis);
-        if ( !cf.isMarkedForDelete() )
+        /* read the number of columns */
+        int size = dis.readInt();
+        for ( int i = 0; i < size; ++i )
         {
-            /* read the number of columns */
-            int size = dis.readInt();
-            for ( int i = 0; i < size; ++i )
+            IColumn column = cf.getColumnSerializer().deserialize(dis, columnName, filter);
+            if ( column != null )
             {
-	            IColumn column = cf.getColumnSerializer().deserialize(dis, columnName, filter);
-	            if ( column != null )
-	            {
-	                cf.addColumn(column);
-	                break;
-	            }
+                cf.addColumn(column);
+                break;
             }
         }
         return cf;
