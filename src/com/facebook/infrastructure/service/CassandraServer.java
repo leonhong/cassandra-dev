@@ -117,7 +117,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 			// TODO: throw a thrift exception if we do not have N nodes
 			/* Create the write messages to be sent */
 			Map<EndPoint, Message> messageMap = createWriteMessages(rm, endpointMap);
-            logger_.debug("Sending to " + StringUtils.join(messageMap.keySet(), ' '));
+            logger_.debug("insert writing to [" + StringUtils.join(messageMap.keySet(), ", ") + "]");
 			for (Map.Entry<EndPoint, Message> entry : messageMap.entrySet())
 			{
 				MessagingService.getMessagingInstance().sendOneWay(entry.getValue(), entry.getKey());
@@ -517,7 +517,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
     }
 
     private boolean insertBlocking(RowMutation rm) {
-        logger_.debug("insertBlocking");
         assert rm.key() != null;
 
         try
@@ -529,7 +528,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
                     DatabaseDescriptor.getReplicationFactor(),
                     writeResponseResolver);
             EndPoint[] endpoints = storageService_.getNStorageEndPoint(rm.key());
-            logger_.debug("writing to " + StringUtils.join(endpoints, ", "));
+            logger_.debug("insertBlocking writing to [" + StringUtils.join(endpoints, ", ") + "]");
             // TODO: throw a thrift exception if we do not have N nodes
 
             MessagingService.getMessagingInstance().sendRR(message, endpoints, quorumResponseHandler);
@@ -551,12 +550,16 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         insert(rm);
 	}
 
-    public void remove(String tablename, String key, String columnFamily_column, long timestamp)
+    public void remove(String tablename, String key, String columnFamily_column, long timestamp, int block_for)
 	{
         logger_.debug("remove");
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.delete(columnFamily_column, timestamp);
-        insert(rm);
+        if (block_for > 0) {
+            insertBlocking(rm);
+        } else {
+            insert(rm);
+        }
 	}
 
     public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)

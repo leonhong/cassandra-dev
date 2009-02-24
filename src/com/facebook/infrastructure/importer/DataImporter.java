@@ -1382,7 +1382,7 @@ public class DataImporter {
                     Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
 					long t = System.currentTimeMillis();
 					
-					peerstorageClient_.remove(tablename_,key,(columnFamilyHack_%divideby_)+":"+threadId,t);
+					peerstorageClient_.remove(tablename_,key,(columnFamilyHack_%divideby_)+":"+threadId,t,0);
 					numReqs_++;
 					totalTime_ = totalTime_ + (System.currentTimeMillis() - t);
 					logger_.debug("Numreqs:" + numReqs_ + " Average: " + totalTime_/numReqs_+  "   Time taken for thrift..."
