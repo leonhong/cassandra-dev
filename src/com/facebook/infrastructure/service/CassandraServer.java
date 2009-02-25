@@ -97,12 +97,6 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
 		return messageMap;
 	}
 
-    public boolean insert_blocking(String tablename, String key, String columnFamily_column, String cellData, long timestamp) {
-        RowMutation rm = new RowMutation(tablename, key.trim());
-        rm.add(columnFamily_column, cellData.getBytes(), timestamp);
-        return insertBlocking(rm);
-    }
-
     private void insert(RowMutation rm)
 	{
         assert rm.key() != null;
@@ -503,20 +497,18 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         return keys;
     }
 
-    public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp)
+    public boolean insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp, int block_for)
 	{
         logger_.debug("insert");
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.add(columnFamily_column, cellData.getBytes(), timestamp);
-        insert(rm);
+        if (block_for > 0) {
+            return insertBlocking(rm);
+        } else {
+            insert(rm);
+            return true;
+        }
 	}
-
-    public boolean batch_insert_blocking(batch_mutation_t batchMutation)
-    {
-        logger_.debug("batch_insert_blocking");
-        RowMutation rm = RowMutation.getRowMutation(batchMutation);
-        return insertBlocking(rm);
-    }
 
     private boolean insertBlocking(RowMutation rm) {
         assert rm.key() != null;
@@ -545,37 +537,41 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         }
     }
 
-    public void batch_insert(batch_mutation_t batchMutation)
+    public boolean batch_insert(batch_mutation_t batchMutation, int block_for)
 	{
         logger_.debug("batch_insert");
         RowMutation rm = RowMutation.getRowMutation(batchMutation);
-        insert(rm);
+        if (block_for > 0) {
+            return insertBlocking(rm);
+        } else {
+            insert(rm);
+            return true;
+        }
 	}
 
-    public void remove(String tablename, String key, String columnFamily_column, long timestamp, int block_for)
+    public boolean remove(String tablename, String key, String columnFamily_column, long timestamp, int block_for)
 	{
         logger_.debug("remove");
         RowMutation rm = new RowMutation(tablename, key.trim());
         rm.delete(columnFamily_column, timestamp);
         if (block_for > 0) {
-            insertBlocking(rm);
+            return insertBlocking(rm);
         } else {
             insert(rm);
+            return true;
         }
 	}
 
-    public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)
-    {
-        logger_.debug("batch_insert_SuperColumn_blocking");
-        RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
-    	return insertBlocking(rm);
-    }
-
-    public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper)
+    public boolean batch_insert_superColumn(batch_mutation_super_t batchMutationSuper, int block_for)
     {
         logger_.debug("batch_insert_SuperColumn");
         RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
-    	insert(rm);
+        if (block_for > 0) {
+            return insertBlocking(rm);
+        } else {
+            insert(rm);
+            return true;
+        }
     }
 
 

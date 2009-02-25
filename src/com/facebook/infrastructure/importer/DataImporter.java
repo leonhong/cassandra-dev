@@ -107,7 +107,7 @@ public class DataImporter {
 		try {
 			long t = System.currentTimeMillis();
 			peerstorageClient_.insert(tablename_, rowKey, columnFamily_ + ":"
-					+ column, columnValue, ts);
+					+ column, columnValue, ts, 0);
 			logger_.debug("Time taken for thrift..."
 					+ (System.currentTimeMillis() - t));
 		} catch (Exception e) {
@@ -125,13 +125,13 @@ public class DataImporter {
 		try {
 			Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
 			long t = System.currentTimeMillis();
-			peerstorageClient_.batch_insert(batchMutation);
+			peerstorageClient_.batch_insert(batchMutation, 0);
 			logger_.debug("Time taken for thrift..."
 					+ (System.currentTimeMillis() - t));
 		} catch (Exception e) {
 			try {
 				peerstorageClient_ = connect();
-				peerstorageClient_.batch_insert(batchMutation);
+				peerstorageClient_.batch_insert(batchMutation, 0);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
@@ -144,13 +144,13 @@ public class DataImporter {
 		try {
 			Thread.sleep(1000/requestsPerSecond_, 1000%requestsPerSecond_);
 			long t = System.currentTimeMillis();
-			peerstorageClient_.batch_insert_superColumn(batchMutation);
+			peerstorageClient_.batch_insert_superColumn(batchMutation, 0);
 			logger_.debug("Time taken for thrift..."
 					+ (System.currentTimeMillis() - t));
 		} catch (Exception e) {
 			try {
 				peerstorageClient_ = connect();
-				peerstorageClient_.batch_insert_superColumn(batchMutation);
+				peerstorageClient_.batch_insert_superColumn(batchMutation, 0);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
