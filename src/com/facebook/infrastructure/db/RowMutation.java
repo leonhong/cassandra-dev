@@ -304,7 +304,7 @@ public class RowMutation implements Serializable
 
     public String toString() {
         return "RowMutation(" +
-               ", key='" + key_ + '\'' +
+               "key='" + key_ + '\'' +
                ", modifications=[" + StringUtils.join(modifications_.values(), ", ") + "]" +
                ')';
     }

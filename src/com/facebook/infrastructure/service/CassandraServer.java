@@ -35,7 +35,9 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.TTransportFactory;
 import org.apache.thrift.TException;
+import org.apache.thrift.TProcessorFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -153,7 +155,7 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
             row = strongRead(params);
         }
 
-        logger_.debug("read " + row + " in " + (System.currentTimeMillis() - startTime) + " ms.");
+        logger_.debug("Finished reading " + row + " in " + (System.currentTimeMillis() - startTime) + " ms.");
         return row;
 	}
 
@@ -626,6 +628,12 @@ public final class CassandraServer extends FacebookBase implements Cassandra.Ifa
         // ThreadPool Server
         TThreadPoolServer.Options options = new TThreadPoolServer.Options();
         options.minWorkerThreads = 64;
-        return new TThreadPoolServer(processor, tServerSocket, tProtocolFactory);
+        return new TThreadPoolServer(new TProcessorFactory(processor),
+                                     tServerSocket,
+                                     new TTransportFactory(),
+                                     new TTransportFactory(),
+                                     tProtocolFactory,
+                                     tProtocolFactory,
+                                     options);
     }
 }

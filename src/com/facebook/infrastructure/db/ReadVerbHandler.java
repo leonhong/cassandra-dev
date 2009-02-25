@@ -99,7 +99,7 @@ public class ReadVerbHandler implements IVerbHandler<byte[]>
             Message response = message.getReply( StorageService.getLocalStorageEndPoint(), bytes );
             MessagingService.getMessagingInstance().sendOneWay(response, message.getFrom());
 
-            logger_.debug("Read " + row + " in " + (rowfetchTime - start) + "ms, " + (System.currentTimeMillis() - start) + "ms total");
+            logger_.debug("RVH read " + row + " in " + (rowfetchTime - start) + "ms, " + (System.currentTimeMillis() - start) + "ms total");
         }
         catch ( IOException ex)
         {
