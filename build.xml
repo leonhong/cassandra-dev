@@ -98,7 +98,7 @@
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc 
-     packagenames="com.facebook.infrastructure.*"
+     packagenames="org.apache.cassandra.*"
      destdir="${build.javadoc}"
      author="true"
      version="true"
@@ -131,11 +131,10 @@
     <jar jarfile="${build.dir}/${final.name}.jar"
          basedir="${build.classes}">
       <manifest>
-        <section name="com/facebook/infrastructure">
+        <section name="org/apache/cassandra">
           <attribute name="Implementation-Title" value="Cassandra"/>
           <attribute name="Implementation-Version" value="${version}"/>
-          <attribute name="Implementation-Vendor" value="Facebook"/>
-          <attribute name="Premain-Class" value="com.facebook.infrastructure.continuations.ContinuationAgent"/>
+          <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
       </manifest>
     </jar>

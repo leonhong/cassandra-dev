@@ -27,13 +27,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKind;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -69,7 +62,6 @@ import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.IFileWriter;
 import org.apache.cassandra.io.SequenceFile;
-import org.apache.cassandra.mapreduce.SequentialScanner;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.IVerbHandler;
 import org.apache.cassandra.net.Message;
@@ -256,21 +248,23 @@ class Scanner implements Runnable
     private static final Logger logger_ = Logger.getLogger(Scanner.class);
     
     public void run()
-    {        
+    {
+        /*
         try
-        {            
-            SequentialScanner scanner = new SequentialScanner("Mailbox");            
-            
+        {
+            SequentialScanner scanner = new SequentialScanner("Mailbox");
+
             while ( scanner.hasNext() )
             {
-                Row row = scanner.next();    
+                Row row = scanner.next();
                 logger_.debug(row.key());
-            }            
+            }
         }
         catch ( IOException ex )
         {
             ex.printStackTrace();
-        }        
+        }
+        */
     }
 }
 

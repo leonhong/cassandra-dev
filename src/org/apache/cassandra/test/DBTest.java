@@ -38,7 +38,6 @@ import org.apache.cassandra.io.IFileReader;
 import org.apache.cassandra.io.IFileWriter;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.io.SequenceFile;
-import org.apache.cassandra.mapreduce.SequentialScanner;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
@@ -110,18 +109,7 @@ public class DBTest
             System.out.println(scanner.next().name());
         }             
     }
-    
-    private static void doSequentialScannerTest() throws Throwable
-    {
-        SequentialScanner scanner = new SequentialScanner("Mailbox");
-        while ( scanner.hasNext() )
-        {
-            Row row = scanner.next();  
-            System.out.println( row.getColumnFamily("Test") );
-            System.out.println( row.getColumnFamily("Test2") );
-        }
-    }
-    
+
     public static void doTest()
     {
         String host = "insearch00";
