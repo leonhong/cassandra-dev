@@ -339,6 +339,10 @@ public class DatabaseDescriptor
             {
                 Node columnFamily = columnFamilies.item(j);
                 String cName = XMLUtils.getAttributeValue(columnFamily, "Name");
+                if (cName == null)
+                {
+                    throw new IllegalArgumentException("ColumnFamily element missing Name attribute: " + columnFamily);
+                }
                 String xqlCF = xqlTable + "ColumnFamily[@Name='" + cName + "']/";
 
                 /* squirrel away the application column families */
