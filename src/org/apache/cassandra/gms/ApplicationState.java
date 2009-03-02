@@ -27,6 +27,7 @@ import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.io.IFileReader;
 import org.apache.cassandra.io.IFileWriter;
 
+
 /**
  * This abstraction represents the state associated with a particular node which an
  * application wants to make available to the rest of the nodes in the cluster. 

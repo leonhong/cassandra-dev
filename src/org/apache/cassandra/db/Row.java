@@ -18,20 +18,23 @@
 
 package org.apache.cassandra.db;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
+
+import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.io.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
-
 public class Row implements Serializable
 {
     private static ICompactSerializer<Row> serializer_;
@@ -47,10 +50,8 @@ public class Row implements Serializable
         return serializer_;
     }
 
-    private String key_;
-    
+    private String key_;    
     private Map<String, ColumnFamily> columnFamilies_ = new Hashtable<String, ColumnFamily>();
-
     private transient AtomicInteger size_ = new AtomicInteger(0);
 
     /* Ctor for JAXB */
@@ -72,6 +73,11 @@ public class Row implements Serializable
     {
         key_ = key;
     }
+    
+    public ColumnFamily getColumnFamily(String cfName)
+    {
+        return columnFamilies_.get(cfName);
+    }
 
     public Map<String, ColumnFamily> getColumnFamilies()
     {
@@ -91,7 +97,7 @@ public class Row implements Serializable
         size_.addAndGet(delta);
     }
 
-    int size()
+    public int size()
     {
         return size_.get();
     }
@@ -101,7 +107,7 @@ public class Row implements Serializable
     	return ( columnFamilies_.size() == 0 );
     }
     
-    /*
+    /**
      * This is used as oldRow.merge(newRow). Basically we take the newRow
      * and merge it into the oldRow.
     */
@@ -122,7 +128,7 @@ public class Row implements Serializable
         }
     }
 
-    /*
+    /**
      * This function will repair the current row with the input row
      * what that means is that if there are any differences between the 2 rows then
      * this fn will make the current row take the latest changes .
@@ -145,8 +151,7 @@ public class Row implements Serializable
 
     }
 
-
-    /*
+    /**
      * This function will calculate the difference between 2 rows
      * and return the resultant row. This assumes that the row that
      * is being submitted is a super set of the current row so

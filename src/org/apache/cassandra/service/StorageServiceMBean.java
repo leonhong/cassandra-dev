@@ -23,13 +23,13 @@ import java.math.BigInteger;
 
 import org.apache.cassandra.net.EndPoint;
 
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
 public interface StorageServiceMBean
-{
-    public long getRequestHandled();    
+{    
     public String getLiveNodes();
     public String getUnreachableNodes();
     public String getToken();

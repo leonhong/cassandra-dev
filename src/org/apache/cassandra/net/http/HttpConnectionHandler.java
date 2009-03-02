@@ -18,14 +18,14 @@
 
 package org.apache.cassandra.net.http;
 
-import org.apache.cassandra.db.Table;
-import org.apache.cassandra.net.SelectionKeyHandler;
-import org.apache.cassandra.net.SelectorManager;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import org.apache.cassandra.db.Table;
+import org.apache.cassandra.net.SelectionKeyHandler;
+import org.apache.cassandra.net.SelectorManager;
 import org.apache.log4j.Logger;
 
 public class HttpConnectionHandler extends SelectionKeyHandler

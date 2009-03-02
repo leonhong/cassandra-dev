@@ -30,7 +30,6 @@ public interface IColumn
     public static short UtfPrefix_ = 2;
     public boolean isMarkedForDelete();
     public String name();
-    public String name(String key);
     public int size();
     public int serializedSize();
     public long timestamp();
@@ -38,6 +37,7 @@ public interface IColumn
     public byte[] value();
     public byte[] value(String key);
     public Collection<IColumn> getSubColumns();
+    public IColumn getSubColumn(String columnName);
     public void addColumn(String name, IColumn column);
     public void delete();
     public void repair(IColumn column);

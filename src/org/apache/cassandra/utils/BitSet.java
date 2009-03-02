@@ -23,6 +23,7 @@ import java.util.*;
 
 import org.apache.cassandra.io.ICompactSerializer;
 
+
 /**
  * This class implements a vector of bits that grows as needed. Each component
  * of the bit set has a <code>boolean</code> value. The bits of a

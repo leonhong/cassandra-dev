@@ -19,6 +19,16 @@
 package org.apache.cassandra.tools;
 
 import java.io.IOException;
+
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.DataOutputBuffer;
+import org.apache.cassandra.io.IFileReader;
+import org.apache.cassandra.io.IFileWriter;
+import org.apache.cassandra.io.SSTable;
+import org.apache.cassandra.io.SequenceFile;
+import org.apache.cassandra.utils.BasicUtilities;
+import org.apache.cassandra.utils.BloomFilter;
+
 import org.apache.cassandra.io.*;
 import org.apache.cassandra.utils.*;
 
@@ -30,7 +40,7 @@ public class IndexBuilder
     {
         if ( args.length != 1 )
         {
-            System.out.println("Usage : java org.apache.cassandra.tools.IndexBuilder <full path to the data file>");
+            System.out.println("Usage : java com.facebook.infrastructure.tools.IndexBuilder <full path to the data file>");
             System.exit(1);
         }
 

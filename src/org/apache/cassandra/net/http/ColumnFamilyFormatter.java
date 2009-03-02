@@ -8,6 +8,7 @@ import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.SuperColumn;
 
+
 public class ColumnFamilyFormatter extends HTMLFormatter
 {
 	public ColumnFamilyFormatter()

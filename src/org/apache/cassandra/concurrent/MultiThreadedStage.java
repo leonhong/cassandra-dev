@@ -20,11 +20,13 @@
 package org.apache.cassandra.concurrent;
 
 import java.util.concurrent.*;
+
 import javax.naming.OperationNotSupportedException;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 /**
  * This class is an implementation of the <i>IStage</i> interface. In particular
@@ -50,9 +52,15 @@ public class MultiThreadedStage implements IStage
                 );        
     }
     
-    public String getName() {        
+    public String getName() 
+    {        
         return name_;
     }    
+    
+    public ExecutorService getInternalThreadPool()
+    {
+        return executorService_;
+    }
 
     public Future<Object> execute(Callable<Object> callable) {
         return executorService_.submit(callable);

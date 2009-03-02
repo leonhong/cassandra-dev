@@ -21,9 +21,8 @@ package org.apache.cassandra.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.FileUtils;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.IVerbHandler;
@@ -31,7 +30,9 @@ import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.io.StreamContextManager;
 import org.apache.cassandra.service.StorageService.BootstrapInitiateDoneVerbHandler;
+import org.apache.cassandra.utils.FileUtils;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 /*
  * This class manages the streaming of multiple files 

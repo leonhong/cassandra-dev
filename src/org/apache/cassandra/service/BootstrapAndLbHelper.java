@@ -21,8 +21,9 @@ package org.apache.cassandra.service;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.io.SSTable;
+import org.apache.log4j.Logger;
 
 public final class BootstrapAndLbHelper
 {

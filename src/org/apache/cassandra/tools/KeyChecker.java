@@ -23,12 +23,13 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 
+import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.cassandra.db.Row;
+
 
 public class KeyChecker
 {
@@ -53,7 +54,7 @@ public class KeyChecker
     {
         if ( args.length != 1 )
         {
-            System.out.println("Usage : java org.apache.cassandra.tools.KeyChecker <file containing all keys>");
+            System.out.println("Usage : java com.facebook.infrastructure.tools.KeyChecker <file containing all keys>");
             System.exit(1);
         }
         

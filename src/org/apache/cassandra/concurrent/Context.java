@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.concurrent;
 
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Context object adding a collection of key/value pairs into ThreadLocalContext.
@@ -27,11 +28,11 @@ import java.util.Hashtable;
 
 public class Context
 {
-    private Hashtable<Object, Object> ht_;
+    private Map<Object, Object> ht_;
     
     public Context()
     {
-        ht_ = new Hashtable<Object, Object>();
+        ht_ = new HashMap<Object, Object>();
     }
     
     public Object put(Object key, Object value)

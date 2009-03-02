@@ -20,12 +20,14 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
   public String table;
   public String key;
   public Map<String,List<superColumn_t>> cfmap;
+  public Map<String,List<superColumn_t>> cfmapdel;
 
   public final Isset __isset = new Isset();
   public static final class Isset implements java.io.Serializable {
     public boolean table = false;
     public boolean key = false;
     public boolean cfmap = false;
+    public boolean cfmapdel = false;
   }
 
   public batch_mutation_super_t() {
@@ -34,7 +36,8 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
   public batch_mutation_super_t(
     String table,
     String key,
-    Map<String,List<superColumn_t>> cfmap)
+    Map<String,List<superColumn_t>> cfmap,
+    Map<String,List<superColumn_t>> cfmapdel)
   {
     this();
     this.table = table;
@@ -43,6 +46,8 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
     this.__isset.key = true;
     this.cfmap = cfmap;
     this.__isset.cfmap = true;
+    this.cfmapdel = cfmapdel;
+    this.__isset.cfmapdel = true;
   }
 
   public boolean equals(Object that) {
@@ -84,6 +89,15 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
         return false;
     }
 
+    boolean this_present_cfmapdel = true && (this.cfmapdel != null);
+    boolean that_present_cfmapdel = true && (that.cfmapdel != null);
+    if (this_present_cfmapdel || that_present_cfmapdel) {
+      if (!(this_present_cfmapdel && that_present_cfmapdel))
+        return false;
+      if (!this.cfmapdel.equals(that.cfmapdel))
+        return false;
+    }
+
     return true;
   }
 
@@ -121,30 +135,61 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
         case 3:
           if (field.type == TType.MAP) {
             {
-              TMap _map13 = iprot.readMapBegin();
-              this.cfmap = new HashMap<String,List<superColumn_t>>(2*_map13.size);
-              for (int _i14 = 0; _i14 < _map13.size; ++_i14)
+              TMap _map22 = iprot.readMapBegin();
+              this.cfmap = new HashMap<String,List<superColumn_t>>(2*_map22.size);
+              for (int _i23 = 0; _i23 < _map22.size; ++_i23)
               {
-                String _key15;
-                List<superColumn_t> _val16;
-                _key15 = iprot.readString();
+                String _key24;
+                List<superColumn_t> _val25;
+                _key24 = iprot.readString();
                 {
-                  TList _list17 = iprot.readListBegin();
-                  _val16 = new ArrayList<superColumn_t>(_list17.size);
-                  for (int _i18 = 0; _i18 < _list17.size; ++_i18)
+                  TList _list26 = iprot.readListBegin();
+                  _val25 = new ArrayList<superColumn_t>(_list26.size);
+                  for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                   {
-                    superColumn_t _elem19 = new superColumn_t();
-                    _elem19 = new superColumn_t();
-                    _elem19.read(iprot);
-                    _val16.add(_elem19);
+                    superColumn_t _elem28 = new superColumn_t();
+                    _elem28 = new superColumn_t();
+                    _elem28.read(iprot);
+                    _val25.add(_elem28);
                   }
                   iprot.readListEnd();
                 }
-                this.cfmap.put(_key15, _val16);
+                this.cfmap.put(_key24, _val25);
               }
               iprot.readMapEnd();
             }
             this.__isset.cfmap = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 4:
+          if (field.type == TType.MAP) {
+            {
+              TMap _map29 = iprot.readMapBegin();
+              this.cfmapdel = new HashMap<String,List<superColumn_t>>(2*_map29.size);
+              for (int _i30 = 0; _i30 < _map29.size; ++_i30)
+              {
+                String _key31;
+                List<superColumn_t> _val32;
+                _key31 = iprot.readString();
+                {
+                  TList _list33 = iprot.readListBegin();
+                  _val32 = new ArrayList<superColumn_t>(_list33.size);
+                  for (int _i34 = 0; _i34 < _list33.size; ++_i34)
+                  {
+                    superColumn_t _elem35 = new superColumn_t();
+                    _elem35 = new superColumn_t();
+                    _elem35.read(iprot);
+                    _val32.add(_elem35);
+                  }
+                  iprot.readListEnd();
+                }
+                this.cfmapdel.put(_key31, _val32);
+              }
+              iprot.readMapEnd();
+            }
+            this.__isset.cfmapdel = true;
           } else { 
             TProtocolUtil.skip(iprot, field.type);
           }
@@ -185,12 +230,33 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
       oprot.writeFieldBegin(field);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmap.size()));
-        for (String _iter20 : this.cfmap.keySet())        {
-          oprot.writeString(_iter20);
+        for (String _iter36 : this.cfmap.keySet())        {
+          oprot.writeString(_iter36);
           {
-            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmap.get(_iter20).size()));
-            for (superColumn_t _iter21 : this.cfmap.get(_iter20))            {
-              _iter21.write(oprot);
+            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmap.get(_iter36).size()));
+            for (superColumn_t _iter37 : this.cfmap.get(_iter36))            {
+              _iter37.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+        }
+        oprot.writeMapEnd();
+      }
+      oprot.writeFieldEnd();
+    }
+    if (this.cfmapdel != null) {
+      field.name = "cfmapdel";
+      field.type = TType.MAP;
+      field.id = 4;
+      oprot.writeFieldBegin(field);
+      {
+        oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmapdel.size()));
+        for (String _iter38 : this.cfmapdel.keySet())        {
+          oprot.writeString(_iter38);
+          {
+            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmapdel.get(_iter38).size()));
+            for (superColumn_t _iter39 : this.cfmapdel.get(_iter38))            {
+              _iter39.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -211,6 +277,8 @@ public class batch_mutation_super_t implements TBase, java.io.Serializable {
     sb.append(this.key);
     sb.append(",cfmap:");
     sb.append(this.cfmap);
+    sb.append(",cfmapdel:");
+    sb.append(this.cfmapdel);
     sb.append(")");
     return sb.toString();
   }

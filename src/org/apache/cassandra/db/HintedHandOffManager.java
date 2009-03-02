@@ -24,8 +24,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
 import org.apache.cassandra.concurrent.ThreadFactoryImpl;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -38,6 +36,8 @@ import org.apache.cassandra.service.IResponseResolver;
 import org.apache.cassandra.service.QuorumResponseHandler;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.service.WriteResponseResolver;
+import org.apache.log4j.Logger;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )

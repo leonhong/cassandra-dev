@@ -29,11 +29,14 @@ import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.cassandra.io.*;
+
+import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.io.*;
 import org.apache.cassandra.utils.*;
 
 public class TokenUpdater
@@ -45,7 +48,7 @@ public class TokenUpdater
     {
         if ( args.length != 3 )
         {
-            System.out.println("Usage : java org.apache.cassandra.tools.TokenUpdater <ip:port> <token> <file containing node token info>");
+            System.out.println("Usage : java com.facebook.infrastructure.tools.TokenUpdater <ip:port> <token> <file containing node token info>");
             System.exit(1);
         }
         

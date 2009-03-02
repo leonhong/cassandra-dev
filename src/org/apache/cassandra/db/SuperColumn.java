@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.db;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -26,10 +28,11 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.HashingSchemes;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -75,24 +78,17 @@ public final class SuperColumn implements IColumn, Serializable
     	return name_;
     }
 
-    public String name(String key)
-    {
-    	IColumn column = columns_.get(key);
-    	if ( column instanceof SuperColumn )
-    		throw new UnsupportedOperationException("A super column cannot hold other super columns.");
-    	if ( column != null )
-    		return column.name();
-    	return null;
-    }
-
     public Collection<IColumn> getSubColumns()
     {
     	return columns_.getSortedColumns();
     }
 
-    public IColumn getSubColumn(String name)
+    public IColumn getSubColumn( String columnName )
     {
-    	return columns_.get(name);
+    	IColumn column = columns_.get(columnName);
+    	if ( column instanceof SuperColumn )
+    		throw new UnsupportedOperationException("A super column cannot hold other super columns.");
+		return column;
     }
 
     public int compareTo(IColumn superColumn)
@@ -225,15 +221,7 @@ public final class SuperColumn implements IColumn, Serializable
 
         for ( IColumn subColumn : columns )
         {
-        	IColumn columnInternal = columns_.get(subColumn.name());
-        	if(columnInternal == null )
-        	{
-        		addColumn(subColumn.name(), subColumn);
-        	}
-        	else
-        	{
-        		columnInternal.putColumn(subColumn);
-        	}
+       		addColumn(subColumn.name(), subColumn);
         }
         return false;
     }

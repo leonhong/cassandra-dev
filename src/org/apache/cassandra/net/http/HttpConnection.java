@@ -30,7 +30,7 @@ import java.io.*;
 import java.nio.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-
+import org.apache.cassandra.service.*;
 import org.apache.cassandra.concurrent.SingleThreadedStage;
 import org.apache.cassandra.concurrent.StageManager;
 import org.apache.cassandra.db.Table;
@@ -39,9 +39,8 @@ import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.SelectionKeyHandler;
 import org.apache.cassandra.net.SelectorManager;
-import org.apache.cassandra.service.*;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.LogUtil;
-
 import org.apache.log4j.Logger;
 
 /**

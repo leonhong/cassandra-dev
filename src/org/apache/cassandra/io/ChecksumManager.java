@@ -36,10 +36,11 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.Adler32;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.FileUtils;
+import org.apache.cassandra.utils.FileUtils;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 import bak.pcj.map.AbstractLongKeyLongMap;
 import bak.pcj.map.LongKeyLongChainedHashMap;
 
@@ -86,6 +87,30 @@ class ChecksumManager
         }
         return chksumMgr;
     }
+    
+    /* TODO: Debug only */
+    public static ChecksumManager instance(String dataFile, String chkSumFile) throws IOException
+    {
+        ChecksumManager chksumMgr = chksumMgrs_.get(dataFile);
+        if ( chksumMgr == null )
+        {
+            lock_.lock();
+            try
+            {
+                if ( chksumMgr == null )
+                {
+                    chksumMgr = new ChecksumManager(dataFile, chkSumFile);
+                    chksumMgrs_.put(dataFile, chksumMgr);
+                }
+            }
+            finally
+            {
+                lock_.unlock();
+            }
+        }
+        return chksumMgr;
+    }
+    
     
     /**
      * On start read all the check sum files on disk and
@@ -172,19 +197,55 @@ class ChecksumManager
         raf_ = new RandomAccessFile(chkSumFile, "rw");
     }
     
+    /* TODO: Remove later. */
+    ChecksumManager(String dataFile, String chkSumFile) throws IOException
+    {
+        File file = new File(dataFile);
+        String directory = file.getParent();
+        String f = file.getName();
+        short fId = SequenceFile.getFileId(f);        
+        raf_ = new RandomAccessFile(chkSumFile, "rw");
+        
+        file = new File(chkSumFile);        
+        ChecksumReader chksumRdr = new ChecksumReader(file.getAbsolutePath(), 0L, file.length());
+                    
+        int chunk = 0;
+        while ( !chksumRdr.isEOF() )
+        {
+            long value = chksumRdr.readLong();
+            long key = ChecksumManager.key(fId, ++chunk);
+            chksums_.put(key, value);
+        }
+    }
+    
     /**
      * Log the checksum for the the specified file and chunk
      * within the file.
      * @param fileId id associated with the file
      * @param chunkId chunk within the file.
-     * @param chksum calculated checksum for the chunk
+     * @param buffer for which the checksum needs to be calculated.
      * @throws IOException
      */
     void logChecksum(int fileId, int chunkId, byte[] buffer)
     {
+        logChecksum(fileId, chunkId, buffer, 0, buffer.length);
+    }
+    
+    /**
+     * Log the checksum for the the specified file and chunk
+     * within the file.
+     * @param fileId id associated with the file
+     * @param chunkId chunk within the file.
+     * @param buffer for which the checksum needs to be calculated.
+     * @param startoffset offset to start within the buffer
+     * @param length size of the checksum buffer.
+     * @throws IOException
+     */
+    void logChecksum(int fileId, int chunkId, byte[] buffer, int startOffset, int length)
+    {
         try
-        {
-            adler_.update(buffer);
+        {            
+            adler_.update(buffer, startOffset, length);
             long chksum = adler_.getValue();
             adler_.reset();
             /* log checksums to disk */
@@ -200,30 +261,45 @@ class ChecksumManager
     }
     
     /**
-     * Validate checksums for the data in the buffer for the region
-     * that is encapsulated in the section object
-     * @param bufOut buffer containing the data.
-     * @param section coordinates indicating the region on disk.
+     * Validate checksums for the data in the buffer.
+     * @file name of the file from which data is being
+     *       read.
+     * @chunkId chunkId
+     * @param buffer with data for which checksum needs to be 
+     *        verified.
      * @throws IOException
      */
-    void validateChecksum(byte[] buffer, int chunkId, String file) throws IOException
+    void validateChecksum(String file, int chunkId, byte[] buffer) throws IOException
     {                
+        validateChecksum(file, chunkId, buffer, 0, buffer.length);
+    }
+    
+    /**
+     * Validate checksums for the data in the buffer for the region
+     * that is encapsulated in the section object
+     * @file name of the file from which data is being
+     *       read.
+     * @chunkId chunkId     
+     * @param buffer with data for which checksum needs to be 
+     *        verified.
+     * @param startOffset within the buffer
+     * @param length of the data whose checksum needs to be verified.
+     * @throws IOException
+     */
+    void validateChecksum(String file, int chunkId, byte[] buffer, int startOffset, int length) throws IOException
+    {            
         int fId = SequenceFile.getFileId(file);
         long key = ChecksumManager.key(fId, chunkId);
-        adler_.update(buffer);
+        adler_.update(buffer, startOffset, length);
         long currentChksum = adler_.getValue();
         adler_.reset();
         long oldChksum = chksums_.get(key);
         if ( currentChksum != oldChksum )
-        {            
-            System.out.println("EXCEPTION:" + chunkId);
-            throw new IOException("Checksums do not match for this chunk.");
-        }
-        else
-        {
-            System.out.println(chunkId);
-        }
+        {                                   
+            throw new IOException("Checksums do not match in file " + file + " for chunk " + chunkId + ".");
+        }        
     }
+    
     
     /**
      * Get the checksum for the specified file's chunk

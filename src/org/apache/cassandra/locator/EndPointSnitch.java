@@ -19,6 +19,7 @@
 package org.apache.cassandra.locator;
 
 import java.net.*;
+
 import org.apache.cassandra.net.EndPoint;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )

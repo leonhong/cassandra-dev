@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.io.DataInputBuffer;
@@ -31,10 +31,10 @@ import org.apache.cassandra.net.IVerbHandler;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.io.StreamContextManager;
-import org.apache.cassandra.service.RequestCountSampler;
 import org.apache.cassandra.service.StreamManager;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 /**
  * This verb handler handles the BootstrapMetadataMessage that is sent
@@ -119,8 +119,8 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
             logger_.debug("Forcing compaction ...");
             /* Get the counting bloom filter for each endpoint and the list of files that need to be streamed */
             List<String> fileList = new ArrayList<String>();
-            BloomFilter.CountingBloomFilter cbf = table.forceCompaction(ranges, target, fileList);                
-            doHandoff(cbf, target, fileList);
+            boolean bVal = table.forceCompaction(ranges, target, fileList);                
+            doHandoff(target, fileList);
         }
     }
 
@@ -128,7 +128,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
      * Stream the files in the bootstrap directory over to the
      * node being bootstrapped.
     */
-    private void doHandoff(BloomFilter.CountingBloomFilter cbf, EndPoint target, List<String> fileList) throws IOException
+    private void doHandoff(EndPoint target, List<String> fileList) throws IOException
     {
         List<File> filesList = new ArrayList<File>();
         for(String file : fileList)
@@ -140,15 +140,7 @@ public class BootstrapMetadataVerbHandler implements IVerbHandler
         int i = 0;
         for ( File file : files )
         {
-            if ( file.getName().indexOf("-Data.db") != -1 )
-            {
-                RequestCountSampler.Cardinality cardinality = new RequestCountSampler.Cardinality(cbf, cbf.count());
-                streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length(), cardinality);
-            }
-            else
-            {
-                streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length());
-            }
+            streamContexts[i] = new StreamContextManager.StreamContext(file.getAbsolutePath(), file.length());
             logger_.debug("Stream context metadata " + streamContexts[i]);
             ++i;
         }

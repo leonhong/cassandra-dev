@@ -39,12 +39,12 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.IComponentShutdown;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 
 
 /**

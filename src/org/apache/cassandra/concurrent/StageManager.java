@@ -21,6 +21,10 @@ package org.apache.cassandra.concurrent;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+
+import org.apache.cassandra.continuations.Suspendable;
+
 
 /**
  * This class manages all stages that exist within a process. The application registers
@@ -33,7 +37,7 @@ import java.util.Set;
 public class StageManager
 {
     private static Map<String, IStage > stageQueues_ = new HashMap<String, IStage>();
-
+    
     /**
      * Register a stage with the StageManager
      * @param stageName stage name.
@@ -43,6 +47,20 @@ public class StageManager
     {
         stageQueues_.put(stageName, stage);
     }
+    
+    /**
+     * Returns the stage that we are currently executing on.
+     * This relies on the fact that the thread names in the
+     * stage have the name of the stage as the prefix.
+     * @return
+     */
+    public static IStage getCurrentStage()
+    {
+        String name = Thread.currentThread().getName();
+        String[] peices = name.split(":");
+        IStage stage = getStage(peices[0]);
+        return stage;
+    }
 
     /**
      * Retrieve a stage from the StageManager
@@ -51,6 +69,19 @@ public class StageManager
     public static IStage getStage(String stageName)
     {
         return stageQueues_.get(stageName);
+    }
+    
+    /**
+     * Retrieve the internal thread pool associated with the
+     * specified stage name.
+     * @param stageName name of the stage.
+     */
+    public static ExecutorService getStageInternalThreadPool(String stageName)
+    {
+        IStage stage = getStage(stageName);
+        if ( stage == null )
+            throw new IllegalArgumentException("No stage registered with name " + stageName);
+        return stage.getInternalThreadPool();
     }
 
     /**

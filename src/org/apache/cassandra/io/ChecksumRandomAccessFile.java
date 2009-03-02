@@ -20,8 +20,10 @@ package org.apache.cassandra.io;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.Random;
 
 import org.apache.cassandra.utils.FBUtilities;
+
 
 /**
  * A <code>ChecksumRandomAccessFile</code> is like a
@@ -37,8 +39,15 @@ import org.apache.cassandra.utils.FBUtilities;
  */
 
 public final class ChecksumRandomAccessFile extends RandomAccessFile
-{
+{ 
+    private static enum ChecksumOperations
+    {
+        LOG,
+        VERIFY
+    }
+    
     static final int LogBuffSz_ = 16; // 64K buffer
+    private static final int checksumSz_ = (1 << LogBuffSz_); // 64K
     public static final int BuffSz_ = (1 << LogBuffSz_);
     static final long BuffMask_ = ~(((long) BuffSz_) - 1L);
     
@@ -170,11 +179,38 @@ public final class ChecksumRandomAccessFile extends RandomAccessFile
         this.flushBuffer();
     }
     
-    private int getChunkId()
+    private void doChecksumOperation(ChecksumOperations chksumOps) throws IOException
     {        
-        int chunk = (int)(curr_ / BuffSz_);
-        int chunkId = ( (int)(curr_ % BuffSz_) == 0 ) ? chunk : ++chunk;      
-        return chunkId;
+        int buffSz = buff_.length;
+        /*
+         * If the diskPos_ is at the buffer boundary then return 
+         * diskPos_ - 1 else return the actual diskPos_.
+        */        
+        long currentPosition = ( (diskPos_ % buffSz) == 0 ) ? diskPos_ - 1 : diskPos_;
+        /* Tells me which buffered chunk I am in. */
+        long chunk = (currentPosition / buffSz) + 1; 
+        /* Number of checksum chunks within a buffer */
+        int chksumChunks = buff_.length / checksumSz_;  
+        /* Position of the start of the previous buffer boundary */
+        long pos = (chunk == 0) ? 0 : (chunk - 1)*buffSz;
+        int startOffset = 0;
+        int chksumChunkId = (int)(chksumChunks*(chunk - 1) + 1);
+        do
+        {            
+            int fId = SequenceFile.getFileId(filename_);               
+            switch( chksumOps )
+            {
+                case LOG:                    
+                    ChecksumManager.instance(filename_).logChecksum(fId, chksumChunkId++, buff_, startOffset, checksumSz_);
+                    break;
+                case VERIFY:
+                    ChecksumManager.instance(filename_).validateChecksum(filename_, chksumChunkId++, buff_, startOffset, checksumSz_);
+                    break;
+            }
+            pos += checksumSz_;
+            startOffset += checksumSz_;
+        }
+        while ( pos < currentPosition );
     }
     
     /**
@@ -186,14 +222,12 @@ public final class ChecksumRandomAccessFile extends RandomAccessFile
         {
             if (this.diskPos_ != this.lo_)
                 super.seek(this.lo_);
-            int len = (int) (this.curr_ - this.lo_);
-            /* checksum the data before we write to disk */
-            int chunkId = getChunkId();            
-            int fId = SequenceFile.getFileId(filename_);            
-            ChecksumManager.instance(filename_).logChecksum(fId, chunkId, buff_);
+            int len = (int) (this.curr_ - this.lo_);            
             super.write(this.buff_, 0, len);
             this.diskPos_ = this.curr_;
             this.dirty_ = false;
+            /* checksum the data before we write to disk */
+            doChecksumOperation(ChecksumOperations.LOG);
         }
     }
     
@@ -218,14 +252,8 @@ public final class ChecksumRandomAccessFile extends RandomAccessFile
         if (this.hitEOF_ = (cnt < this.buff_.length))
         {
             // make sure buffer that wasn't read is initialized with -1
-            Arrays.fill(this.buff_, cnt, this.buff_.length, (byte) 0xff);            
-        }
-        /* checksum the data to verify */
-        if ( n > 0 )
-        {
-            int chunkId = getChunkId();            
-            //ChecksumManager.instance(filename_).validateChecksum(buff_, chunkId, filename_);
-        }
+            Arrays.fill(this.buff_, cnt, this.buff_.length, (byte) 0xff);             
+        }                
         this.diskPos_ += cnt;
         return cnt;
     }
@@ -253,6 +281,10 @@ public final class ChecksumRandomAccessFile extends RandomAccessFile
                 this.diskPos_ = this.lo_;
             }
             int n = this.fillBuffer();
+            if ( n > 0 )
+            {
+                doChecksumOperation(ChecksumOperations.VERIFY);
+            }
             this.hi_ = this.lo_ + (long) n;
         }
         else
@@ -392,5 +424,33 @@ public final class ChecksumRandomAccessFile extends RandomAccessFile
         System.arraycopy(b, off, this.buff_, buffOff, len);
         this.curr_ += len;
         return len;
+    }
+    
+    public static void main(String[] args) throws Throwable
+    {
+        
+        RandomAccessFile raf = new ChecksumRandomAccessFile("C:\\Engagements\\Table-ColumnFamily-1-Data.dat", "rw");
+        byte[] bytes = new byte[32*1024];
+        Random random = new Random();
+        
+        for ( int i = 0; i < 16; ++i )
+        {
+            random.nextBytes(bytes);
+            raf.write(bytes);
+        }
+        raf.close();
+        
+        String file = "C:\\Engagements\\Checksum-1.db";
+        ChecksumManager.instance("C:\\Engagements\\Table-ColumnFamily-1-Data.dat", file);
+        
+        raf = new ChecksumRandomAccessFile("C:\\Engagements\\Table-ColumnFamily-1-Data.dat", "rw", 4*1024*1024);
+        bytes = new byte[32*1024];
+        
+        for ( int i = 0; i < 16; ++i )
+        {           
+            raf.readFully(bytes);
+        }
+        raf.close();
+       
     }
 }

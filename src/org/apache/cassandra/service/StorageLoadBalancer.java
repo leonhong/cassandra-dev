@@ -26,7 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
 import org.apache.cassandra.concurrent.DebuggableThreadPoolExecutor;
 import org.apache.cassandra.concurrent.SingleThreadedStage;
@@ -39,6 +39,11 @@ import org.apache.cassandra.gms.EndPointState;
 import org.apache.cassandra.gms.Gossiper;
 import org.apache.cassandra.gms.IEndPointStateChangeSubscriber;
 import org.apache.cassandra.io.SSTable;
+import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.net.IVerbHandler;
+import org.apache.cassandra.net.Message;
+import org.apache.cassandra.net.MessagingService;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.net.*;
 import org.apache.cassandra.utils.*;
 
@@ -64,17 +69,18 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
             loadInfo2_.putAll(loadInfo_);
         }
 
+        /**
+         * Obtain a node which is a potential target. Start with
+         * the neighbours i.e either successor or predecessor.
+         * Send the target a MoveMessage. If the node cannot be
+         * relocated on the ring then we pick another candidate for
+         * relocation.
+        */        
         public void run()
         {
-            int threshold = (int)(StorageLoadBalancer.ratio_ * averageSystemLoad());
-            int myLoad = localLoad();
             /*
-             * Obtain a node which is a potential target. Start with
-             * the neighbours i.e either successor or predecessor.
-             * Send the target a MoveMessage. If the node cannot be
-             * relocated on the ring then we pick another candidate for
-             * relocation.
-            */
+            int threshold = (int)(StorageLoadBalancer.ratio_ * averageSystemLoad());
+            int myLoad = localLoad();            
             EndPoint predecessor = storageService_.getPredecessor(StorageService.getLocalStorageEndPoint());
             logger_.debug("Trying to relocate the predecessor " + predecessor);
             boolean value = tryThisNode(myLoad, threshold, predecessor);
@@ -105,25 +111,25 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
                         }
                         else
                         {
-                            /* No light nodes available - this is NOT good. */
+                            // No light nodes available - this is NOT good.
                             logger_.warn("Not even a single lightly loaded node is available ...");
                             break;
                         }
                     }
 
-                    loadInfo2_.clear();
-                    /*
-                     * If we are here and no node was available to
-                     * perform load balance with we need to report and bail.
-                    */
+                    loadInfo2_.clear();                    
+                     // If we are here and no node was available to
+                     // perform load balance with we need to report and bail.                    
                     if ( !value )
                     {
                         logger_.warn("Load Balancing operations weren't performed for this node");
                     }
-                }
+                }                
             }
+            */        
         }
 
+        /*
         private boolean tryThisNode(int myLoad, int threshold, EndPoint target)
         {
             boolean value = false;
@@ -131,14 +137,12 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
             int pLoad = li.count();
             if ( ((myLoad + pLoad) >> 1) <= threshold )
             {
-                /* calculate the number of keys to be transferred */
+                //calculate the number of keys to be transferred
                 int keyCount = ( (myLoad - pLoad) >> 1 );
                 logger_.debug("Number of keys we attempt to transfer to " + target + " " + keyCount);
-                /*
-                 * Determine the token that the target should join at.
-                */
+                // Determine the token that the target should join at.         
                 BigInteger targetToken = BootstrapAndLbHelper.getTokenBasedOnPrimaryCount(keyCount);
-                /* Send a MoveMessage and see if this node is relocateable */
+                // Send a MoveMessage and see if this node is relocateable
                 MoveMessage moveMessage = new MoveMessage(targetToken);
                 Message message = new Message(StorageService.getLocalStorageEndPoint(), StorageLoadBalancer.lbStage_, StorageLoadBalancer.moveMessageVerbHandler_, new Object[]{moveMessage});
                 logger_.debug("Sending a move message to " + target);
@@ -148,6 +152,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
             }
             return value;
         }
+        */
     }
 
     class MoveMessageVerbHandler implements IVerbHandler
@@ -221,7 +226,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
     {
         logger_.debug("CHANGE IN STATE FOR @ StorageLoadBalancer " + endpoint);
         // load information for this specified endpoint for load balancing 
-        ApplicationState loadInfoState = epState.getApplicationState(RequestCountSampler.loadInfo_);
+        ApplicationState loadInfoState = epState.getApplicationState(LoadDisseminator.loadInfo_);
         if ( loadInfoState != null )
         {
             String lInfoState = loadInfoState.getState();
@@ -254,6 +259,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
         return li;        
     }
 
+    /*
     private boolean isMoveable()
     {
         if ( !isMoveable_.get() )
@@ -261,30 +267,31 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
         int myload = localLoad();
         EndPoint successor = storageService_.getSuccessor(StorageService.getLocalStorageEndPoint());
         LoadInfo li = loadInfo2_.get(successor);
-        /*
-         * "load" is NULL means that the successor node has not
-         * yet gossiped its load information. We should return
-         * false in this case since we want to err on the side
-         * of caution.
-        */
+        // "load" is NULL means that the successor node has not
+        // yet gossiped its load information. We should return
+        // false in this case since we want to err on the side
+        // of caution.
         if ( li == null )
             return false;
         else
-        {
-            /* l(i) + l(j) > el(av) */
+        {            
             if ( ( myload + li.count() ) > StorageLoadBalancer.ratio_*averageSystemLoad() )
                 return false;
             else
                 return true;
         }
     }
+    */
 
+    /*
     private int localLoad()
     {
         LoadInfo value = loadInfo2_.get(StorageService.getLocalStorageEndPoint());
         return (value == null) ? 0 : value.count();
     }
+    */
 
+    /*
     private int averageSystemLoad()
     {
         int nodeCount = loadInfo2_.size();
@@ -301,21 +308,23 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
         logger_.debug("Average system load should be " + averageLoad);
         return averageLoad;
     }
+    */
     
+    /*
     private boolean isHeavyNode()
     {
         return ( localLoad() > ( StorageLoadBalancer.ratio_ * averageSystemLoad() ) );
     }
-
+    */
+    
+    /*
     private boolean isMoveable(EndPoint target)
     {
         int threshold = (int)(StorageLoadBalancer.ratio_ * averageSystemLoad());
         if ( isANeighbour(target) )
         {
-            /*
-             * If the target is a neighbour then it is
-             * moveable if its
-            */
+            // If the target is a neighbour then it is
+            // moveable if its
             LoadInfo load = loadInfo2_.get(target);
             if ( load == null )
                 return false;
@@ -340,6 +349,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
                 return true;
         }
     }
+    */
 
     private boolean isANeighbour(EndPoint neighbour)
     {
@@ -359,6 +369,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
      * random one of the lightly loaded nodes and use them as
      * a potential target for load balance.
     */
+    /*
     private EndPoint findARandomLightNode()
     {
         List<EndPoint> potentialCandidates = new ArrayList<EndPoint>();
@@ -380,6 +391,7 @@ final class StorageLoadBalancer implements IEndPointStateChangeSubscriber, IComp
         }
         return null;
     }
+    */
 }
 
 class MoveMessage implements Serializable

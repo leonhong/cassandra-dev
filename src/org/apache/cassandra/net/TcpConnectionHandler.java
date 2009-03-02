@@ -22,9 +22,9 @@ import java.nio.channels.*;
 import java.io.IOException;
 import java.net.*;
 
+import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
 
-import org.apache.cassandra.utils.LogUtil;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

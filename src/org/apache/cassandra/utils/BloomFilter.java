@@ -33,6 +33,8 @@ import javax.xml.bind.annotation.XmlElement;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.ICompactSerializer;
+import org.apache.cassandra.io.SSTable;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -258,7 +260,8 @@ public class BloomFilter implements Serializable
         count_ = numElements;
         size_ = numElements * bitsPerElement + 20 + random_.nextInt(64);
         filter_ = new BitSet(size_);
-        hashes_ = BloomCalculations.computeBestK(bitsPerElement);
+        //hashes_ = BloomCalculations.computeBestK(bitsPerElement);
+        hashes_ = 8;
     }
 
     public BloomFilter(int numElements, double maxFalsePosProbability)
@@ -285,12 +288,6 @@ public class BloomFilter implements Serializable
         hashes_ = hashes;
         size_ = size;
         filter_ = filter;
-    }
-
-    public int getSerializedStateSize()
-    {
-        /* look at the serialize() below to figure this out. */
-        return 20 + (filter_.words().length * 8);
     }
 
     int count()
@@ -368,42 +365,18 @@ public class BloomFilter implements Serializable
     }
 
     public static void main(String[] args) throws Throwable
-    {
-        BloomFilter.CountingBloomFilter cbf = new BloomFilter.CountingBloomFilter(1024, 8);        
-        for (int i = 0; i < 1024; ++i)
+    { 
+        BloomFilter bf = new BloomFilter(64*1024*1024, 15);        
+        for ( int i = 0; i < 64*1024*1024; ++i )
         {
-            cbf.add(Integer.valueOf(i).toString());
-        }      
-        
-        cbf.delete(Integer.valueOf(23).toString());
-        cbf.delete(Integer.valueOf(53).toString());
-        System.out.println( cbf.isPresent( Integer.valueOf(23).toString() ) );
-        System.out.println( cbf.isPresent( Integer.valueOf(53).toString() ) );
-        System.out.println(cbf.count());        
-        /*
-        BloomFilter.CountingBloomFilter cbf2 = new BloomFilter.CountingBloomFilter(64*1024*1024 + 1, 8);        
-        for (int i = 0; i < 1025; ++i)
-        {
-            cbf2.add(Integer.valueOf(i).toString());
-        }   
-        
-        for (int i = 0; i < 1025; ++i)
-        {
-            boolean bVal = cbf.isPresent(Integer.valueOf(i).toString());            
-            if (!bVal)
-                System.out.println(Integer.valueOf(i).toString());
+            bf.fill(Integer.toString(i));
         }
-        
-        System.out.println("-------------------------------------------------------------------------------");        
-        BloomFilter.CountingBloomFilter mbf = cbf.merge(cbf2);
-        
-        for (int i = 0; i < 1025; ++i)
+        System.out.println("Done filling ...");
+        for ( int i = 0; i < 64*1024*1024; ++i )
         {
-            boolean bVal = mbf.isPresent(Integer.valueOf(i).toString());            
-            if (!bVal)
-                System.out.println(Integer.valueOf(i).toString());
+        	if ( !bf.isPresent(Integer.toString(i)) )
+        		System.out.println("Oops");
         }
-        */
     }
 }
 
@@ -417,8 +390,7 @@ class BloomFilterSerializer implements ICompactSerializer<BloomFilter>
      * going to reside in it.
      */
 
-    public void serialize(BloomFilter bf, DataOutputStream dos)
-            throws IOException
+    public void serialize(BloomFilter bf, DataOutputStream dos) throws IOException
     {
         /* write out the count of the BloomFilter */
         dos.writeInt(bf.count());

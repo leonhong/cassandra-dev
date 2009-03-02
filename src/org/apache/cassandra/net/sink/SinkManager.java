@@ -18,10 +18,11 @@
 
 package org.apache.cassandra.net.sink;
 
-import org.apache.cassandra.net.EndPoint;
-import org.apache.cassandra.net.Message;
 import java.util.*;
 import java.io.IOException;
+
+import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.net.Message;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )

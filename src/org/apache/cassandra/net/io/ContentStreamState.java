@@ -24,9 +24,9 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 import java.io.*;
 
+import org.apache.cassandra.db.Table;
 import org.apache.log4j.Logger;
 
-import org.apache.cassandra.db.Table;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

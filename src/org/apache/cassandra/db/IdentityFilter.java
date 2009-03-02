@@ -5,12 +5,15 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.SSTable;
+
 
 public class IdentityFilter implements IFilter
 {
     private boolean isDone_ = false;
+    
 	public boolean isDone()
 	{
 		return isDone_;
@@ -42,15 +45,13 @@ public class IdentityFilter implements IFilter
 		return columnFamily;
 	}
 
-	public IColumn filter(IColumn column, DataInputStream dis)
-			throws IOException
+	public IColumn filter(IColumn column, DataInputStream dis) throws IOException
 	{
 		// TODO Auto-generated method stub
 		return column;
 	}
 
-	public DataInputBuffer next(String key, String cf, SSTable ssTable)
-			throws IOException
+	public DataInputBuffer next(String key, String cf, SSTable ssTable) throws IOException
 	{
 		return ssTable.next(key, cf);
 	}

@@ -18,13 +18,13 @@
 
 package org.apache.cassandra.db;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.db.RowMutationVerbHandler.RowMutationContext;
 import org.apache.cassandra.net.IVerbHandler;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 
 
 /**
@@ -52,9 +52,7 @@ public class BinaryVerbHandler implements IVerbHandler
 	    try
 	    {
             RowMutationMessage rmMsg = RowMutationMessage.serializer().deserialize(rowMutationCtx.buffer_);
-            RowMutation rm = rmMsg.getRowMutation();
-            	    
-            StorageService.instance().sample(rm.key());  
+            RowMutation rm = rmMsg.getRowMutation();            	                
             rowMutationCtx.row_.key(rm.key());
             rm.load(rowMutationCtx.row_);
 	

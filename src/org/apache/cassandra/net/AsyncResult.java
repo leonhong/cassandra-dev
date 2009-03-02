@@ -27,11 +27,11 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.QuorumResponseHandler;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

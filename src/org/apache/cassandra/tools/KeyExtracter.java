@@ -34,6 +34,7 @@ import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.io.SSTable.KeyPositionInfo;
 import org.apache.cassandra.utils.BasicUtilities;
 
+
 public class KeyExtracter
 {
     private static final int bufferSize_ = 64*1024;
@@ -42,7 +43,7 @@ public class KeyExtracter
     {
         if ( args.length != 3 )
         {
-            System.out.println("Usage : java org.apache.cassandra.tools.IndexBuilder <key to extract> <data file> <output file>");
+            System.out.println("Usage : java com.facebook.infrastructure.tools.IndexBuilder <key to extract> <data file> <output file>");
             System.exit(1);
         }
 		String keyToExtract = args[0];

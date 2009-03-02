@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
 import org.apache.cassandra.concurrent.ThreadFactoryImpl;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -42,6 +40,8 @@ import org.apache.cassandra.utils.Cachetable;
 import org.apache.cassandra.utils.ICacheExpungeHook;
 import org.apache.cassandra.utils.ICachetable;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 
 class ConsistencyManager implements Runnable
 {

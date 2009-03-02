@@ -19,14 +19,24 @@
 package org.apache.cassandra.db;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
+
+import org.apache.cassandra.config.CFMetaData;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.DataOutputBuffer;
+import org.apache.cassandra.io.IFileReader;
+import org.apache.cassandra.io.IFileWriter;
+import org.apache.cassandra.io.SequenceFile;
+import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.FileUtils;
+import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.*;
-import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.*;
 
 /*
@@ -132,7 +142,7 @@ class CommitLog
             return SequenceFile.fastWriter(file, CommitLog.bufSize_ + bufSize);
         }
         else
-            return SequenceFile.concurrentWriter(file);
+            return SequenceFile.writer(file);
     }
 
     static CommitLog open(String table) throws IOException
@@ -171,6 +181,10 @@ class CommitLog
     private CommitLogHeader clHeader_;
     private IFileWriter logWriter_;
     private long commitHeaderStartPos_;
+    /* Force rollover the commit log on the next insert */
+    private boolean forcedRollOver_ = false;
+
+
     /*
      * Generates a file name of the format CommitLog-<table>-<timestamp>.log in the
      * directory specified by the Database Descriptor.
@@ -451,9 +465,7 @@ class CommitLog
             /* Update the header */
             updateHeader(row);
             logWriter_.append(table_, cfBuffer);
-            fileSize = logWriter_.getFileSize();
-            /* Count this key if necessary */
-            StorageService.instance().sample(row.key());  
+            fileSize = logWriter_.getFileSize();                       
             checkThresholdAndRollLog(fileSize);            
         }
         catch (IOException e)
@@ -574,9 +586,9 @@ class CommitLog
     {
         try
         {
-            if ( fileSize >= DatabaseDescriptor.getLogFileSizeThreshold() )
+            if ( fileSize >= DatabaseDescriptor.getLogFileSizeThreshold() || forcedRollOver_ )
             {
-                if ( logWriter_.getFileSize() >= DatabaseDescriptor.getLogFileSizeThreshold() )
+                if ( logWriter_.getFileSize() >= DatabaseDescriptor.getLogFileSizeThreshold() || forcedRollOver_ )
                 {
 	                /* Rolls the current log file over to a new one. */
 	                setNextFileName();
@@ -605,12 +617,45 @@ class CommitLog
         {
             logger_.info(LogUtil.throwableToString(e));
         }
+        finally
+        {
+        	forcedRollOver_ = false;
+        }
     }
 
+    public void setForcedRollOver()
+    {
+    	forcedRollOver_ = true;
+    }
+
+    synchronized  public void snapshot( String snapshotDirectory ) throws IOException
+    {
+        Map<String, List<File>> tableToCommitLogs = RecoveryManager.getListOFCommitLogsPerTable();
+        List<File> clogs = tableToCommitLogs.get(table_);
+        
+        if( clogs != null )
+        {
+        	File snapshotDir = new File(snapshotDirectory);
+        	if( !snapshotDir.exists() )
+        		snapshotDir.mkdir();
+        	File commitLogSnapshotDir = new File(snapshotDirectory + System.getProperty("file.separator") + "CommitLogs");
+        	if( !commitLogSnapshotDir.exists() )
+        		commitLogSnapshotDir.mkdir();
+            for (File file : clogs)
+            {
+            	Path existingLink = file.toPath();
+            	File hardLinkFile = new File(commitLogSnapshotDir.getAbsolutePath() + System.getProperty("file.separator") + file.getName());
+            	Path hardLink = hardLinkFile.toPath();
+            	hardLink.createLink(existingLink);
+            }
+        }
+    }
     public static void main(String[] args) throws Throwable
     {
         LogUtil.init();
-        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.init();
+
+        // the return value is not used in this case
+        DatabaseDescriptor.init();
         
         File logDir = new File(DatabaseDescriptor.getLogFileLocation());
         File[] files = logDir.listFiles();

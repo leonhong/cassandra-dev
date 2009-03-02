@@ -28,6 +28,7 @@ import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.SSTable;
 
 
+
 public class NamesFilter implements IFilter
 {
     /* list of column names to filter against. */
@@ -40,6 +41,10 @@ public class NamesFilter implements IFilter
     
     public ColumnFamily filter(String cf, ColumnFamily columnFamily)
     {
+        if ( columnFamily == null )
+        {
+            return columnFamily;
+        }
     	String[] values = RowMutation.getColumnAndColumnFamily(cf);
 		String cfName = columnFamily.name();
 		ColumnFamily filteredCf = new ColumnFamily(cfName);

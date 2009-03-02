@@ -21,6 +21,8 @@ package org.apache.cassandra.io;
 import java.io.*;
 import java.util.Arrays;
 
+import org.apache.log4j.Logger;
+
 /**
  * A <code>BufferedRandomAccessFile</code> is like a
  * <code>RandomAccessFile</code>, but it uses a private buffer so that most
@@ -36,6 +38,7 @@ import java.util.Arrays;
 
 public final class BufferedRandomAccessFile extends RandomAccessFile
 {
+    private static final Logger logger_ = Logger.getLogger(BufferedRandomAccessFile.class);
     static final int LogBuffSz_ = 16; // 64K buffer
     public static final int BuffSz_ = (1 << LogBuffSz_);
     static final long BuffMask_ = ~(((long) BuffSz_) - 1L);
@@ -197,7 +200,7 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
             cnt += n;
             rem -= n;
         }
-        if (this.hitEOF_ = (cnt < this.buff_.length))
+        if ( (cnt < 0) && (this.hitEOF_ = (cnt < this.buff_.length)) )
         {
             // make sure buffer that wasn't read is initialized with -1
             Arrays.fill(this.buff_, cnt, this.buff_.length, (byte) 0xff);

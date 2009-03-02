@@ -26,9 +26,12 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
+
+import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.service.StorageService;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -36,7 +39,7 @@ import org.apache.cassandra.service.StorageService;
 
 public class ReadMessage implements Serializable
 {
-private static ICompactSerializer<ReadMessage> serializer_;	
+    private static ICompactSerializer<ReadMessage> serializer_;	
 	
     static
     {

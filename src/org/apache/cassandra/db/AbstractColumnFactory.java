@@ -46,8 +46,7 @@ abstract class AbstractColumnFactory
 		else
 			return columnFactory_.get("Super");
 	}
-	
-	public abstract IColumn createColumn();
+    
 	public abstract IColumn createColumn(String name);
 	public abstract IColumn createColumn(String name, byte[] value);
 	public abstract IColumn createColumn(String name, byte[] value, long timestamp);
@@ -56,11 +55,6 @@ abstract class AbstractColumnFactory
 
 class ColumnFactory extends AbstractColumnFactory
 {
-	public IColumn createColumn()
-	{
-		return new Column();
-	}
-	
 	public IColumn createColumn(String name)
 	{
 		return new Column(name);
@@ -95,11 +89,6 @@ class SuperColumnFactory extends AbstractColumnFactory
         }
         return values;
     }
-    
-	public IColumn createColumn()
-	{
-        return  new SuperColumn();
-	}
 
 	public IColumn createColumn(String name)
 	{

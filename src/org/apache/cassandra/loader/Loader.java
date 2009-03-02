@@ -16,20 +16,20 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
-import org.apache.log4j.Logger;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.Token;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.FileUtils;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.locator.EndPointSnitch;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.Token;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.cassandra.utils.*;
 
 

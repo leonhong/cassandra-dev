@@ -34,6 +34,7 @@ import org.apache.cassandra.net.CompactEndPointSerializationHelper;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.service.StorageService;
 
+
 /**
  * A representation of the range that a node is responsible for on the DHT ring.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )

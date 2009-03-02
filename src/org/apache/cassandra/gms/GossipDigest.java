@@ -23,6 +23,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.cassandra.io.ICompactSerializer;
+import org.apache.cassandra.net.CompactEndPointSerializationHelper;
+import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.*;
 
 /**

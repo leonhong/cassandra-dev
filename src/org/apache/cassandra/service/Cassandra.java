@@ -20,29 +20,43 @@ public class Cassandra {
 
   public interface Iface extends com.facebook.fb303.FacebookService.Iface {
 
-    public List<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws TException;
+    public List<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws CassandraException, TException;
 
-    public column_t get_column(String tablename, String key, String columnFamily_column) throws TException;
+    public List<column_t> get_slice_by_names(String tablename, String key, String columnFamily, List<String> columnNames) throws CassandraException, TException;
 
-    public int get_column_count(String tablename, String key, String columnFamily_column) throws TException;
+    public column_t get_column(String tablename, String key, String columnFamily_column) throws CassandraException, TException;
+
+    public int get_column_count(String tablename, String key, String columnFamily_column) throws CassandraException, TException;
 
     public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp) throws TException;
 
     public void batch_insert(batch_mutation_t batchMutation) throws TException;
 
-    public boolean batch_insert_blocking(batch_mutation_t batchMutation) throws TException;
+    public boolean batch_insert_blocking(batch_mutation_t batchMutation) throws CassandraException, TException;
 
     public void remove(String tablename, String key, String columnFamily_column) throws TException;
 
-    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException;
+    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws CassandraException, TException;
 
-    public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws TException;
+    public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws CassandraException, TException;
 
-    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws TException;
+    public List<superColumn_t> get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws CassandraException, TException;
+
+    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws CassandraException, TException;
 
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper) throws TException;
 
-    public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper) throws TException;
+    public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper) throws CassandraException, TException;
+
+    public void touch(String key, boolean fData) throws TException;
+
+    public String getStringProperty(String propertyName) throws TException;
+
+    public List<String> getStringListProperty(String propertyName) throws TException;
+
+    public String describeTable(String tableName) throws TException;
+
+    public CqlResult_t executeQuery(String query) throws TException;
 
   }
 
@@ -57,7 +71,7 @@ public class Cassandra {
       super(iprot, oprot);
     }
 
-    public List<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws TException
+    public List<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws CassandraException, TException
     {
       send_get_slice(tablename, key, columnFamily_column, start, count);
       return recv_get_slice();
@@ -77,7 +91,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<column_t> recv_get_slice() throws TException
+    public List<column_t> recv_get_slice() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -91,10 +105,52 @@ public class Cassandra {
       if (result.__isset.success) {
         return result.success;
       }
+      if (result.__isset.e) {
+        throw result.e;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice failed: unknown result");
     }
 
-    public column_t get_column(String tablename, String key, String columnFamily_column) throws TException
+    public List<column_t> get_slice_by_names(String tablename, String key, String columnFamily, List<String> columnNames) throws CassandraException, TException
+    {
+      send_get_slice_by_names(tablename, key, columnFamily, columnNames);
+      return recv_get_slice_by_names();
+    }
+
+    public void send_get_slice_by_names(String tablename, String key, String columnFamily, List<String> columnNames) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("get_slice_by_names", TMessageType.CALL, seqid_));
+      get_slice_by_names_args args = new get_slice_by_names_args();
+      args.tablename = tablename;
+      args.key = key;
+      args.columnFamily = columnFamily;
+      args.columnNames = columnNames;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<column_t> recv_get_slice_by_names() throws CassandraException, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      get_slice_by_names_result result = new get_slice_by_names_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      if (result.__isset.e) {
+        throw result.e;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice_by_names failed: unknown result");
+    }
+
+    public column_t get_column(String tablename, String key, String columnFamily_column) throws CassandraException, TException
     {
       send_get_column(tablename, key, columnFamily_column);
       return recv_get_column();
@@ -112,7 +168,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public column_t recv_get_column() throws TException
+    public column_t recv_get_column() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -126,10 +182,13 @@ public class Cassandra {
       if (result.__isset.success) {
         return result.success;
       }
+      if (result.__isset.e) {
+        throw result.e;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_column failed: unknown result");
     }
 
-    public int get_column_count(String tablename, String key, String columnFamily_column) throws TException
+    public int get_column_count(String tablename, String key, String columnFamily_column) throws CassandraException, TException
     {
       send_get_column_count(tablename, key, columnFamily_column);
       return recv_get_column_count();
@@ -147,7 +206,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public int recv_get_column_count() throws TException
+    public int recv_get_column_count() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -160,6 +219,9 @@ public class Cassandra {
       iprot_.readMessageEnd();
       if (result.__isset.success) {
         return result.success;
+      }
+      if (result.__isset.e) {
+        throw result.e;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_column_count failed: unknown result");
     }
@@ -198,7 +260,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public boolean batch_insert_blocking(batch_mutation_t batchMutation) throws TException
+    public boolean batch_insert_blocking(batch_mutation_t batchMutation) throws CassandraException, TException
     {
       send_batch_insert_blocking(batchMutation);
       return recv_batch_insert_blocking();
@@ -214,7 +276,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public boolean recv_batch_insert_blocking() throws TException
+    public boolean recv_batch_insert_blocking() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -227,6 +289,9 @@ public class Cassandra {
       iprot_.readMessageEnd();
       if (result.__isset.success) {
         return result.success;
+      }
+      if (result.__isset.e) {
+        throw result.e;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "batch_insert_blocking failed: unknown result");
     }
@@ -248,7 +313,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException
+    public List<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws CassandraException, TException
     {
       send_get_columns_since(tablename, key, columnFamily_column, timeStamp);
       return recv_get_columns_since();
@@ -267,7 +332,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<column_t> recv_get_columns_since() throws TException
+    public List<column_t> recv_get_columns_since() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -281,10 +346,13 @@ public class Cassandra {
       if (result.__isset.success) {
         return result.success;
       }
+      if (result.__isset.e) {
+        throw result.e;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_columns_since failed: unknown result");
     }
 
-    public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws TException
+    public List<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws CassandraException, TException
     {
       send_get_slice_super(tablename, key, columnFamily_superColumnName, start, count);
       return recv_get_slice_super();
@@ -304,7 +372,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public List<superColumn_t> recv_get_slice_super() throws TException
+    public List<superColumn_t> recv_get_slice_super() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -318,10 +386,52 @@ public class Cassandra {
       if (result.__isset.success) {
         return result.success;
       }
+      if (result.__isset.e) {
+        throw result.e;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice_super failed: unknown result");
     }
 
-    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws TException
+    public List<superColumn_t> get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws CassandraException, TException
+    {
+      send_get_slice_super_by_names(tablename, key, columnFamily, superColumnNames);
+      return recv_get_slice_super_by_names();
+    }
+
+    public void send_get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("get_slice_super_by_names", TMessageType.CALL, seqid_));
+      get_slice_super_by_names_args args = new get_slice_super_by_names_args();
+      args.tablename = tablename;
+      args.key = key;
+      args.columnFamily = columnFamily;
+      args.superColumnNames = superColumnNames;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<superColumn_t> recv_get_slice_super_by_names() throws CassandraException, TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      get_slice_super_by_names_result result = new get_slice_super_by_names_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      if (result.__isset.e) {
+        throw result.e;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_slice_super_by_names failed: unknown result");
+    }
+
+    public superColumn_t get_superColumn(String tablename, String key, String columnFamily) throws CassandraException, TException
     {
       send_get_superColumn(tablename, key, columnFamily);
       return recv_get_superColumn();
@@ -339,7 +449,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public superColumn_t recv_get_superColumn() throws TException
+    public superColumn_t recv_get_superColumn() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -352,6 +462,9 @@ public class Cassandra {
       iprot_.readMessageEnd();
       if (result.__isset.success) {
         return result.success;
+      }
+      if (result.__isset.e) {
+        throw result.e;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "get_superColumn failed: unknown result");
     }
@@ -371,7 +484,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper) throws TException
+    public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper) throws CassandraException, TException
     {
       send_batch_insert_superColumn_blocking(batchMutationSuper);
       return recv_batch_insert_superColumn_blocking();
@@ -387,7 +500,7 @@ public class Cassandra {
       oprot_.getTransport().flush();
     }
 
-    public boolean recv_batch_insert_superColumn_blocking() throws TException
+    public boolean recv_batch_insert_superColumn_blocking() throws CassandraException, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -401,7 +514,158 @@ public class Cassandra {
       if (result.__isset.success) {
         return result.success;
       }
+      if (result.__isset.e) {
+        throw result.e;
+      }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "batch_insert_superColumn_blocking failed: unknown result");
+    }
+
+    public void touch(String key, boolean fData) throws TException
+    {
+      send_touch(key, fData);
+    }
+
+    public void send_touch(String key, boolean fData) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("touch", TMessageType.CALL, seqid_));
+      touch_args args = new touch_args();
+      args.key = key;
+      args.fData = fData;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public String getStringProperty(String propertyName) throws TException
+    {
+      send_getStringProperty(propertyName);
+      return recv_getStringProperty();
+    }
+
+    public void send_getStringProperty(String propertyName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getStringProperty", TMessageType.CALL, seqid_));
+      getStringProperty_args args = new getStringProperty_args();
+      args.propertyName = propertyName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public String recv_getStringProperty() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getStringProperty_result result = new getStringProperty_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getStringProperty failed: unknown result");
+    }
+
+    public List<String> getStringListProperty(String propertyName) throws TException
+    {
+      send_getStringListProperty(propertyName);
+      return recv_getStringListProperty();
+    }
+
+    public void send_getStringListProperty(String propertyName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getStringListProperty", TMessageType.CALL, seqid_));
+      getStringListProperty_args args = new getStringListProperty_args();
+      args.propertyName = propertyName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public List<String> recv_getStringListProperty() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getStringListProperty_result result = new getStringListProperty_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getStringListProperty failed: unknown result");
+    }
+
+    public String describeTable(String tableName) throws TException
+    {
+      send_describeTable(tableName);
+      return recv_describeTable();
+    }
+
+    public void send_describeTable(String tableName) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("describeTable", TMessageType.CALL, seqid_));
+      describeTable_args args = new describeTable_args();
+      args.tableName = tableName;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public String recv_describeTable() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      describeTable_result result = new describeTable_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "describeTable failed: unknown result");
+    }
+
+    public CqlResult_t executeQuery(String query) throws TException
+    {
+      send_executeQuery(query);
+      return recv_executeQuery();
+    }
+
+    public void send_executeQuery(String query) throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("executeQuery", TMessageType.CALL, seqid_));
+      executeQuery_args args = new executeQuery_args();
+      args.query = query;
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public CqlResult_t recv_executeQuery() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      executeQuery_result result = new executeQuery_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.__isset.success) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "executeQuery failed: unknown result");
     }
 
   }
@@ -411,6 +675,7 @@ public class Cassandra {
       super(iface);
       iface_ = iface;
       processMap_.put("get_slice", new get_slice());
+      processMap_.put("get_slice_by_names", new get_slice_by_names());
       processMap_.put("get_column", new get_column());
       processMap_.put("get_column_count", new get_column_count());
       processMap_.put("insert", new insert());
@@ -419,9 +684,15 @@ public class Cassandra {
       processMap_.put("remove", new remove());
       processMap_.put("get_columns_since", new get_columns_since());
       processMap_.put("get_slice_super", new get_slice_super());
+      processMap_.put("get_slice_super_by_names", new get_slice_super_by_names());
       processMap_.put("get_superColumn", new get_superColumn());
       processMap_.put("batch_insert_superColumn", new batch_insert_superColumn());
       processMap_.put("batch_insert_superColumn_blocking", new batch_insert_superColumn_blocking());
+      processMap_.put("touch", new touch());
+      processMap_.put("getStringProperty", new getStringProperty());
+      processMap_.put("getStringListProperty", new getStringListProperty());
+      processMap_.put("describeTable", new describeTable());
+      processMap_.put("executeQuery", new executeQuery());
     }
 
     private Iface iface_;
@@ -451,9 +722,36 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_slice_result result = new get_slice_result();
-        result.success = iface_.get_slice(args.tablename, args.key, args.columnFamily_column, args.start, args.count);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_slice(args.tablename, args.key, args.columnFamily_column, args.start, args.count);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_slice", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class get_slice_by_names implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        get_slice_by_names_args args = new get_slice_by_names_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        get_slice_by_names_result result = new get_slice_by_names_result();
+        try {
+          result.success = iface_.get_slice_by_names(args.tablename, args.key, args.columnFamily, args.columnNames);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
+        oprot.writeMessageBegin(new TMessage("get_slice_by_names", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -468,8 +766,13 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_column_result result = new get_column_result();
-        result.success = iface_.get_column(args.tablename, args.key, args.columnFamily_column);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_column(args.tablename, args.key, args.columnFamily_column);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_column", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -485,8 +788,13 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_column_count_result result = new get_column_count_result();
-        result.success = iface_.get_column_count(args.tablename, args.key, args.columnFamily_column);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_column_count(args.tablename, args.key, args.columnFamily_column);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_column_count", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -524,8 +832,13 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         batch_insert_blocking_result result = new batch_insert_blocking_result();
-        result.success = iface_.batch_insert_blocking(args.batchMutation);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.batch_insert_blocking(args.batchMutation);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("batch_insert_blocking", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -552,8 +865,13 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_columns_since_result result = new get_columns_since_result();
-        result.success = iface_.get_columns_since(args.tablename, args.key, args.columnFamily_column, args.timeStamp);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_columns_since(args.tablename, args.key, args.columnFamily_column, args.timeStamp);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_columns_since", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -569,9 +887,36 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_slice_super_result result = new get_slice_super_result();
-        result.success = iface_.get_slice_super(args.tablename, args.key, args.columnFamily_superColumnName, args.start, args.count);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_slice_super(args.tablename, args.key, args.columnFamily_superColumnName, args.start, args.count);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_slice_super", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class get_slice_super_by_names implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        get_slice_super_by_names_args args = new get_slice_super_by_names_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        get_slice_super_by_names_result result = new get_slice_super_by_names_result();
+        try {
+          result.success = iface_.get_slice_super_by_names(args.tablename, args.key, args.columnFamily, args.superColumnNames);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
+        oprot.writeMessageBegin(new TMessage("get_slice_super_by_names", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -586,8 +931,13 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         get_superColumn_result result = new get_superColumn_result();
-        result.success = iface_.get_superColumn(args.tablename, args.key, args.columnFamily);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.get_superColumn(args.tablename, args.key, args.columnFamily);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("get_superColumn", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
@@ -614,9 +964,93 @@ public class Cassandra {
         args.read(iprot);
         iprot.readMessageEnd();
         batch_insert_superColumn_blocking_result result = new batch_insert_superColumn_blocking_result();
-        result.success = iface_.batch_insert_superColumn_blocking(args.batchMutationSuper);
-        result.__isset.success = true;
+        try {
+          result.success = iface_.batch_insert_superColumn_blocking(args.batchMutationSuper);
+          result.__isset.success = true;
+        } catch (CassandraException e) {
+          result.e = e;
+          result.__isset.e = true;
+        }
         oprot.writeMessageBegin(new TMessage("batch_insert_superColumn_blocking", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class touch implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        touch_args args = new touch_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        iface_.touch(args.key, args.fData);
+        return;
+      }
+    }
+
+    private class getStringProperty implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getStringProperty_args args = new getStringProperty_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getStringProperty_result result = new getStringProperty_result();
+        result.success = iface_.getStringProperty(args.propertyName);
+        result.__isset.success = true;
+        oprot.writeMessageBegin(new TMessage("getStringProperty", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getStringListProperty implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getStringListProperty_args args = new getStringListProperty_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getStringListProperty_result result = new getStringListProperty_result();
+        result.success = iface_.getStringListProperty(args.propertyName);
+        result.__isset.success = true;
+        oprot.writeMessageBegin(new TMessage("getStringListProperty", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class describeTable implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        describeTable_args args = new describeTable_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        describeTable_result result = new describeTable_result();
+        result.success = iface_.describeTable(args.tableName);
+        result.__isset.success = true;
+        oprot.writeMessageBegin(new TMessage("describeTable", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class executeQuery implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        executeQuery_args args = new executeQuery_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        executeQuery_result result = new executeQuery_result();
+        result.success = iface_.executeQuery(args.query);
+        result.__isset.success = true;
+        oprot.writeMessageBegin(new TMessage("executeQuery", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -857,21 +1291,26 @@ public class Cassandra {
 
   public static class get_slice_result implements TBase, java.io.Serializable   {
     public List<column_t> success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_slice_result() {
     }
 
     public get_slice_result(
-      List<column_t> success)
+      List<column_t> success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -892,6 +1331,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -916,18 +1364,27 @@ public class Cassandra {
           case 0:
             if (field.type == TType.LIST) {
               {
-                TList _list22 = iprot.readListBegin();
-                this.success = new ArrayList<column_t>(_list22.size);
-                for (int _i23 = 0; _i23 < _list22.size; ++_i23)
+                TList _list49 = iprot.readListBegin();
+                this.success = new ArrayList<column_t>(_list49.size);
+                for (int _i50 = 0; _i50 < _list49.size; ++_i50)
                 {
-                  column_t _elem24 = new column_t();
-                  _elem24 = new column_t();
-                  _elem24.read(iprot);
-                  this.success.add(_elem24);
+                  column_t _elem51 = new column_t();
+                  _elem51 = new column_t();
+                  _elem51.read(iprot);
+                  this.success.add(_elem51);
                 }
                 iprot.readListEnd();
               }
               this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -954,11 +1411,20 @@ public class Cassandra {
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (column_t _iter25 : this.success)            {
-              _iter25.write(oprot);
+            for (column_t _iter52 : this.success)            {
+              _iter52.write(oprot);
             }
             oprot.writeListEnd();
           }
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
           oprot.writeFieldEnd();
         }
       }
@@ -970,6 +1436,376 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_slice_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class get_slice_by_names_args implements TBase, java.io.Serializable   {
+    public String tablename;
+    public String key;
+    public String columnFamily;
+    public List<String> columnNames;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tablename = false;
+      public boolean key = false;
+      public boolean columnFamily = false;
+      public boolean columnNames = false;
+    }
+
+    public get_slice_by_names_args() {
+    }
+
+    public get_slice_by_names_args(
+      String tablename,
+      String key,
+      String columnFamily,
+      List<String> columnNames)
+    {
+      this();
+      this.tablename = tablename;
+      this.__isset.tablename = true;
+      this.key = key;
+      this.__isset.key = true;
+      this.columnFamily = columnFamily;
+      this.__isset.columnFamily = true;
+      this.columnNames = columnNames;
+      this.__isset.columnNames = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_slice_by_names_args)
+        return this.equals((get_slice_by_names_args)that);
+      return false;
+    }
+
+    public boolean equals(get_slice_by_names_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tablename = true && (this.tablename != null);
+      boolean that_present_tablename = true && (that.tablename != null);
+      if (this_present_tablename || that_present_tablename) {
+        if (!(this_present_tablename && that_present_tablename))
+          return false;
+        if (!this.tablename.equals(that.tablename))
+          return false;
+      }
+
+      boolean this_present_key = true && (this.key != null);
+      boolean that_present_key = true && (that.key != null);
+      if (this_present_key || that_present_key) {
+        if (!(this_present_key && that_present_key))
+          return false;
+        if (!this.key.equals(that.key))
+          return false;
+      }
+
+      boolean this_present_columnFamily = true && (this.columnFamily != null);
+      boolean that_present_columnFamily = true && (that.columnFamily != null);
+      if (this_present_columnFamily || that_present_columnFamily) {
+        if (!(this_present_columnFamily && that_present_columnFamily))
+          return false;
+        if (!this.columnFamily.equals(that.columnFamily))
+          return false;
+      }
+
+      boolean this_present_columnNames = true && (this.columnNames != null);
+      boolean that_present_columnNames = true && (that.columnNames != null);
+      if (this_present_columnNames || that_present_columnNames) {
+        if (!(this_present_columnNames && that_present_columnNames))
+          return false;
+        if (!this.columnNames.equals(that.columnNames))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.tablename = iprot.readString();
+              this.__isset.tablename = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -2:
+            if (field.type == TType.STRING) {
+              this.key = iprot.readString();
+              this.__isset.key = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -3:
+            if (field.type == TType.STRING) {
+              this.columnFamily = iprot.readString();
+              this.__isset.columnFamily = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -4:
+            if (field.type == TType.LIST) {
+              {
+                TList _list53 = iprot.readListBegin();
+                this.columnNames = new ArrayList<String>(_list53.size);
+                for (int _i54 = 0; _i54 < _list53.size; ++_i54)
+                {
+                  String _elem55 = null;
+                  _elem55 = iprot.readString();
+                  this.columnNames.add(_elem55);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.columnNames = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("get_slice_by_names_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tablename != null) {
+        field.name = "tablename";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.tablename);
+        oprot.writeFieldEnd();
+      }
+      if (this.key != null) {
+        field.name = "key";
+        field.type = TType.STRING;
+        field.id = -2;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.key);
+        oprot.writeFieldEnd();
+      }
+      if (this.columnFamily != null) {
+        field.name = "columnFamily";
+        field.type = TType.STRING;
+        field.id = -3;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.columnFamily);
+        oprot.writeFieldEnd();
+      }
+      if (this.columnNames != null) {
+        field.name = "columnNames";
+        field.type = TType.LIST;
+        field.id = -4;
+        oprot.writeFieldBegin(field);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.columnNames.size()));
+          for (String _iter56 : this.columnNames)          {
+            oprot.writeString(_iter56);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_slice_by_names_args(");
+      sb.append("tablename:");
+      sb.append(this.tablename);
+      sb.append(",key:");
+      sb.append(this.key);
+      sb.append(",columnFamily:");
+      sb.append(this.columnFamily);
+      sb.append(",columnNames:");
+      sb.append(this.columnNames);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class get_slice_by_names_result implements TBase, java.io.Serializable   {
+    public List<column_t> success;
+    public CassandraException e;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+      public boolean e = false;
+    }
+
+    public get_slice_by_names_result() {
+    }
+
+    public get_slice_by_names_result(
+      List<column_t> success,
+      CassandraException e)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_slice_by_names_result)
+        return this.equals((get_slice_by_names_result)that);
+      return false;
+    }
+
+    public boolean equals(get_slice_by_names_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.LIST) {
+              {
+                TList _list57 = iprot.readListBegin();
+                this.success = new ArrayList<column_t>(_list57.size);
+                for (int _i58 = 0; _i58 < _list57.size; ++_i58)
+                {
+                  column_t _elem59 = new column_t();
+                  _elem59 = new column_t();
+                  _elem59.read(iprot);
+                  this.success.add(_elem59);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("get_slice_by_names_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.LIST;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          {
+            oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+            for (column_t _iter60 : this.success)            {
+              _iter60.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_slice_by_names_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -1143,21 +1979,26 @@ public class Cassandra {
 
   public static class get_column_result implements TBase, java.io.Serializable   {
     public column_t success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_column_result() {
     }
 
     public get_column_result(
-      column_t success)
+      column_t success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -1178,6 +2019,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -1208,6 +2058,15 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -1231,6 +2090,15 @@ public class Cassandra {
           this.success.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -1240,6 +2108,8 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_column_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -1413,21 +2283,26 @@ public class Cassandra {
 
   public static class get_column_count_result implements TBase, java.io.Serializable   {
     public int success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_column_count_result() {
     }
 
     public get_column_count_result(
-      int success)
+      int success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -1448,6 +2323,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -1477,6 +2361,15 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -1498,6 +2391,15 @@ public class Cassandra {
         oprot.writeFieldBegin(field);
         oprot.writeI32(this.success);
         oprot.writeFieldEnd();
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -1507,6 +2409,8 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_column_count_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -1946,21 +2850,26 @@ public class Cassandra {
 
   public static class batch_insert_blocking_result implements TBase, java.io.Serializable   {
     public boolean success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public batch_insert_blocking_result() {
     }
 
     public batch_insert_blocking_result(
-      boolean success)
+      boolean success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -1981,6 +2890,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -2010,6 +2928,15 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -2031,6 +2958,15 @@ public class Cassandra {
         oprot.writeFieldBegin(field);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -2040,6 +2976,8 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("batch_insert_blocking_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -2408,21 +3346,26 @@ public class Cassandra {
 
   public static class get_columns_since_result implements TBase, java.io.Serializable   {
     public List<column_t> success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_columns_since_result() {
     }
 
     public get_columns_since_result(
-      List<column_t> success)
+      List<column_t> success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -2443,6 +3386,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -2467,18 +3419,27 @@ public class Cassandra {
           case 0:
             if (field.type == TType.LIST) {
               {
-                TList _list26 = iprot.readListBegin();
-                this.success = new ArrayList<column_t>(_list26.size);
-                for (int _i27 = 0; _i27 < _list26.size; ++_i27)
+                TList _list61 = iprot.readListBegin();
+                this.success = new ArrayList<column_t>(_list61.size);
+                for (int _i62 = 0; _i62 < _list61.size; ++_i62)
                 {
-                  column_t _elem28 = new column_t();
-                  _elem28 = new column_t();
-                  _elem28.read(iprot);
-                  this.success.add(_elem28);
+                  column_t _elem63 = new column_t();
+                  _elem63 = new column_t();
+                  _elem63.read(iprot);
+                  this.success.add(_elem63);
                 }
                 iprot.readListEnd();
               }
               this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -2505,11 +3466,20 @@ public class Cassandra {
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (column_t _iter29 : this.success)            {
-              _iter29.write(oprot);
+            for (column_t _iter64 : this.success)            {
+              _iter64.write(oprot);
             }
             oprot.writeListEnd();
           }
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
           oprot.writeFieldEnd();
         }
       }
@@ -2521,6 +3491,8 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_columns_since_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -2758,21 +3730,26 @@ public class Cassandra {
 
   public static class get_slice_super_result implements TBase, java.io.Serializable   {
     public List<superColumn_t> success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_slice_super_result() {
     }
 
     public get_slice_super_result(
-      List<superColumn_t> success)
+      List<superColumn_t> success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -2793,6 +3770,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -2817,18 +3803,27 @@ public class Cassandra {
           case 0:
             if (field.type == TType.LIST) {
               {
-                TList _list30 = iprot.readListBegin();
-                this.success = new ArrayList<superColumn_t>(_list30.size);
-                for (int _i31 = 0; _i31 < _list30.size; ++_i31)
+                TList _list65 = iprot.readListBegin();
+                this.success = new ArrayList<superColumn_t>(_list65.size);
+                for (int _i66 = 0; _i66 < _list65.size; ++_i66)
                 {
-                  superColumn_t _elem32 = new superColumn_t();
-                  _elem32 = new superColumn_t();
-                  _elem32.read(iprot);
-                  this.success.add(_elem32);
+                  superColumn_t _elem67 = new superColumn_t();
+                  _elem67 = new superColumn_t();
+                  _elem67.read(iprot);
+                  this.success.add(_elem67);
                 }
                 iprot.readListEnd();
               }
               this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -2855,11 +3850,20 @@ public class Cassandra {
           oprot.writeFieldBegin(field);
           {
             oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
-            for (superColumn_t _iter33 : this.success)            {
-              _iter33.write(oprot);
+            for (superColumn_t _iter68 : this.success)            {
+              _iter68.write(oprot);
             }
             oprot.writeListEnd();
           }
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
           oprot.writeFieldEnd();
         }
       }
@@ -2871,6 +3875,376 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_slice_super_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class get_slice_super_by_names_args implements TBase, java.io.Serializable   {
+    public String tablename;
+    public String key;
+    public String columnFamily;
+    public List<String> superColumnNames;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tablename = false;
+      public boolean key = false;
+      public boolean columnFamily = false;
+      public boolean superColumnNames = false;
+    }
+
+    public get_slice_super_by_names_args() {
+    }
+
+    public get_slice_super_by_names_args(
+      String tablename,
+      String key,
+      String columnFamily,
+      List<String> superColumnNames)
+    {
+      this();
+      this.tablename = tablename;
+      this.__isset.tablename = true;
+      this.key = key;
+      this.__isset.key = true;
+      this.columnFamily = columnFamily;
+      this.__isset.columnFamily = true;
+      this.superColumnNames = superColumnNames;
+      this.__isset.superColumnNames = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_slice_super_by_names_args)
+        return this.equals((get_slice_super_by_names_args)that);
+      return false;
+    }
+
+    public boolean equals(get_slice_super_by_names_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tablename = true && (this.tablename != null);
+      boolean that_present_tablename = true && (that.tablename != null);
+      if (this_present_tablename || that_present_tablename) {
+        if (!(this_present_tablename && that_present_tablename))
+          return false;
+        if (!this.tablename.equals(that.tablename))
+          return false;
+      }
+
+      boolean this_present_key = true && (this.key != null);
+      boolean that_present_key = true && (that.key != null);
+      if (this_present_key || that_present_key) {
+        if (!(this_present_key && that_present_key))
+          return false;
+        if (!this.key.equals(that.key))
+          return false;
+      }
+
+      boolean this_present_columnFamily = true && (this.columnFamily != null);
+      boolean that_present_columnFamily = true && (that.columnFamily != null);
+      if (this_present_columnFamily || that_present_columnFamily) {
+        if (!(this_present_columnFamily && that_present_columnFamily))
+          return false;
+        if (!this.columnFamily.equals(that.columnFamily))
+          return false;
+      }
+
+      boolean this_present_superColumnNames = true && (this.superColumnNames != null);
+      boolean that_present_superColumnNames = true && (that.superColumnNames != null);
+      if (this_present_superColumnNames || that_present_superColumnNames) {
+        if (!(this_present_superColumnNames && that_present_superColumnNames))
+          return false;
+        if (!this.superColumnNames.equals(that.superColumnNames))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.tablename = iprot.readString();
+              this.__isset.tablename = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -2:
+            if (field.type == TType.STRING) {
+              this.key = iprot.readString();
+              this.__isset.key = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -3:
+            if (field.type == TType.STRING) {
+              this.columnFamily = iprot.readString();
+              this.__isset.columnFamily = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -4:
+            if (field.type == TType.LIST) {
+              {
+                TList _list69 = iprot.readListBegin();
+                this.superColumnNames = new ArrayList<String>(_list69.size);
+                for (int _i70 = 0; _i70 < _list69.size; ++_i70)
+                {
+                  String _elem71 = null;
+                  _elem71 = iprot.readString();
+                  this.superColumnNames.add(_elem71);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.superColumnNames = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("get_slice_super_by_names_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tablename != null) {
+        field.name = "tablename";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.tablename);
+        oprot.writeFieldEnd();
+      }
+      if (this.key != null) {
+        field.name = "key";
+        field.type = TType.STRING;
+        field.id = -2;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.key);
+        oprot.writeFieldEnd();
+      }
+      if (this.columnFamily != null) {
+        field.name = "columnFamily";
+        field.type = TType.STRING;
+        field.id = -3;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.columnFamily);
+        oprot.writeFieldEnd();
+      }
+      if (this.superColumnNames != null) {
+        field.name = "superColumnNames";
+        field.type = TType.LIST;
+        field.id = -4;
+        oprot.writeFieldBegin(field);
+        {
+          oprot.writeListBegin(new TList(TType.STRING, this.superColumnNames.size()));
+          for (String _iter72 : this.superColumnNames)          {
+            oprot.writeString(_iter72);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_slice_super_by_names_args(");
+      sb.append("tablename:");
+      sb.append(this.tablename);
+      sb.append(",key:");
+      sb.append(this.key);
+      sb.append(",columnFamily:");
+      sb.append(this.columnFamily);
+      sb.append(",superColumnNames:");
+      sb.append(this.superColumnNames);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class get_slice_super_by_names_result implements TBase, java.io.Serializable   {
+    public List<superColumn_t> success;
+    public CassandraException e;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+      public boolean e = false;
+    }
+
+    public get_slice_super_by_names_result() {
+    }
+
+    public get_slice_super_by_names_result(
+      List<superColumn_t> success,
+      CassandraException e)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof get_slice_super_by_names_result)
+        return this.equals((get_slice_super_by_names_result)that);
+      return false;
+    }
+
+    public boolean equals(get_slice_super_by_names_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.LIST) {
+              {
+                TList _list73 = iprot.readListBegin();
+                this.success = new ArrayList<superColumn_t>(_list73.size);
+                for (int _i74 = 0; _i74 < _list73.size; ++_i74)
+                {
+                  superColumn_t _elem75 = new superColumn_t();
+                  _elem75 = new superColumn_t();
+                  _elem75.read(iprot);
+                  this.success.add(_elem75);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("get_slice_super_by_names_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.LIST;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          {
+            oprot.writeListBegin(new TList(TType.STRUCT, this.success.size()));
+            for (superColumn_t _iter76 : this.success)            {
+              _iter76.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("get_slice_super_by_names_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -3044,21 +4418,26 @@ public class Cassandra {
 
   public static class get_superColumn_result implements TBase, java.io.Serializable   {
     public superColumn_t success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public get_superColumn_result() {
     }
 
     public get_superColumn_result(
-      superColumn_t success)
+      superColumn_t success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -3079,6 +4458,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (!this.success.equals(that.success))
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -3109,6 +4497,15 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -3132,6 +4529,15 @@ public class Cassandra {
           this.success.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -3141,6 +4547,8 @@ public class Cassandra {
       StringBuilder sb = new StringBuilder("get_superColumn_result(");
       sb.append("success:");
       sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
       sb.append(")");
       return sb.toString();
     }
@@ -3353,21 +4761,26 @@ public class Cassandra {
 
   public static class batch_insert_superColumn_blocking_result implements TBase, java.io.Serializable   {
     public boolean success;
+    public CassandraException e;
 
     public final Isset __isset = new Isset();
     public static final class Isset implements java.io.Serializable {
       public boolean success = false;
+      public boolean e = false;
     }
 
     public batch_insert_superColumn_blocking_result() {
     }
 
     public batch_insert_superColumn_blocking_result(
-      boolean success)
+      boolean success,
+      CassandraException e)
     {
       this();
       this.success = success;
       this.__isset.success = true;
+      this.e = e;
+      this.__isset.e = true;
     }
 
     public boolean equals(Object that) {
@@ -3388,6 +4801,15 @@ public class Cassandra {
         if (!(this_present_success && that_present_success))
           return false;
         if (this.success != that.success)
+          return false;
+      }
+
+      boolean this_present_e = true && (this.e != null);
+      boolean that_present_e = true && (that.e != null);
+      if (this_present_e || that_present_e) {
+        if (!(this_present_e && that_present_e))
+          return false;
+        if (!this.e.equals(that.e))
           return false;
       }
 
@@ -3417,6 +4839,15 @@ public class Cassandra {
               TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 1:
+            if (field.type == TType.STRUCT) {
+              this.e = new CassandraException();
+              this.e.read(iprot);
+              this.__isset.e = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             TProtocolUtil.skip(iprot, field.type);
             break;
@@ -3438,6 +4869,15 @@ public class Cassandra {
         oprot.writeFieldBegin(field);
         oprot.writeBool(this.success);
         oprot.writeFieldEnd();
+      } else if (this.__isset.e) {
+        if (this.e != null) {
+          field.name = "e";
+          field.type = TType.STRUCT;
+          field.id = 1;
+          oprot.writeFieldBegin(field);
+          this.e.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -3445,6 +4885,976 @@ public class Cassandra {
 
     public String toString() {
       StringBuilder sb = new StringBuilder("batch_insert_superColumn_blocking_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(",e:");
+      sb.append(this.e);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class touch_args implements TBase, java.io.Serializable   {
+    public String key;
+    public boolean fData;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean key = false;
+      public boolean fData = false;
+    }
+
+    public touch_args() {
+    }
+
+    public touch_args(
+      String key,
+      boolean fData)
+    {
+      this();
+      this.key = key;
+      this.__isset.key = true;
+      this.fData = fData;
+      this.__isset.fData = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof touch_args)
+        return this.equals((touch_args)that);
+      return false;
+    }
+
+    public boolean equals(touch_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_key = true && (this.key != null);
+      boolean that_present_key = true && (that.key != null);
+      if (this_present_key || that_present_key) {
+        if (!(this_present_key && that_present_key))
+          return false;
+        if (!this.key.equals(that.key))
+          return false;
+      }
+
+      boolean this_present_fData = true;
+      boolean that_present_fData = true;
+      if (this_present_fData || that_present_fData) {
+        if (!(this_present_fData && that_present_fData))
+          return false;
+        if (this.fData != that.fData)
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.key = iprot.readString();
+              this.__isset.key = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case -2:
+            if (field.type == TType.BOOL) {
+              this.fData = iprot.readBool();
+              this.__isset.fData = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("touch_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.key != null) {
+        field.name = "key";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.key);
+        oprot.writeFieldEnd();
+      }
+      field.name = "fData";
+      field.type = TType.BOOL;
+      field.id = -2;
+      oprot.writeFieldBegin(field);
+      oprot.writeBool(this.fData);
+      oprot.writeFieldEnd();
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("touch_args(");
+      sb.append("key:");
+      sb.append(this.key);
+      sb.append(",fData:");
+      sb.append(this.fData);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getStringProperty_args implements TBase, java.io.Serializable   {
+    public String propertyName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean propertyName = false;
+    }
+
+    public getStringProperty_args() {
+    }
+
+    public getStringProperty_args(
+      String propertyName)
+    {
+      this();
+      this.propertyName = propertyName;
+      this.__isset.propertyName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getStringProperty_args)
+        return this.equals((getStringProperty_args)that);
+      return false;
+    }
+
+    public boolean equals(getStringProperty_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_propertyName = true && (this.propertyName != null);
+      boolean that_present_propertyName = true && (that.propertyName != null);
+      if (this_present_propertyName || that_present_propertyName) {
+        if (!(this_present_propertyName && that_present_propertyName))
+          return false;
+        if (!this.propertyName.equals(that.propertyName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.propertyName = iprot.readString();
+              this.__isset.propertyName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getStringProperty_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.propertyName != null) {
+        field.name = "propertyName";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.propertyName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getStringProperty_args(");
+      sb.append("propertyName:");
+      sb.append(this.propertyName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getStringProperty_result implements TBase, java.io.Serializable   {
+    public String success;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+    }
+
+    public getStringProperty_result() {
+    }
+
+    public getStringProperty_result(
+      String success)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getStringProperty_result)
+        return this.equals((getStringProperty_result)that);
+      return false;
+    }
+
+    public boolean equals(getStringProperty_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.STRING) {
+              this.success = iprot.readString();
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getStringProperty_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.STRING;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          oprot.writeString(this.success);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getStringProperty_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getStringListProperty_args implements TBase, java.io.Serializable   {
+    public String propertyName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean propertyName = false;
+    }
+
+    public getStringListProperty_args() {
+    }
+
+    public getStringListProperty_args(
+      String propertyName)
+    {
+      this();
+      this.propertyName = propertyName;
+      this.__isset.propertyName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getStringListProperty_args)
+        return this.equals((getStringListProperty_args)that);
+      return false;
+    }
+
+    public boolean equals(getStringListProperty_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_propertyName = true && (this.propertyName != null);
+      boolean that_present_propertyName = true && (that.propertyName != null);
+      if (this_present_propertyName || that_present_propertyName) {
+        if (!(this_present_propertyName && that_present_propertyName))
+          return false;
+        if (!this.propertyName.equals(that.propertyName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.propertyName = iprot.readString();
+              this.__isset.propertyName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getStringListProperty_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.propertyName != null) {
+        field.name = "propertyName";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.propertyName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getStringListProperty_args(");
+      sb.append("propertyName:");
+      sb.append(this.propertyName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class getStringListProperty_result implements TBase, java.io.Serializable   {
+    public List<String> success;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+    }
+
+    public getStringListProperty_result() {
+    }
+
+    public getStringListProperty_result(
+      List<String> success)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getStringListProperty_result)
+        return this.equals((getStringListProperty_result)that);
+      return false;
+    }
+
+    public boolean equals(getStringListProperty_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.LIST) {
+              {
+                TList _list77 = iprot.readListBegin();
+                this.success = new ArrayList<String>(_list77.size);
+                for (int _i78 = 0; _i78 < _list77.size; ++_i78)
+                {
+                  String _elem79 = null;
+                  _elem79 = iprot.readString();
+                  this.success.add(_elem79);
+                }
+                iprot.readListEnd();
+              }
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("getStringListProperty_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.LIST;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          {
+            oprot.writeListBegin(new TList(TType.STRING, this.success.size()));
+            for (String _iter80 : this.success)            {
+              oprot.writeString(_iter80);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getStringListProperty_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class describeTable_args implements TBase, java.io.Serializable   {
+    public String tableName;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean tableName = false;
+    }
+
+    public describeTable_args() {
+    }
+
+    public describeTable_args(
+      String tableName)
+    {
+      this();
+      this.tableName = tableName;
+      this.__isset.tableName = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof describeTable_args)
+        return this.equals((describeTable_args)that);
+      return false;
+    }
+
+    public boolean equals(describeTable_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && (this.tableName != null);
+      boolean that_present_tableName = true && (that.tableName != null);
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!this.tableName.equals(that.tableName))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.tableName = iprot.readString();
+              this.__isset.tableName = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("describeTable_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.tableName != null) {
+        field.name = "tableName";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.tableName);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("describeTable_args(");
+      sb.append("tableName:");
+      sb.append(this.tableName);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class describeTable_result implements TBase, java.io.Serializable   {
+    public String success;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+    }
+
+    public describeTable_result() {
+    }
+
+    public describeTable_result(
+      String success)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof describeTable_result)
+        return this.equals((describeTable_result)that);
+      return false;
+    }
+
+    public boolean equals(describeTable_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.STRING) {
+              this.success = iprot.readString();
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("describeTable_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.STRING;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          oprot.writeString(this.success);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("describeTable_result(");
+      sb.append("success:");
+      sb.append(this.success);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class executeQuery_args implements TBase, java.io.Serializable   {
+    public String query;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean query = false;
+    }
+
+    public executeQuery_args() {
+    }
+
+    public executeQuery_args(
+      String query)
+    {
+      this();
+      this.query = query;
+      this.__isset.query = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof executeQuery_args)
+        return this.equals((executeQuery_args)that);
+      return false;
+    }
+
+    public boolean equals(executeQuery_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_query = true && (this.query != null);
+      boolean that_present_query = true && (that.query != null);
+      if (this_present_query || that_present_query) {
+        if (!(this_present_query && that_present_query))
+          return false;
+        if (!this.query.equals(that.query))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case -1:
+            if (field.type == TType.STRING) {
+              this.query = iprot.readString();
+              this.__isset.query = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("executeQuery_args");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+      if (this.query != null) {
+        field.name = "query";
+        field.type = TType.STRING;
+        field.id = -1;
+        oprot.writeFieldBegin(field);
+        oprot.writeString(this.query);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("executeQuery_args(");
+      sb.append("query:");
+      sb.append(this.query);
+      sb.append(")");
+      return sb.toString();
+    }
+
+  }
+
+  public static class executeQuery_result implements TBase, java.io.Serializable   {
+    public CqlResult_t success;
+
+    public final Isset __isset = new Isset();
+    public static final class Isset implements java.io.Serializable {
+      public boolean success = false;
+    }
+
+    public executeQuery_result() {
+    }
+
+    public executeQuery_result(
+      CqlResult_t success)
+    {
+      this();
+      this.success = success;
+      this.__isset.success = true;
+    }
+
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof executeQuery_result)
+        return this.equals((executeQuery_result)that);
+      return false;
+    }
+
+    public boolean equals(executeQuery_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true && (this.success != null);
+      boolean that_present_success = true && (that.success != null);
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (!this.success.equals(that.success))
+          return false;
+      }
+
+      return true;
+    }
+
+    public int hashCode() {
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case 0:
+            if (field.type == TType.STRUCT) {
+              this.success = new CqlResult_t();
+              this.success.read(iprot);
+              this.__isset.success = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      TStruct struct = new TStruct("executeQuery_result");
+      oprot.writeStructBegin(struct);
+      TField field = new TField();
+
+      if (this.__isset.success) {
+        if (this.success != null) {
+          field.name = "success";
+          field.type = TType.STRUCT;
+          field.id = 0;
+          oprot.writeFieldBegin(field);
+          this.success.write(oprot);
+          oprot.writeFieldEnd();
+        }
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder("executeQuery_result(");
       sb.append("success:");
       sb.append(this.success);
       sb.append(")");

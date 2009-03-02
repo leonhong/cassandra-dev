@@ -23,6 +23,7 @@ import java.util.Random;
 import org.apache.cassandra.utils.BitSet;
 
 
+
 /**
  * Implementation of a PureRandomNumber generator. Use this class cautiously. Not
  * for general purpose use. Currently this is used by the Gossiper to choose a random

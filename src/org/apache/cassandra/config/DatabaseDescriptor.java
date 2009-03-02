@@ -21,14 +21,16 @@ package org.apache.cassandra.config;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.io.*;
+
+import org.apache.cassandra.db.ColumnFamily;
+import org.apache.cassandra.db.Table;
+import org.apache.cassandra.db.TypeInfo;
+import org.apache.cassandra.db.Table.TableMetadata;
+import org.apache.cassandra.utils.FileUtils;
+import org.apache.cassandra.utils.XMLUtils;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.apache.cassandra.db.ColumnFamily;
-import org.apache.cassandra.db.FileUtils;
-import org.apache.cassandra.db.Table;
-import org.apache.cassandra.db.Table.TableMetadata;
 import org.apache.cassandra.io.*;
-import org.apache.cassandra.utils.XMLUtils;
 
 
 /**
@@ -37,6 +39,8 @@ import org.apache.cassandra.utils.XMLUtils;
 
 public class DatabaseDescriptor
 {
+    public static final String random_ = "RANDOM";
+    public static final String ophf_ = "OPHF";
     private static int storagePort_ = 7000;
     private static int controlPort_ = 7001;
     private static int httpPort_ = 7002;
@@ -44,15 +48,16 @@ public class DatabaseDescriptor
     private static int replicationFactor_ = 3;
     private static long rpcTimeoutInMillis_ = 2000;
     private static Set<String> seeds_ = new HashSet<String>();
-    private static String multicastAddr_ = "230.0.0.1";
     private static String metadataDirectory_;
+    private static String snapshotDirectory_;
     /* Keeps the list of Ganglia servers to contact */
     private static String[] gangliaServers_ ;
+    /* Keeps the list of map output directories */
+    private static String[] mapOutputDirectories_;
     /* Keeps the list of data file directories */
     private static String[] dataFileDirectories_;
     /* Current index into the above list of directories */
     private static int currentIndex_ = 0;
-    private static String stagingFileDirectory_;
     private static String logFileDirectory_;
     private static String bootstrapFileDirectory_;
     private static int logRotationThreshold_ = 128*1024*1024;
@@ -61,107 +66,158 @@ public class DatabaseDescriptor
     private static int threadsPerPool_ = 4;
     private static List<String> tables_ = new ArrayList<String>();
     private static Set<String> applicationColumnFamilies_ = new HashSet<String>();
-    private static Map<String, String> cfToColumnTypeMap_ = new HashMap<String, String>();
-    private static Map<String, String> cfToIndexPropertyMap_ = new HashMap<String, String>();
+
+    // Default descriptive names for use in CQL. The user can override
+    // these choices in the config file. These are not case sensitive.
+    // Hence, these are stored in UPPER case for easy comparison.
+    private static String d_rowKey_           = "ROW_KEY";
+    private static String d_superColumnMap_   = "SUPER_COLUMN_MAP";
+    private static String d_superColumnKey_   = "SUPER_COLUMN_KEY";
+    private static String d_columnMap_        = "COLUMN_MAP";
+    private static String d_columnKey_        = "COLUMN_KEY";
+    private static String d_columnValue_      = "COLUMN_VALUE";
+    private static String d_columnTimestamp_  = "COLUMN_TIMESTAMP";
+
+    /*
+     * A map from table names to the set of column families for the table and the
+     * corresponding meta data for that column family.
+    */
+    private static Map<String, Map<String, CFMetaData>> tableToCFMetaDataMap_;
+    /* Hashing strategy Random or OPHF */
+    private static String hashingStrategy_ = DatabaseDescriptor.random_;
     /* if the size of columns or super-columns are more than this, indexing will kick in */
     private static int columnIndexSizeInKB_;
     /* Size of touch key cache */
     private static int touchKeyCacheSize_ = 1024;
     /* Number of hours to keep a memtable in memory */
     private static int memtableLifetime_ = 6;
+    /* Size of the memtable in memory before it is dumped */
+    private static int memtableSize_ = 128;
+    /* Number of objects in millions in the memtable before it is dumped */
+    private static int memtableObjectCount_ = 1;
+    /* 
+     * This parameter enables or disables consistency checks. 
+     * If set to false the read repairs are disable for very
+     * high throughput on reads but at the cost of consistency.
+    */
+    private static boolean doConsistencyCheck_ = true;
     /* Address of ZooKeeper cell */
     private static String zkAddress_;
+    /* Callout directories */
+    private static String calloutLocation_;
+    /* Job Jar Location */
+    private static String jobJarFileLocation_;
+    /* Address where to run the job tracker */
+    private static String jobTrackerHost_;    
     /* Zookeeper session timeout. */
     private static int zkSessionTimeout_ = 30000;
-    /* Should cardinality be altered. */
-    private static boolean isCardinalityAltered_ = true;
-    /* The compaction parameter decides if we should deserialize each key and then serialize it to fix issues.
-     *  true -   we only deserialize if the key needs to be resolved
-     *  false -  we always desrialize  the key. 
-     *  */
     
-    private static boolean aggressiveCompaction_ = false;
+    // the path qualified config file (storage-conf.xml) name
+    private static String configFileName_;
 
-    public static Map<String, Set<String>> init(String filePath) throws Throwable
+    public static Map<String, Map<String, CFMetaData>> init(String filePath) throws Throwable
     {
         /* Read the configuration file to retrieve DB related properties. */
         String file = filePath + System.getProperty("file.separator") + "storage-conf.xml";
         return initInternal(file);
     }
-    
-    public static Map<String, Set<String>> init() throws Throwable
+
+    public static Map<String, Map<String, CFMetaData>> init() throws Throwable
     {
         /* Read the configuration file to retrieve DB related properties. */
-        String file = System.getProperty("storage-config") + System.getProperty("file.separator") + "storage-conf.xml";
-        return initInternal(file);
+        configFileName_ = System.getProperty("storage-config") + System.getProperty("file.separator") + "storage-conf.xml";
+        return initInternal(configFileName_);
     }
     
-    public static Map<String, Set<String>> initInternal(String file) throws Throwable
+    public static Map<String, Map<String, CFMetaData>> initInternal(String file) throws Throwable
     {
         String os = System.getProperty("os.name");
-        XMLUtils xmlUtils = new XMLUtils(file);
-        Node rootNode = xmlUtils.getRequestedNode("/Storage");
+        XMLUtils xmlUtils = new XMLUtils(file);        
 
         /* Cluster Name */
-        clusterName_ = xmlUtils.getNodeValue(rootNode, "ClusterName");
-
-        /* Multicast channel */
-        multicastAddr_ = xmlUtils.getNodeValue(rootNode, "MulticastChannel");
+        clusterName_ = xmlUtils.getNodeValue("/Storage/ClusterName");
 
         /* Ganglia servers contact list */
-        gangliaServers_ = xmlUtils.getNodeValues(rootNode, "GangliaServers/GangliaServer");
+        gangliaServers_ = xmlUtils.getNodeValues("/Storage/GangliaServers/GangliaServer");
         
         /* ZooKeeper's address */
-        zkAddress_ = xmlUtils.getNodeValue(rootNode, "ZookeeperAddress");
+        zkAddress_ = xmlUtils.getNodeValue("/Storage/ZookeeperAddress");
+        
+        /* Hashing strategy */
+        hashingStrategy_ = xmlUtils.getNodeValue("/Storage/HashingStrategy");
+        /* Callout location */
+        calloutLocation_ = xmlUtils.getNodeValue("/Storage/CalloutLocation");
+        
+        /* JobTracker address */
+        jobTrackerHost_ = xmlUtils.getNodeValue("/Storage/JobTrackerHost");
+        
+        /* Job Jar file location */
+        jobJarFileLocation_ = xmlUtils.getNodeValue("/Storage/JobJarFileLocation");       
         
         /* Zookeeper's session timeout */
-        String zkSessionTimeout = xmlUtils.getNodeValue(rootNode, "ZookeeperSessionTimeout");
+        String zkSessionTimeout = xmlUtils.getNodeValue("/Storage/ZookeeperSessionTimeout");
         if ( zkSessionTimeout != null )
             zkSessionTimeout_ = Integer.parseInt(zkSessionTimeout);
 
         /* Data replication factor */
-        String replicationFactor = xmlUtils.getNodeValue(rootNode, "ReplicationFactor");
+        String replicationFactor = xmlUtils.getNodeValue("/Storage/ReplicationFactor");
         if ( replicationFactor != null )
         	replicationFactor_ = Integer.parseInt(replicationFactor);
 
         /* RPC Timeout */
-        String rpcTimeoutInMillis = xmlUtils.getNodeValue(rootNode, "RpcTimeoutInMillis");
+        String rpcTimeoutInMillis = xmlUtils.getNodeValue("/Storage/RpcTimeoutInMillis");
         if ( rpcTimeoutInMillis != null )
         	rpcTimeoutInMillis_ = Integer.parseInt(rpcTimeoutInMillis);
 
         /* Thread per pool */
-        String threadsPerPool = xmlUtils.getNodeValue(rootNode, "ThreadsPerPool");
+        String threadsPerPool = xmlUtils.getNodeValue("/Storage/ThreadsPerPool");
         if ( threadsPerPool != null )
             threadsPerPool_ = Integer.parseInt(threadsPerPool);
 
         /* TCP port on which the storage system listens */
-        String port = xmlUtils.getNodeValue(rootNode, "StoragePort");
+        String port = xmlUtils.getNodeValue("/Storage/StoragePort");
         if ( port != null )
             storagePort_ = Integer.parseInt(port);
 
         /* UDP port for control messages */
-        port = xmlUtils.getNodeValue(rootNode, "ControlPort");
+        port = xmlUtils.getNodeValue("/Storage/ControlPort");
         if ( port != null )
             controlPort_ = Integer.parseInt(port);
 
         /* HTTP port for HTTP messages */
-        port = xmlUtils.getNodeValue(rootNode, "HttpPort");
+        port = xmlUtils.getNodeValue("/Storage/HttpPort");
         if ( port != null )
             httpPort_ = Integer.parseInt(port);
 
         /* Touch Key Cache Size */
-        String touchKeyCacheSize = xmlUtils.getNodeValue(rootNode, "TouchKeyCacheSize");
+        String touchKeyCacheSize = xmlUtils.getNodeValue("/Storage/TouchKeyCacheSize");
         if ( touchKeyCacheSize != null )
             touchKeyCacheSize_ = Integer.parseInt(touchKeyCacheSize);
 
         /* Number of days to keep the memtable around w/o flushing */
-        String lifetime = xmlUtils.getNodeValue(rootNode, "MemtableLifetimeInDays");
+        String lifetime = xmlUtils.getNodeValue("/Storage/MemtableLifetimeInDays");
         if ( lifetime != null )
             memtableLifetime_ = Integer.parseInt(lifetime);
-
-
+        
+        /* Size of the memtable in memory in MB before it is dumped */
+        String memtableSize = xmlUtils.getNodeValue("/Storage/MemtableSizeInMB");
+        if ( memtableSize != null )
+        	memtableSize_ = Integer.parseInt(memtableSize);
+        /* Number of objects in millions in the memtable before it is dumped */
+        String memtableObjectCount = xmlUtils.getNodeValue("/Storage/MemtableObjectCountInMillions");
+        if ( memtableObjectCount != null )
+        	memtableObjectCount_ = Integer.parseInt(memtableObjectCount);
+        
+        /* This parameter enables or disables consistency checks. 
+         * If set to false the read repairs are disable for very
+         * high throughput on reads but at the cost of consistency.*/
+        String doConsistencyCheck = xmlUtils.getNodeValue("/Storage/DoConsistencyChecksBoolean");
+        if ( doConsistencyCheck != null )
+        	doConsistencyCheck_ = Boolean.parseBoolean(doConsistencyCheck);
+        
+        
         /* read the size at which we should do column indexes */
-        String columnIndexSizeInKB = xmlUtils.getNodeValue(rootNode, "ColumnIndexSizeInKB");
+        String columnIndexSizeInKB = xmlUtils.getNodeValue("/Storage/ColumnIndexSizeInKB");
         if(columnIndexSizeInKB == null)
         {
         	columnIndexSizeInKB_ = 64;
@@ -172,7 +228,7 @@ public class DatabaseDescriptor
         }
 
         /* metadata directory */
-        metadataDirectory_ = xmlUtils.getNodeValue(rootNode, "MetadataDirectory");
+        metadataDirectory_ = xmlUtils.getNodeValue("/Storage/MetadataDirectory");
         if ( metadataDirectory_ != null )
             FileUtils.createDirectory(metadataDirectory_);
         else
@@ -183,8 +239,25 @@ public class DatabaseDescriptor
             }
         }
 
+        /* snapshot directory */
+        snapshotDirectory_ = xmlUtils.getNodeValue("/Storage/SnapshotDirectory");
+        if ( snapshotDirectory_ != null )
+            FileUtils.createDirectory(snapshotDirectory_);
+        else
+        {
+            	snapshotDirectory_ = metadataDirectory_ + System.getProperty("file.separator") + "snapshot";
+        }
+        
+        /* map output directory */
+        mapOutputDirectories_ = xmlUtils.getNodeValues("/Storage/MapOutputDirectories/MapOutputDirectory");
+        if ( mapOutputDirectories_.length > 0 )
+        {
+            for ( String mapOutputDirectory : mapOutputDirectories_ )
+                FileUtils.createDirectory(mapOutputDirectory);
+        }
+        
         /* data file directory */
-        dataFileDirectories_ = xmlUtils.getNodeValues(rootNode, "DataFileDirectories/DataFileDirectory");
+        dataFileDirectories_ = xmlUtils.getNodeValues("/Storage/DataFileDirectories/DataFileDirectory");
         if ( dataFileDirectories_.length > 0 )
         {
         	for ( String dataFileDirectory : dataFileDirectories_ )
@@ -199,7 +272,7 @@ public class DatabaseDescriptor
         }
 
         /* bootstrap file directory */
-        bootstrapFileDirectory_ = xmlUtils.getNodeValue(rootNode, "BootstrapFileDirectory");
+        bootstrapFileDirectory_ = xmlUtils.getNodeValue("/Storage/BootstrapFileDirectory");
         if ( bootstrapFileDirectory_ != null )
             FileUtils.createDirectory(bootstrapFileDirectory_);
         else
@@ -210,20 +283,8 @@ public class DatabaseDescriptor
             }
         }
 
-        /* bootstrap file directory */
-        stagingFileDirectory_ = xmlUtils.getNodeValue(rootNode, "StagingFileDirectory");
-        if ( stagingFileDirectory_ != null )
-            FileUtils.createDirectory(stagingFileDirectory_);
-        else
-        {
-            if ( os.equals("Linux") )
-            {
-                stagingFileDirectory_ = "/var/storage/staging";
-            }
-        }
-
         /* commit log directory */
-        logFileDirectory_ = xmlUtils.getNodeValue(rootNode, "CommitLogDirectory");
+        logFileDirectory_ = xmlUtils.getNodeValue("/Storage/CommitLogDirectory");
         if ( logFileDirectory_ != null )
             FileUtils.createDirectory(logFileDirectory_);
         else
@@ -235,61 +296,125 @@ public class DatabaseDescriptor
         }
 
         /* threshold after which commit log should be rotated. */
-        String value = xmlUtils.getNodeValue(rootNode, "CommitLogRotationThresholdInMB");
+        String value = xmlUtils.getNodeValue("/Storage/CommitLogRotationThresholdInMB");
         if ( value != null)
             logRotationThreshold_ = Integer.parseInt(value) * 1024 * 1024;
 
         /* fast sync option */
-        value = xmlUtils.getNodeValue(rootNode, "CommitLogFastSync");
+        value = xmlUtils.getNodeValue("/Storage/CommitLogFastSync");
         if ( value != null )
             fastSync_ = Boolean.parseBoolean(value);
 
+        tableToCFMetaDataMap_ = new HashMap<String, Map<String, CFMetaData>>();
 
         /* Rack Aware option */
-        value = xmlUtils.getNodeValue(rootNode, "RackAware");
+        value = xmlUtils.getNodeValue("/Storage/RackAware");
         if ( value != null )
             rackAware_ = Boolean.parseBoolean(value);
 
-        Map<String, Set<String>> tableToColumnFamilyMap = new HashMap<String, Set<String>>();
         /* Read the table related stuff from config */
-        NodeList tables = xmlUtils.getRequestedNodeList(rootNode, "/Storage/Tables/Table");
+        NodeList tables = xmlUtils.getRequestedNodeList("/Storage/Tables/Table");
         int size = tables.getLength();
         for ( int i = 0; i < size; ++i )
         {
             Node table = tables.item(i);
-            /* parsing out the table name */
-            String tName = xmlUtils.getAttributeValue(table, "Name");
-            tables_.add(tName);
-            tableToColumnFamilyMap.put(tName, new HashSet<String>());
 
-            NodeList columnFamilies = xmlUtils.getRequestedNodeList(table, "ColumnFamily");
+            /* parsing out the table name */
+            String tName = XMLUtils.getAttributeValue(table, "Name");
+            tables_.add(tName);
+            tableToCFMetaDataMap_.put(tName, new HashMap<String, CFMetaData>());
+
+            String xqlTable = "/Storage/Tables/Table[@Name='" + tName + "']/";
+            NodeList columnFamilies = xmlUtils.getRequestedNodeList(xqlTable + "ColumnFamily");
+
+            // get name of the rowKey for this table
+            String n_rowKey = xmlUtils.getNodeValue(xqlTable + "RowKey");
+            if (n_rowKey == null)
+                n_rowKey = d_rowKey_;
+
+            //NodeList columnFamilies = xmlUtils.getRequestedNodeList(table, "ColumnFamily");            
             int size2 = columnFamilies.getLength();
 
             for ( int j = 0; j < size2; ++j )
             {
                 Node columnFamily = columnFamilies.item(j);
-                String cName = columnFamily.getChildNodes().item(0).getNodeValue();
+                String cName = XMLUtils.getAttributeValue(columnFamily, "Name");
+                String xqlCF = xqlTable + "ColumnFamily[@Name='" + cName + "']/";
+
                 /* squirrel away the application column families */
                 applicationColumnFamilies_.add(cName);
-                /* Parse out the column type */
+
+                // Parse out the column type
                 String columnType = xmlUtils.getAttributeValue(columnFamily, "ColumnType");
                 columnType = ColumnFamily.getColumnType(columnType);
-                cfToColumnTypeMap_.put(cName, columnType);
-                /* Parse out the column family index property */
-                String columnIndexProperty = xmlUtils.getAttributeValue(columnFamily, "Index");
-                String columnIndexType = ColumnFamily.getColumnIndexProperty(columnIndexProperty);
-                cfToIndexPropertyMap_.put(cName, columnIndexType);
-                tableToColumnFamilyMap.get(tName).add(cName);
+
+                // Parse out the column family sorting property for columns
+                String columnIndexProperty = XMLUtils.getAttributeValue(columnFamily, "ColumnSort");
+                String columnIndexType = ColumnFamily.getColumnSortProperty(columnIndexProperty);
+
+                // Parse out user-specified logical names for the various dimensions
+                // of a the column family from the config.
+                String n_superColumnMap = xmlUtils.getNodeValue(xqlCF + "SuperColumnMap");
+                if (n_superColumnMap == null)
+                    n_superColumnMap = d_superColumnMap_;
+                
+                String n_superColumnKey = xmlUtils.getNodeValue(xqlCF + "SuperColumnKey");
+                if (n_superColumnKey == null)
+                    n_superColumnKey = d_superColumnKey_;
+                
+                String n_columnMap = xmlUtils.getNodeValue(xqlCF + "ColumnMap");
+                if (n_columnMap == null)
+                    n_columnMap = d_columnMap_;
+                
+                String n_columnKey = xmlUtils.getNodeValue(xqlCF + "ColumnKey");
+                if (n_columnKey == null)
+                    n_columnKey = d_columnKey_;
+
+                String n_columnValue = xmlUtils.getNodeValue(xqlCF + "ColumnValue");
+                if (n_columnValue == null)
+                    n_columnValue = d_columnValue_;
+
+                String n_columnTimestamp = xmlUtils.getNodeValue(xqlCF + "ColumnTimestamp");
+                if (n_columnTimestamp == null)
+                    n_columnTimestamp = d_columnTimestamp_;
+
+                // now populate the column family meta data and
+                // insert it into the table dictionary. 
+                CFMetaData cfMetaData = new CFMetaData();
+                
+                cfMetaData.tableName = tName;
+                cfMetaData.cfName = cName;
+                
+                cfMetaData.columnType = columnType;
+                cfMetaData.indexProperty_ = columnIndexType;
+
+                cfMetaData.n_rowKey = n_rowKey;
+                cfMetaData.n_columnMap = n_columnMap;
+                cfMetaData.n_columnKey = n_columnKey;
+                cfMetaData.n_columnValue = n_columnValue;
+                cfMetaData.n_columnTimestamp = n_columnTimestamp;
+                if ("Super".equals(columnType))
+                {
+                    cfMetaData.n_superColumnKey = n_superColumnKey;
+                    cfMetaData.n_superColumnMap = n_superColumnMap;
+                }
+
+                tableToCFMetaDataMap_.get(tName).put(cName, cfMetaData);
             }
         }
 
         /* Load the seeds for node contact points */
-        String[] seeds = xmlUtils.getNodeValues(rootNode, "Seeds/Seed");
+        String[] seeds = xmlUtils.getNodeValues("/Storage/Seeds/Seed");
         for( int i = 0; i < seeds.length; ++i )
-        {
+        {            
             seeds_.add( seeds[i] );
         }
-        return tableToColumnFamilyMap;
+        return tableToCFMetaDataMap_;
+    }
+    
+    public static String getHashingStrategy()
+    {
+        return hashingStrategy_;
     }
     
     public static String getZkAddress()
@@ -297,14 +422,19 @@ public class DatabaseDescriptor
         return zkAddress_;
     }
     
+    public static String getCalloutLocation()
+    {
+        return calloutLocation_;
+    }
+    
+    public static String getJobTrackerAddress()
+    {
+        return jobTrackerHost_;
+    }
+    
     public static int getZkSessionTimeout()
     {
         return zkSessionTimeout_;
-    }
-
-    public static String getMulticastChannel()
-    {
-        return multicastAddr_;
     }
 
     public static int getColumnIndexSize()
@@ -312,14 +442,25 @@ public class DatabaseDescriptor
     	return columnIndexSizeInKB_ * 1024;
     }
 
-    public static boolean isAlterCardinality()
-    {
-        return isCardinalityAltered_;
-    }
-    
+   
     public static int getMemtableLifetime()
     {
       return memtableLifetime_;
+    }
+
+    public static int getMemtableSize()
+    {
+      return memtableSize_;
+    }
+
+    public static int getMemtableObjectCount()
+    {
+      return memtableObjectCount_;
+    }
+
+    public static boolean getConsistencyCheck()
+    {
+      return doConsistencyCheck_;
     }
 
     public static String getClusterName()
@@ -327,6 +468,10 @@ public class DatabaseDescriptor
         return clusterName_;
     }
 
+    public static String getConfigFileName() {
+        return configFileName_;
+    }
+    
     public static boolean isApplicationColumnFamily(String columnFamily)
     {
         return applicationColumnFamilies_.contains(columnFamily);
@@ -335,6 +480,11 @@ public class DatabaseDescriptor
     public static int getTouchKeyCacheSize()
     {
         return touchKeyCacheSize_;
+    }
+    
+    public static String getJobJarLocation()
+    {
+        return jobJarFileLocation_;
     }
 
     public static String getGangliaServers()
@@ -348,16 +498,58 @@ public class DatabaseDescriptor
     	}
     	return sb.toString();
     }
+    
+    public static Map<String, CFMetaData> getTableMetaData(String table)
+    {
+        return tableToCFMetaDataMap_.get(table);
+    }
 
+    /*
+     * Given a table name & column family name, get the column family
+     * meta data. If the table name or column family name is not valid
+     * this function returns null.
+     */
+    public static CFMetaData getCFMetaData(String table, String cfName)
+    {
+        Map<String, CFMetaData> cfInfo = tableToCFMetaDataMap_.get(table);
+        if (cfInfo == null)
+            return null;
+        
+        return cfInfo.get(cfName);
+    }
+    
     public static String getColumnType(String cfName)
     {
-    	return cfToColumnTypeMap_.get(cfName);
+        String table = getTables().get(0);
+        CFMetaData cfMetaData = getCFMetaData(table, cfName);
+        
+        if (cfMetaData == null)
+            return null;
+        return cfMetaData.columnType;
     }
 
-    public static boolean isNameIndexEnabled(String cfName)
+    public static boolean isNameSortingEnabled(String cfName)
     {
-    	return "Name".equals(cfToIndexPropertyMap_.get(cfName));
+        String table = getTables().get(0);
+        CFMetaData cfMetaData = getCFMetaData(table, cfName);
+
+        if (cfMetaData == null)
+            return false;
+
+    	return "Name".equals(cfMetaData.indexProperty_);
     }
+    
+    public static boolean isTimeSortingEnabled(String cfName)
+    {
+        String table = getTables().get(0);
+        CFMetaData cfMetaData = getCFMetaData(table, cfName);
+
+        if (cfMetaData == null)
+            return false;
+
+        return "Time".equals(cfMetaData.indexProperty_);
+    }
+    
 
     public static List<String> getTables()
     {
@@ -406,7 +598,28 @@ public class DatabaseDescriptor
 
     public static void setMetadataDirectory(String metadataDirectory)
     {
-        metadataDirectory_ = metadataDirectory_;
+        metadataDirectory_ = metadataDirectory;
+    }
+
+    public static String getSnapshotDirectory()
+    {
+        return snapshotDirectory_;
+    }
+
+    public static void setSnapshotDirectory(String snapshotDirectory)
+    {
+    	snapshotDirectory_ = snapshotDirectory;
+    }
+    
+    public static String[] getAllMapOutputDirectories()
+    {
+        return mapOutputDirectories_;
+    }
+    
+    public static String getMapOutputLocation()
+    {
+        String mapOutputDirectory = mapOutputDirectories_[currentIndex_];
+        return mapOutputDirectory;
     }
 
     public static String[] getAllDataFileLocations()
@@ -419,6 +632,7 @@ public class DatabaseDescriptor
     	String dataFileDirectory = dataFileDirectories_[currentIndex_];
         return dataFileDirectory;
     }
+    
     public static String getCompactionFileLocation()
     {
     	String dataFileDirectory = dataFileDirectories_[currentIndex_];
@@ -434,16 +648,6 @@ public class DatabaseDescriptor
     public static void setBootstrapFileLocation(String bfLocation)
     {
         bootstrapFileDirectory_ = bfLocation;
-    }
-
-    public static String getStagingFileLocation()
-    {
-        return stagingFileDirectory_;
-    }
-
-    public static void setStagingFileLocation(String stagingLocation)
-    {
-        stagingFileDirectory_ = stagingLocation;
     }
 
     public static int getLogFileSizeThreshold()
@@ -478,19 +682,12 @@ public class DatabaseDescriptor
 
     public static String getColumnFamilyType(String cfName)
     {
-    	return cfToColumnTypeMap_.get(cfName);
+        String cfType = getColumnType(cfName);
+        if ( cfType == null )
+            cfType = "Standard";
+    	return cfType;
     }
 
-    public static void setCompactionFactor(boolean compactionFactor)
-    {
-    	aggressiveCompaction_ = compactionFactor;
-    }
-    public static  boolean getCompactionFactor()
-    {
-        return aggressiveCompaction_;
-    }
-
-    
     /*
      * Loop through all the disks to see which disk has the max free space
      * return the disk with max free space for compactions. If the size of the expected
@@ -523,5 +720,24 @@ public class DatabaseDescriptor
         currentIndex_ = maxDiskIndex;
       }
         return dataFileDirectory;
+    }
+    
+    public static TypeInfo getTypeInfo(String cfName)
+    {
+        String table = DatabaseDescriptor.getTables().get(0);
+        CFMetaData cfMetadata = DatabaseDescriptor.getCFMetaData(table, cfName);
+        if ( cfMetadata.indexProperty_.equals("Name") )
+        {
+            return TypeInfo.STRING;
+        }
+        else
+        {
+            return TypeInfo.LONG;
+        }
+    }
+    
+    public static void main(String[] args) throws Throwable
+    {
+        DatabaseDescriptor.initInternal("C:\\Engagements\\Cassandra-Golden\\storage-conf.xml");
     }
 }

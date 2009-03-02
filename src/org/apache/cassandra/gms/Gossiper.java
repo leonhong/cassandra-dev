@@ -20,12 +20,18 @@ package org.apache.cassandra.gms;
 
 import java.io.*;
 import java.util.*;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.concurrent.SingleThreadedStage;
 import org.apache.cassandra.concurrent.StageManager;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.net.IVerbHandler;
+import org.apache.cassandra.net.Message;
+import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.service.IComponentShutdown;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.utils.*;
 import org.apache.cassandra.net.*;
 

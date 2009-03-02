@@ -18,8 +18,9 @@
 
 package org.apache.cassandra.io;
 
-import java.io.IOException;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.DataInputStream;
 
 /**
@@ -32,14 +33,14 @@ public interface ICompactSerializer<T>
 	/**
      * Serialize the specified type into the specified DataOutputStream instance.
      * @param t type that needs to be serialized
-     * @param dos DataOutputStream into which serialization needs to happen.
+     * @param dos DataOutput into which serialization needs to happen.
      * @throws IOException
      */
     public void serialize(T t, DataOutputStream dos) throws IOException;
 
     /**
      * Deserialize into the specified DataInputStream instance.
-     * @param dis DataInputStream from which deserialization needs to happen.
+     * @param dis DataInput from which deserialization needs to happen.
      * @throws IOException
      * @return the type that was deserialized
      */

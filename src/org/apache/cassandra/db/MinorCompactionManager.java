@@ -29,9 +29,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
-import org.apache.cassandra.concurrent.*;
+import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
+import org.apache.cassandra.concurrent.ThreadFactoryImpl;
 import org.apache.cassandra.db.HintedHandOffManager.HintedHandOff;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.net.EndPoint;
@@ -39,6 +38,8 @@ import org.apache.cassandra.service.IComponentShutdown;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.concurrent.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -83,7 +84,7 @@ class MinorCompactionManager implements IComponentShutdown
             try
             {
                 logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
-            	columnFamilyStore_.doCompaction(null);
+            	columnFamilyStore_.doCompaction();
                 logger_.debug("Finished compaction ..."+columnFamilyStore_.columnFamily_);
             }
             catch (IOException e)
@@ -97,7 +98,7 @@ class MinorCompactionManager implements IComponentShutdown
         }
     }
 
-    class FileCompactor2 implements Callable<BloomFilter.CountingBloomFilter>
+    class FileCompactor2 implements Callable<Boolean>
     {
         private ColumnFamilyStore columnFamilyStore_;
         private List<Range> ranges_;
@@ -118,13 +119,13 @@ class MinorCompactionManager implements IComponentShutdown
             fileList_ = fileList;
         }
 
-        public BloomFilter.CountingBloomFilter call()
+        public Boolean call()
         {
-        	BloomFilter.CountingBloomFilter result = null;
+        	boolean result = true;
             try
             {
                 logger_.debug("Started  compaction ..."+columnFamilyStore_.columnFamily_);
-                result = columnFamilyStore_.doRangeAntiCompaction(ranges_, target_,fileList_);
+                result = columnFamilyStore_.doAntiCompaction(ranges_, target_,fileList_);
                 logger_.debug("Finished compaction ..."+columnFamilyStore_.columnFamily_);
             }
             catch (IOException e)
@@ -135,7 +136,7 @@ class MinorCompactionManager implements IComponentShutdown
         }
     }
 
-    class OnDemandCompactor implements Callable<BloomFilter.CountingBloomFilter>
+    class OnDemandCompactor implements Runnable
     {
         private ColumnFamilyStore columnFamilyStore_;
         private long skip_ = 0L;
@@ -146,20 +147,19 @@ class MinorCompactionManager implements IComponentShutdown
             skip_ = skip;
         }
 
-        public BloomFilter.CountingBloomFilter call()
+        public void run()
         {
-        	BloomFilter.CountingBloomFilter result = null;
             try
             {
                 logger_.debug("Started  Major compaction ..."+columnFamilyStore_.columnFamily_);
-                result = columnFamilyStore_.doMajorCompaction(skip_);
+                columnFamilyStore_.doMajorCompaction(skip_);
                 logger_.debug("Finished Major compaction ..."+columnFamilyStore_.columnFamily_);
             }
             catch (IOException e)
             {
                 logger_.debug( LogUtil.throwableToString(e) );
             }
-            return result;
+            return ;
         }
     }
 
@@ -220,18 +220,18 @@ class MinorCompactionManager implements IComponentShutdown
         compactor_.submit(new CleanupCompactor(columnFamilyStore));
     }
 
-    public Future<BloomFilter.CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges, EndPoint target, List<String> fileList)
+    public Future<Boolean> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges, EndPoint target, List<String> fileList)
     {
         return compactor_.submit( new FileCompactor2(columnFamilyStore, ranges, target, fileList) );
     } 
 
-    public Future<BloomFilter.CountingBloomFilter> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges)
+    public Future<Boolean> submit(ColumnFamilyStore columnFamilyStore, List<Range> ranges)
     {
         return compactor_.submit( new FileCompactor2(columnFamilyStore, ranges) );
     }
 
-    public Future<BloomFilter.CountingBloomFilter> submitMajor(ColumnFamilyStore columnFamilyStore, List<Range> ranges, long skip)
+    public void  submitMajor(ColumnFamilyStore columnFamilyStore, List<Range> ranges, long skip)
     {
-        return compactor_.submit( new OnDemandCompactor(columnFamilyStore, skip) );
+        compactor_.submit( new OnDemandCompactor(columnFamilyStore, skip) );
     }
 }

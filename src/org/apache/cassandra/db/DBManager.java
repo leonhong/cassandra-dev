@@ -29,13 +29,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.IFileWriter;
 import org.apache.cassandra.io.SequenceFile;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BasicUtilities;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.GuidGenerator;
 import org.apache.cassandra.utils.HashingSchemes;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -94,7 +98,7 @@ public class DBManager
     public DBManager() throws Throwable
     {
         /* Read the configuration file */
-        Map<String, Set<String>> tableToColumnFamilyMap = DatabaseDescriptor.init();
+        Map<String, Map<String, CFMetaData>> tableToColumnFamilyMap = DatabaseDescriptor.init();
         storeMetadata(tableToColumnFamilyMap);
         Set<String> tables = tableToColumnFamilyMap.keySet();
         
@@ -113,7 +117,7 @@ public class DBManager
      * the table name and the column families that make up the table.
      * Each column family also has an associated ID which is an int.
     */
-    private static void storeMetadata(Map<String, Set<String>> tableToColumnFamilyMap) throws Throwable
+    private static void storeMetadata(Map<String, Map<String, CFMetaData>> tableToColumnFamilyMap) throws Throwable
     {
         AtomicInteger idGenerator = new AtomicInteger(0);
         Set<String> tables = tableToColumnFamilyMap.keySet();
@@ -125,8 +129,9 @@ public class DBManager
             {
                 tmetadata = Table.TableMetadata.instance();
                 /* Column families associated with this table */
-                Set<String> columnFamilies = tableToColumnFamilyMap.get(table);
-                for ( String columnFamily : columnFamilies )
+                Map<String, CFMetaData> columnFamilies = tableToColumnFamilyMap.get(table);
+
+                for (String columnFamily : columnFamilies.keySet())
                 {
                     tmetadata.add(columnFamily, idGenerator.getAndIncrement(), DatabaseDescriptor.getColumnType(columnFamily));
                 }
@@ -162,11 +167,12 @@ public class DBManager
         SystemTable sysTable = SystemTable.openSystemTable(SystemTable.name_);
         Row row = sysTable.get(FBUtilities.getHostName());
 
+        Random random = new Random();
         if ( row == null )
         {
-            /* Generate a token for this Storage node */
-            Random random = new Random();
-            BigInteger token = new BigInteger(160, random);
+        	/* Generate a token for this Storage node */                       
+            String guid = GuidGenerator.guid();
+            BigInteger token = StorageService.hash(guid);
             if ( token.signum() == -1 )
                 token = token.multiply(BigInteger.valueOf(-1L));
 

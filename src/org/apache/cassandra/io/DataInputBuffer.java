@@ -22,6 +22,9 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.cassandra.continuations.Suspendable;
+
+
 /**
  * An implementation of the DataInputStream interface. This instance is completely thread 
  * unsafe.
@@ -305,11 +308,16 @@ public final class DataInputBuffer extends DataInputStream
             this.mark = start;
             this.pos = start;
         }
-
+        
         public int getPosition()
         {
             return pos;
         }
+        
+        public void setPosition(int position)
+        {
+            pos = position;
+        }        
 
         public int getLength()
         {
@@ -317,7 +325,7 @@ public final class DataInputBuffer extends DataInputStream
         }
     }
 
-    private Buffer buffer;
+    private Buffer buffer_;
 
     /** Constructs a new empty buffer. */
     public DataInputBuffer()
@@ -328,73 +336,36 @@ public final class DataInputBuffer extends DataInputStream
     private DataInputBuffer(Buffer buffer)
     {
         super(buffer);
-        this.buffer = buffer;
+        this.buffer_ = buffer;
     }
    
     /** Resets the data that the buffer reads. */
     public void reset(byte[] input, int length)
     {
-        buffer.reset(input, 0, length);
+        buffer_.reset(input, 0, length);
     }
 
     /** Resets the data that the buffer reads. */
     public void reset(byte[] input, int start, int length)
     {
-        buffer.reset(input, start, length);
+        buffer_.reset(input, start, length);
     }
 
     /** Returns the current position in the input. */
     public int getPosition()
     {
-        return buffer.getPosition();
+        return buffer_.getPosition();
+    }
+    
+    /** Set the position within the input */
+    public void setPosition(int position)
+    {
+        buffer_.setPosition(position);
     }
 
     /** Returns the length of the input. */
     public int getLength()
     {
-        return buffer.getLength();
-    }
-    
-    public static void main(String[] args) throws Throwable
-    {
-        Random random = new Random();
-        byte[] bytes = new byte[64*1024*1024];
-        random.nextBytes(bytes);
-            
-        for ( int i = 0; i < 16; ++i )
-        {
-            int pos = 0;
-            int count = bytes.length;
-            long start2 = System.currentTimeMillis();
-            while ( true )
-            {
-                int value = (pos < count) ? (bytes[pos] & 0xff) : -1;
-                ++pos;
-                if ( value == -1 )
-                    break;
-            }
-            System.out.println("TIME TAKEN : " + (System.currentTimeMillis() - start2));
-            
-            FastByteArrayInputStream bis = new FastByteArrayInputStream(bytes);        
-            int read = 0;        
-            long start = System.currentTimeMillis();        
-            while ( true )
-            {
-                read = bis.read();
-                if ( read == -1 )
-                    break;            
-            }        
-            System.out.println("TIME TAKEN : " + (System.currentTimeMillis() - start));
-        }
-        
-        /*
-        DataOutputBuffer bufOut = new DataOutputBuffer();        
-        bufOut.writeUTF("Avinash");
-        bufOut.writeInt(41*1024*1024);
-        DataInputBuffer bufIn = new DataInputBuffer();
-        bufIn.reset(bufOut.getData(), bufOut.getLength());
-        System.out.println(bufIn.readUTF()); 
-        System.out.println(bufIn.readInt());
-        */
+        return buffer_.getLength();
     }
 }

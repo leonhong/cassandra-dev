@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.utils.BloomFilter;
 
+
 public class ThreadListBuilder
 {
     private final static int bufSize_ = 64*1024*1024;
@@ -39,7 +40,7 @@ public class ThreadListBuilder
     {
         if ( args.length != 2 )
         {
-            System.out.println("Usage : java org.apache.cassandra.tools.ThreadListBuilder <directory containing files to be processed> <directory to dump the bloom filter in.>");
+            System.out.println("Usage : java com.facebook.infrastructure.tools.ThreadListBuilder <directory containing files to be processed> <directory to dump the bloom filter in.>");
             System.exit(1);
         }
         

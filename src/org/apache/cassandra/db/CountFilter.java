@@ -25,6 +25,7 @@ import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.SSTable;
 
+
 /**
  * This class provides a filter for fitering out columns
  * greater than a certain count.
@@ -46,6 +47,9 @@ public class CountFilter implements IFilter
 	public ColumnFamily filter(String cfNameParam, ColumnFamily columnFamily)
 	{
     	String[] values = RowMutation.getColumnAndColumnFamily(cfNameParam);
+        if ( columnFamily == null )
+            return columnFamily;
+        
 		String cfName = columnFamily.name();
 		ColumnFamily filteredCf = new ColumnFamily(cfName);
 		if( countLimit_ <= 0 )

@@ -19,12 +19,12 @@
 package org.apache.cassandra.db;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.utils.BloomFilter;
+
 
 /**
  * This interface is an extension of the ICompactSerializer which allows for partial deserialization
@@ -39,7 +39,7 @@ public interface ICompactSerializer2<T> extends ICompactSerializer<T>
      * columns that are required. This is specified in the <i>columnNames</i>
      * argument.
      * 
-     * @param dis DataInputStream from which we need to deserialize.
+     * @param dis DataInput from which we need to deserialize.
      * @param columnNames list of items that are required.
      * @throws IOException
      * @return type which contains the specified items.
@@ -50,7 +50,7 @@ public interface ICompactSerializer2<T> extends ICompactSerializer<T>
      * This method is used to deserialize just the specified field from 
      * the serialized stream.
      * 
-     * @param dis DataInputStream from which we need to deserialize.
+     * @param dis DataInput from which we need to deserialize.
      * @param name name of the desired field.
      * @param count count of the number of fields required.
      * @throws IOException

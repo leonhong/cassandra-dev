@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 
 import org.apache.cassandra.io.DataOutputBuffer;
 
+
 /*
  * This is the abstraction that pre-processes calls to implmentations
  * of the ICompactSerializer2 serialize() via dynamic proxies.

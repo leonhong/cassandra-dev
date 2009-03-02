@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.db;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -26,11 +28,12 @@ import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.io.*;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.HashingSchemes;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.io.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -52,8 +55,7 @@ public final class ColumnFamily implements Serializable
         /* TODO: These are the various column types. Hard coded for now. */
         columnTypes_.put("Standard", "Standard");
         columnTypes_.put("Super", "Super");
-
-        indexTypes_.put("None", "None");
+        
         indexTypes_.put("Name", "Name");
         indexTypes_.put("Time", "Time");
     }
@@ -79,10 +81,10 @@ public final class ColumnFamily implements Serializable
     	return columnTypes_.get(key);
     }
 
-    public static String getColumnIndexProperty(String columnIndexProperty)
+    public static String getColumnSortProperty(String columnIndexProperty)
     {
     	if ( columnIndexProperty == null )
-    		return indexTypes_.get("None");
+    		return indexTypes_.get("Time");
     	return indexTypes_.get(columnIndexProperty);
     }
 
@@ -105,7 +107,7 @@ public final class ColumnFamily implements Serializable
 			 * if this columnfamily has supercolumns or there is an index on the column name,
 			 * then sort by name
 			*/
-			if("Super".equals(columnType) || DatabaseDescriptor.isNameIndexEnabled(cfName))
+			if("Super".equals(columnType) || DatabaseDescriptor.isNameSortingEnabled(cfName))
 			{
 				columnComparator_ = ColumnComparatorFactory.getComparator(ColumnComparatorFactory.ComparatorType.NAME);
 			}
@@ -118,9 +120,8 @@ public final class ColumnFamily implements Serializable
 
 		return columnComparator_;
 	}
-
-    /* CTOR for JAXB */
-    private ColumnFamily()
+    
+    ColumnFamily()
     {
     }
 
@@ -175,7 +176,7 @@ public final class ColumnFamily implements Serializable
         return name_;
     }
 
-    /*
+    /**
      *  We need to go through each column
      *  in the column family and resolve it before adding
     */
@@ -201,20 +202,6 @@ public final class ColumnFamily implements Serializable
     	IColumn column = columnFactory_.createColumn(name);
     	addColumn(column.name(), column);
     }
-
-//    int getColumnCount()
-//    {
-//    	int count = 0;
-//    	Set<IColumn> columns = columns_.getSortedColumns();
-//    	if( columns != null )
-//    	{
-//	    	for(IColumn column: columns)
-//	    	{
-//	    		count = count + column.getObjectCount();
-//	    	}
-//    	}
-//    	return count;
-//    }
 
     int getColumnCount()
     {
@@ -261,23 +248,26 @@ public final class ColumnFamily implements Serializable
     */
     void addColumn(String name, IColumn column)
     {
-        int newSize = column.size();
+    	int newSize = 0;
         IColumn oldColumn = columns_.get(name);
         if ( oldColumn != null )
         {
             int oldSize = oldColumn.size();
-            size_.addAndGet(newSize - oldSize);
-
-            /*
-             * TODO: This needs to re-examined again.
-            */
             if( oldColumn.putColumn(column))
             {
+            	// This will never be called for super column as put column always returns false.
                 columns_.put(name, column);
+            	newSize = column.size();
             }
+            else
+            {
+            	newSize = oldColumn.size();
+            }
+            size_.addAndGet(newSize - oldSize);
         }
         else
         {
+            newSize = column.size();
             size_.addAndGet(newSize);
             columns_.put(name, column);
         }
@@ -351,7 +341,7 @@ public final class ColumnFamily implements Serializable
         	IColumn columnExternal = columns.get(cName);
 
         	if( columnInternal == null )
-        	{
+        	{                
         		if(DatabaseDescriptor.getColumnFamilyType(name_).equals(ColumnFamily.getColumnType("Super")))
         		{
         			columnInternal = new SuperColumn(columnExternal.name());
@@ -536,7 +526,7 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
     private void fillColumnFamily(ColumnFamily cf,  DataInputStream dis) throws IOException
     {
         int size = dis.readInt();        	        	
-    	IColumn column = null;
+    	IColumn column = null;           
         for ( int i = 0; i < size; ++i )
         {
         	column = cf.getColumnSerializer().deserialize(dis);
@@ -548,10 +538,7 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
     }
 
     public ColumnFamily deserialize(DataInputStream dis) throws IOException
-    {
-        if ( dis.available() == 0 )
-            return null;
-        
+    {       
         ColumnFamily cf = defreezeColumnFamily(dis);
         if ( !cf.isMarkedForDelete() )
             fillColumnFamily(cf,dis);
@@ -563,10 +550,7 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
      * a column family specified in the name cfName parameter.
     */
     public ColumnFamily deserialize(DataInputStream dis, IFilter filter) throws IOException
-    {
-        if ( dis.available() == 0 )
-            return null;
-        
+    {        
         ColumnFamily cf = defreezeColumnFamily(dis);
         if ( !cf.isMarkedForDelete() )
         {
@@ -594,10 +578,7 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
      * name could be of the form cf:superColumn:column  or cf:column or cf
      */
     public ColumnFamily deserialize(DataInputStream dis, String name, IFilter filter) throws IOException
-    {
-        if ( dis.available() == 0 )
-            return null;
-        
+    {        
         String[] names = RowMutation.getColumnAndColumnFamily(name);
         String columnName = "";
         if ( names.length == 1 )
@@ -611,7 +592,7 @@ class ColumnFamilySerializer implements ICompactSerializer2<ColumnFamily>
         if ( !cf.isMarkedForDelete() )
         {
             /* read the number of columns */
-            int size = dis.readInt();
+            int size = dis.readInt();            
             for ( int i = 0; i < size; ++i )
             {
 	            IColumn column = cf.getColumnSerializer().deserialize(dis, columnName, filter);

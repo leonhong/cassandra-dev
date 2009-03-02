@@ -9,6 +9,7 @@ import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.service.StorageService;
 
+
 public class ClusterTool
 {
 	public static final String SET_TOKEN = "settoken";

@@ -20,8 +20,8 @@ package org.apache.cassandra.concurrent;
 
 import java.util.concurrent.*;
 
+import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
-
 import org.apache.cassandra.utils.*;
 
 /**
@@ -34,7 +34,7 @@ import org.apache.cassandra.utils.*;
 
 public final class DebuggableThreadPoolExecutor extends ThreadPoolExecutor
 {
-    private static Logger logger_ = Logger.getLogger(DebuggableThreadPoolExecutor.class);
+    private static Logger logger_ = Logger.getLogger(DebuggableThreadPoolExecutor.class);    
     
     public DebuggableThreadPoolExecutor(int corePoolSize,
             int maximumPoolSize,

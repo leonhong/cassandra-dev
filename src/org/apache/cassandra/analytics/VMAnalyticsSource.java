@@ -24,11 +24,11 @@ import java.lang.management.MemoryUsage;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 
 /**
  * This class sets up the analytics package to report metrics into

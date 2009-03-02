@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.db;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
@@ -27,13 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.IFileReader;
 import org.apache.cassandra.io.IFileWriter;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.HashingSchemes;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -88,11 +91,6 @@ public final class Column implements IColumn, Serializable
         return name_;
     }
 
-    public String name(String key)
-    {
-    	throw new UnsupportedOperationException("This operation is unsupported on simple columns.");
-    }
-
     public byte[] value()
     {
         return value_;
@@ -104,6 +102,11 @@ public final class Column implements IColumn, Serializable
     }
 
     public Collection<IColumn> getSubColumns()
+    {
+    	throw new UnsupportedOperationException("This operation is unsupported on simple columns.");
+    }
+
+    public IColumn getSubColumn( String columnName )
     {
     	throw new UnsupportedOperationException("This operation is unsupported on simple columns.");
     }
@@ -148,7 +151,7 @@ public final class Column implements IColumn, Serializable
 
     /*
      * This returns the size of the column when serialized.
-     * @see org.apache.cassandra.db.IColumn#serializedSize()
+     * @see com.facebook.infrastructure.db.IColumn#serializedSize()
     */
     public int serializedSize()
     {
@@ -201,8 +204,6 @@ public final class Column implements IColumn, Serializable
     		throw new IllegalArgumentException("The name should match the name of the current column or super column");
     	if(timestamp_ <= column.timestamp())
     	{
-    		value_ = column.value();
-    		timestamp_ = column.timestamp();
             return true;
     	}
         return false;
@@ -231,6 +232,35 @@ public final class Column implements IColumn, Serializable
   		stringBuilder.append(seperator_);
   		stringBuilder.append(timestamp_);
     	return stringBuilder.toString().getBytes();
+    }
+    
+    /**
+     * This method is basically implemented for Writable interface
+     * for M/R. 
+     */
+    public void readFields(DataInput in) throws IOException
+    {
+        name_ = in.readUTF();
+        boolean delete = in.readBoolean();
+        long ts = in.readLong();
+        int size = in.readInt();
+        byte[] value = new byte[size];
+        in.readFully(value);        
+        if ( delete )
+            delete();
+    }
+    
+    /**
+     * This method is basically implemented for Writable interface
+     * for M/R. 
+     */
+    public void write(DataOutput out) throws IOException
+    {
+        out.writeUTF(name_);
+        out.writeBoolean(isMarkedForDelete());
+        out.writeLong(timestamp_);
+        out.writeInt(value().length);
+        out.write(value());
     }
 
 }

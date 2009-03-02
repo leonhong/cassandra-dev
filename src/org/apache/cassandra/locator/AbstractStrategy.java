@@ -7,11 +7,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.gms.FailureDetector;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.service.StorageService;
+import org.apache.log4j.Logger;
 
 /**
  * This class contains a helper method that will be used by

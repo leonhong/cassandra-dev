@@ -36,7 +36,7 @@ public class LogUtil
     {
         //BasicConfigurator.configure();
         String file = System.getProperty("storage-config");
-        file += System.getProperty("file.separator") + "logging.props";
+        file += System.getProperty("file.separator") + "log4j.properties";
         PropertyConfigurator.configure(file);
     }
 

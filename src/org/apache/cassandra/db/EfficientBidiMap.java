@@ -20,8 +20,10 @@ package org.apache.cassandra.db;
 
 import java.io.Serializable;
 import java.util.*;
+
 import org.apache.cassandra.db.ColumnComparatorFactory.ComparatorType;
 import org.apache.cassandra.service.StorageService;
+
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -70,6 +72,9 @@ class EfficientBidiMap implements Serializable
 
     public void put(String key, IColumn column)
     {
+    	IColumn oldColumn = map_.get(key);
+    	if( oldColumn != null )
+    		sortedSet_.remove( oldColumn );
         map_.put(key, column);
         sortedSet_.add(column);
     }
@@ -81,13 +86,6 @@ class EfficientBidiMap implements Serializable
 
     public SortedSet<IColumn> getSortedColumns()
     {
-//    	SortedSet<IColumn> columns =  new TreeSet<IColumn>(columnComparator_);
-//        Set<String> keySet = map_.keySet();
-//        for(String key: keySet)
-//        {
-//        	columns.add(map_.get(key));
-//        }
-//    	return columns;
     	return sortedSet_;
     }
 

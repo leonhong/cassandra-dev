@@ -21,10 +21,10 @@ package org.apache.cassandra.net;
 import java.io.*;
 import java.net.SocketException;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.net.sink.SinkManager;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

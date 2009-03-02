@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,8 +32,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.concurrent.DebuggableThreadPoolExecutor;
 import org.apache.cassandra.concurrent.ThreadFactoryImpl;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -42,11 +41,10 @@ import org.apache.cassandra.gms.Gossiper;
 import org.apache.cassandra.gms.IEndPointStateChangeSubscriber;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.utils.LogUtil;
-import com.yahoo.zookeeper.KeeperException;
-import com.yahoo.zookeeper.ZooKeeper;
-import com.yahoo.zookeeper.ZooDefs.CreateFlags;
-import com.yahoo.zookeeper.ZooDefs.Ids;
-import com.yahoo.zookeeper.data.Stat;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.Stat;
 
 class LeaderElector implements IEndPointStateChangeSubscriber
 {
@@ -152,6 +150,10 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             {
                 logger_.warn(LogUtil.throwableToString(ex));
             }
+            catch ( IOException ex )
+            {
+                logger_.warn(LogUtil.throwableToString(ex));
+            }
             catch ( KeeperException ex )
             {
                 logger_.warn(LogUtil.throwableToString(ex));
@@ -230,7 +232,7 @@ class LeaderElector implements IEndPointStateChangeSubscriber
         
         /* Create the znodes under the Leader znode */       
         logger_.debug("Attempting to create znode " + createPath);
-        String pathCreated = zk.create(createPath, EndPoint.toBytes( StorageService.getLocalControlEndPoint() ), Ids.OPEN_ACL_UNSAFE, (CreateFlags.SEQUENCE  | CreateFlags.EPHEMERAL) );             
+        String pathCreated = zk.create(createPath, EndPoint.toBytes( StorageService.getLocalControlEndPoint() ), Ids.OPEN_ACL_UNSAFE, (CreateMode.EPHEMERAL_SEQUENTIAL) );             
         logger_.debug("Created znode under leader znode " + pathCreated);            
         leaderElectionService_.submit(new LeaderDeathMonitor(pathCreated));
     }
@@ -254,9 +256,17 @@ class LeaderElector implements IEndPointStateChangeSubscriber
         return (leader_ != null ) ? leader_.get() : StorageService.getLocalStorageEndPoint();
     }
     
-    private void onLeaderElection()
+    private void onLeaderElection() throws InterruptedException, IOException
     {
+        /*
+         * If the local node is the leader then not only does he 
+         * diseminate the information but also starts the M/R job
+         * tracker. Non leader nodes start the M/R task tracker 
+         * thereby initializing the M/R subsystem.
+        */
         if ( StorageService.instance().isLeader(leader_.get()) )
-                Gossiper.instance().addApplicationState(LeaderElector.leaderState_, new ApplicationState(leader_.toString()));
+        {
+            Gossiper.instance().addApplicationState(LeaderElector.leaderState_, new ApplicationState(leader_.toString()));              
+        }
     }
 }

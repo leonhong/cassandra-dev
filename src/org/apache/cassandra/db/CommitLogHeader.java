@@ -21,6 +21,10 @@ package org.apache.cassandra.db;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.io.*;
 
 /**
@@ -221,10 +225,13 @@ class CommitLogHeader
     
     public String toString()
     {
-        StringBuilder sb = new StringBuilder("");
-        for ( byte b : header_ )
+        StringBuilder sb = new StringBuilder("");        
+        for ( int i = 0; i < header_.length; ++i )
         {
-            sb.append(b);
+            sb.append(header_[i]);
+            sb.append(":");
+            Table table = Table.open( DatabaseDescriptor.getTables().get(0));
+            sb.append(table.getColumnFamilyName(i));
             sb.append(" ");
         }        
         sb.append(" | " );        

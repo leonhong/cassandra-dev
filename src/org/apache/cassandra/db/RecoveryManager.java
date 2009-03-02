@@ -21,9 +21,10 @@ package org.apache.cassandra.db;
 import java.util.*;
 import java.io.*;
 
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.utils.FileUtils;
 import org.apache.log4j.Logger;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -40,12 +41,18 @@ public class RecoveryManager
             instance_ = new RecoveryManager();
         return instance_;
     }
-    
-    public void doRecovery() throws IOException
+
+    public static File[] getListofCommitLogs()
     {
         String directory = DatabaseDescriptor.getLogFileLocation();
         File file = new File(directory);
         File[] files = file.listFiles();
+        return files;
+    }
+    
+    public static Map<String, List<File>> getListOFCommitLogsPerTable()
+    {
+        File[] files = getListofCommitLogs();
         /* Maintains a mapping of table name to a list of commit log files */
         Map<String, List<File>> tableToCommitLogs = new HashMap<String, List<File>>();
         
@@ -60,7 +67,13 @@ public class RecoveryManager
             }
             clogs.add(f);
         }
-        
+        return tableToCommitLogs;
+    }
+    
+    public void doRecovery() throws IOException
+    {
+        File[] files = getListofCommitLogs();
+        Map<String, List<File>> tableToCommitLogs = getListOFCommitLogsPerTable();
         recoverEachTable(tableToCommitLogs);
         FileUtils.delete(files);
     }

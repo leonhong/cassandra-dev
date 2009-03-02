@@ -30,7 +30,17 @@ import java.util.concurrent.*;
 
 public interface IStage 
 {
+    /**
+     * Get the name of the associated stage
+     * @return
+     */
     public String getName();
+    
+    /**
+     * Get the thread pool used by this stage 
+     * internally.
+     */
+    public ExecutorService getInternalThreadPool();
     
     /**
      * This method is used to execute a peice of code on

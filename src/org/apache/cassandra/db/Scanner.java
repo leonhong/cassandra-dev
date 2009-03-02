@@ -23,12 +23,12 @@ import java.io.IOException;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 
-/*
+
+/**
  * This class is used to loop through a retrieved column family
  * to get all columns in Iterator style. Usage is as follows:
  * Scanner scanner = new Scanner("table");
- * scanner.fetchColumnfamily("column-family");
- * scanner.lookup("key");
+ * scanner.fetchColumnfamily(key, "column-family");
  * 
  * while ( scanner.hasNext() )
  * {
@@ -38,74 +38,53 @@ import org.apache.cassandra.config.DatabaseDescriptor;
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
 
-public class Scanner
+public class Scanner implements IScanner<IColumn>
 {
-    private String table_;
-    private String columnFamily_;
-    private Set<IColumn> columns_ = new HashSet<IColumn>();
-    
+    /* Table over which we are scanning. */
+    private String table_; 
+    /* Iterator when iterating over the columns of a given key in a column family */
+    private Iterator<IColumn> columnIt_;
+        
     public Scanner(String table)
     {
         table_ = table;
     }
     
-    public void fetchColumnFamily(String cf) throws IOException
-    {
-        columnFamily_ = cf;        
-    }
-    
-    public Iterator<IColumn> lookup(String key) throws ColumnFamilyNotDefinedException, IOException
-    {
-        if ( columnFamily_ != null )
+    /**
+     * Fetch the columns associated with this key for the specified column family.
+     * This method basically sets up an iterator internally and then provides an 
+     * iterator like interface to iterate over the columns.
+     * @param key key we are interested in.
+     * @param cf column family we are interested in.
+     * @throws IOException
+     * @throws ColumnFamilyNotDefinedException
+     */
+    public void fetch(String key, String cf) throws IOException, ColumnFamilyNotDefinedException
+    {        
+        if ( cf != null )
         {
             Table table = Table.open(table_);
-            ColumnFamily columnFamily = table.get(key, columnFamily_);
+            ColumnFamily columnFamily = table.get(key, cf);
             if ( columnFamily != null )
             {
                 Collection<IColumn> columns = columnFamily.getAllColumns();            
-                columns_.addAll(columns);
+                columnIt_ = columns.iterator();
             }
         }
-        return columns_.iterator();
-    }
+    }        
     
-    public boolean hasNext()
+    public boolean hasNext() throws IOException
     {
-        return columns_.iterator().hasNext();
+        return columnIt_.hasNext();
     }
     
     public IColumn next()
     {
-        return columns_.iterator().next();
+        return columnIt_.next();
     }
     
-    public void remove()
+    public void close() throws IOException
     {
-        columns_.iterator().remove();
-    }
-    
-    public static void main(String[] args) throws Throwable
-    {
-        DatabaseDescriptor.init();
-        Table table = Table.open("Test");    
-        Random random = new Random();
-        byte[] bytes = new byte[1024];        
-        
-        String key = new Integer(10).toString();
-        RowMutation rm = new RowMutation("Test", key);
-        random.nextBytes(bytes);
-        rm.add("ColumnFamily:Column", bytes);
-        rm.add("ColumnFamily2:Column", bytes);
-        rm.apply();
-        
-        Scanner scanner = new Scanner("Test");
-        scanner.fetchColumnFamily("ColumnFamily");
-        Iterator<IColumn> it = scanner.lookup(key);
-        while ( it.hasNext() )
-        {
-            IColumn column = it.next();
-            System.out.println(column.name());
-            System.out.println(column.value());
-        }
+        throw new UnsupportedOperationException("This operation is not supported in the Scanner");
     }
 }

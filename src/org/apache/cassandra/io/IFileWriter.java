@@ -21,6 +21,9 @@ package org.apache.cassandra.io;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.cassandra.db.PrimaryKey;
+
+
 /**
  * An interface for writing into the SequenceFile abstraction.
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -46,6 +49,13 @@ public interface IFileWriter
      * @throws IOException
      */
     public void seek(long position) throws IOException;
+    
+    /**
+     * Appends the buffer to the the underlying SequenceFile.
+     * @param buffer buffer which contains the serialized data.
+     * @throws IOException
+     */
+    public void append(DataOutputBuffer buffer) throws IOException;
     
     /**
      * Appends the key and the value to the the underlying SequenceFile.
@@ -91,6 +101,13 @@ public interface IFileWriter
      * @throws IOException
     */
     public long writeDirect(byte[] bytes) throws IOException;
+    
+    /**
+     * Write a long into the underlying sub system.
+     * @param value long to be written
+     * @throws IOException
+     */
+    public void writeLong(long value) throws IOException;
       
     /**
      * Close the file which is being used for the write.

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.cassandra.net.EndPoint;
 
+
 /*
  * This interface has two implementations. One which
  * does not respect rack or datacenter awareness and
@@ -32,6 +33,7 @@ import org.apache.cassandra.net.EndPoint;
 public interface IReplicaPlacementStrategy
 {
 	public EndPoint[] getStorageEndPoints(BigInteger token);
+	public Map<String, EndPoint[]> getStorageEndPoints(String[] keys);
     public EndPoint[] getStorageEndPoints(BigInteger token, Map<BigInteger, EndPoint> tokenToEndPointMap);
-    public Map<EndPoint, EndPoint> getHintedStorageEndPoints(BigInteger token);
+    public Map<EndPoint, EndPoint> getHintedStorageEndPoints(BigInteger token);    
 }

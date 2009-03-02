@@ -20,12 +20,14 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
   public String table;
   public String key;
   public Map<String,List<column_t>> cfmap;
+  public Map<String,List<column_t>> cfmapdel;
 
   public final Isset __isset = new Isset();
   public static final class Isset implements java.io.Serializable {
     public boolean table = false;
     public boolean key = false;
     public boolean cfmap = false;
+    public boolean cfmapdel = false;
   }
 
   public batch_mutation_t() {
@@ -34,7 +36,8 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
   public batch_mutation_t(
     String table,
     String key,
-    Map<String,List<column_t>> cfmap)
+    Map<String,List<column_t>> cfmap,
+    Map<String,List<column_t>> cfmapdel)
   {
     this();
     this.table = table;
@@ -43,6 +46,8 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     this.__isset.key = true;
     this.cfmap = cfmap;
     this.__isset.cfmap = true;
+    this.cfmapdel = cfmapdel;
+    this.__isset.cfmapdel = true;
   }
 
   public boolean equals(Object that) {
@@ -81,6 +86,15 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
       if (!(this_present_cfmap && that_present_cfmap))
         return false;
       if (!this.cfmap.equals(that.cfmap))
+        return false;
+    }
+
+    boolean this_present_cfmapdel = true && (this.cfmapdel != null);
+    boolean that_present_cfmapdel = true && (that.cfmapdel != null);
+    if (this_present_cfmapdel || that_present_cfmapdel) {
+      if (!(this_present_cfmapdel && that_present_cfmapdel))
+        return false;
+      if (!this.cfmapdel.equals(that.cfmapdel))
         return false;
     }
 
@@ -149,6 +163,37 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case 4:
+          if (field.type == TType.MAP) {
+            {
+              TMap _map7 = iprot.readMapBegin();
+              this.cfmapdel = new HashMap<String,List<column_t>>(2*_map7.size);
+              for (int _i8 = 0; _i8 < _map7.size; ++_i8)
+              {
+                String _key9;
+                List<column_t> _val10;
+                _key9 = iprot.readString();
+                {
+                  TList _list11 = iprot.readListBegin();
+                  _val10 = new ArrayList<column_t>(_list11.size);
+                  for (int _i12 = 0; _i12 < _list11.size; ++_i12)
+                  {
+                    column_t _elem13 = new column_t();
+                    _elem13 = new column_t();
+                    _elem13.read(iprot);
+                    _val10.add(_elem13);
+                  }
+                  iprot.readListEnd();
+                }
+                this.cfmapdel.put(_key9, _val10);
+              }
+              iprot.readMapEnd();
+            }
+            this.__isset.cfmapdel = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
           break;
@@ -185,12 +230,33 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
       oprot.writeFieldBegin(field);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmap.size()));
-        for (String _iter7 : this.cfmap.keySet())        {
-          oprot.writeString(_iter7);
+        for (String _iter14 : this.cfmap.keySet())        {
+          oprot.writeString(_iter14);
           {
-            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmap.get(_iter7).size()));
-            for (column_t _iter8 : this.cfmap.get(_iter7))            {
-              _iter8.write(oprot);
+            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmap.get(_iter14).size()));
+            for (column_t _iter15 : this.cfmap.get(_iter14))            {
+              _iter15.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+        }
+        oprot.writeMapEnd();
+      }
+      oprot.writeFieldEnd();
+    }
+    if (this.cfmapdel != null) {
+      field.name = "cfmapdel";
+      field.type = TType.MAP;
+      field.id = 4;
+      oprot.writeFieldBegin(field);
+      {
+        oprot.writeMapBegin(new TMap(TType.STRING, TType.LIST, this.cfmapdel.size()));
+        for (String _iter16 : this.cfmapdel.keySet())        {
+          oprot.writeString(_iter16);
+          {
+            oprot.writeListBegin(new TList(TType.STRUCT, this.cfmapdel.get(_iter16).size()));
+            for (column_t _iter17 : this.cfmapdel.get(_iter16))            {
+              _iter17.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -211,6 +277,8 @@ public class batch_mutation_t implements TBase, java.io.Serializable {
     sb.append(this.key);
     sb.append(",cfmap:");
     sb.append(this.cfmap);
+    sb.append(",cfmapdel:");
+    sb.append(this.cfmapdel);
     sb.append(")");
     return sb.toString();
   }

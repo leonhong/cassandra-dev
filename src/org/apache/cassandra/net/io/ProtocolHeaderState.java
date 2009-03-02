@@ -18,12 +18,12 @@
 
 package org.apache.cassandra.net.io;
 
-import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.utils.*;
-
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.io.IOException;
+import org.apache.cassandra.net.MessagingService;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

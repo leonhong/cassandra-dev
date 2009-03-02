@@ -47,6 +47,13 @@ public interface IFileReader
     public void readDirect(byte[] bytes) throws IOException;
     
     /**
+     * Read a long value from the underlying sub system.
+     * @return value read
+     * @throws IOException
+     */
+    public long readLong() throws IOException;
+    
+    /**
      * This functions is used to help out subsequent reads
      * on the specified key. It reads the keys prior to this
      * one on disk so that the buffer cache is hot.
@@ -124,6 +131,20 @@ public interface IFileReader
      *
     */
     public long next(String key, DataOutputBuffer bufOut, String columnFamilyName, List<String> columnNames, Coordinate section) throws IOException;
+    
+    /**
+     * This method dumps the next key/value into the DataOuputStream
+     * passed in.
+     *
+     * @param key key we are interested in.
+     * @param dos DataOutputStream that needs to be filled.
+     * @param column name of the column in our format.
+     * @param timeRange time range we are interested in.
+     * @param section region of the file that needs to be read
+     * @throws IOException
+     * @return number of bytes that were read.
+    */
+    public long next(String key, DataOutputBuffer bufOut, String column, IndexHelper.TimeRange timeRange, Coordinate section) throws IOException;
 
     /**
      * Close the file after reading.

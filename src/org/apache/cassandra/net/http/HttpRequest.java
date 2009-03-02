@@ -169,7 +169,10 @@ z    * For example, if the body is of the form:
             for(int i = 0; i < sParamValues.length; ++i)
             {
                 String[] paramVal = sParamValues[i].split("=");
-                setParameter(paramVal[0], paramVal[1]);
+                if ( paramVal[0] != null && paramVal[1] != null )
+                {
+                    setParameter(paramVal[0], paramVal[1]);
+                }
             }
         }
         catch(Exception e)

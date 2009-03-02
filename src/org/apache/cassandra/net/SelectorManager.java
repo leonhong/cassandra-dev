@@ -28,9 +28,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeSet;
-
+import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
-
 import org.apache.cassandra.utils.*;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )

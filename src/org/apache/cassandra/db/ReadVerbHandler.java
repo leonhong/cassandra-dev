@@ -21,10 +21,16 @@ package org.apache.cassandra.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.service.StorageService;
+
+import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.DataOutputBuffer;
+import org.apache.cassandra.net.IVerbHandler;
+import org.apache.cassandra.net.Message;
+import org.apache.cassandra.net.MessagingService;
+import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.net.*;
 import org.apache.cassandra.utils.*;
 
@@ -75,9 +81,9 @@ public class ReadVerbHandler implements IVerbHandler
             	}
             	else
             	{
-            		row = table.getRow(readMessage.key(), readMessage.columnFamily_column(), readMessage.getColumnNames());
+            		row = table.getRow(readMessage.key(), readMessage.columnFamily_column(), readMessage.getColumnNames());            		
             	}
-            }
+            }              
             logger_.info("getRow()  TIME: " + (System.currentTimeMillis() - start) + " ms.");
             start = System.currentTimeMillis();
             ReadResponseMessage readResponseMessage = null;

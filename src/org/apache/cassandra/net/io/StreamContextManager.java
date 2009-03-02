@@ -26,17 +26,16 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import javax.xml.bind.annotation.XmlElement;
-import org.apache.log4j.Logger;
 
 import org.apache.cassandra.db.Table;
 import org.apache.cassandra.dht.BootstrapInitiateMessage;
+import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.Message;
-import org.apache.cassandra.io.DataInputBuffer;
-import org.apache.cassandra.service.RequestCountSampler;
 import org.apache.cassandra.service.StorageService;
-import org.apache.cassandra.utils.*;
+import org.apache.log4j.Logger;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -67,34 +66,14 @@ public class StreamContextManager
         }
                 
         private String targetFile_;        
-        private long expectedBytes_;             
-        private RequestCountSampler.Cardinality cardinality_;
+        private long expectedBytes_;                     
         
         public StreamContext(String targetFile, long expectedBytes)
         {
             targetFile_ = targetFile;
             expectedBytes_ = expectedBytes;         
-        }
-        
-        public StreamContext(String targetFile, long expectedBytes, RequestCountSampler.Cardinality cardinality)
-        {
-            targetFile_ = targetFile;
-            expectedBytes_ = expectedBytes;
-            cardinality_ = cardinality;
-        }
-        
-        public StreamContext cloneMe()
-        {
-            if ( cardinality_ != null )
-            {
-                return new StreamContext(targetFile_, expectedBytes_, cardinality_);
-            }
-            else
-            {
-                return new StreamContext(targetFile_, expectedBytes_);
-            }
-        }
-        
+        }                
+                
         public String getTargetFile()
         {
             return targetFile_;
@@ -109,12 +88,7 @@ public class StreamContextManager
         {
             return expectedBytes_;
         }
-        
-        public RequestCountSampler.Cardinality getCardinality()
-        {            
-            return cardinality_;
-        }
-        
+                
         public boolean equals(Object o)
         {
             if ( !(o instanceof StreamContext) )
@@ -140,28 +114,14 @@ public class StreamContextManager
         public void serialize(StreamContextManager.StreamContext sc, DataOutputStream dos) throws IOException
         {
             dos.writeUTF(sc.targetFile_);
-            dos.writeLong(sc.expectedBytes_);
-            if ( sc.cardinality_ == null )
-            {
-                dos.writeBoolean(false);
-            }
-            else
-            {
-                dos.writeBoolean(true);
-                RequestCountSampler.Cardinality.serializer().serialize(sc.cardinality_, dos);
-            }
+            dos.writeLong(sc.expectedBytes_);            
         }
         
         public StreamContextManager.StreamContext deserialize(DataInputStream dis) throws IOException
         {
             String targetFile = dis.readUTF();
-            long expectedBytes = dis.readLong();
-            boolean bVal = dis.readBoolean();
-            
-            RequestCountSampler.Cardinality cardinality = null;
-            if ( bVal )
-                cardinality = RequestCountSampler.Cardinality.serializer().deserialize(dis);
-            return new StreamContext(targetFile, expectedBytes, cardinality);
+            long expectedBytes = dis.readLong();           
+            return new StreamContext(targetFile, expectedBytes);
         }
     }
     

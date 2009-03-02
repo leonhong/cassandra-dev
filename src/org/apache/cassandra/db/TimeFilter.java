@@ -23,7 +23,9 @@ import java.util.Collection;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.IndexHelper;
 import org.apache.cassandra.io.SSTable;
+
 
 /**
  * This class provides a filter for fitering out columns
@@ -141,6 +143,6 @@ class TimeFilter implements IFilter
 
 	public DataInputBuffer next(String key, String cf, SSTable ssTable) throws IOException
     {
-    	return ssTable.next(key, cf);
+    	return ssTable.next( key, cf, new IndexHelper.TimeRange( timeLimit_, System.currentTimeMillis() ) );
     }
 }

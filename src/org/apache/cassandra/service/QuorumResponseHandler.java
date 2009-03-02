@@ -25,13 +25,13 @@ import java.util.concurrent.locks.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.WriteResponseMessage;
 import org.apache.cassandra.net.IAsyncCallback;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.utils.*;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -53,10 +53,12 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
         responseCount_ = responseCount;
         responseResolver_ =  responseResolver;
     }
+    
     public void  setResponseCount(int responseCount)
     {
         responseCount_ = responseCount;
     }
+    
     public T get() throws TimeoutException, DigestMismatchException
     {
         long startTime = System.currentTimeMillis();

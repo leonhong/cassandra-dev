@@ -20,10 +20,10 @@ package org.apache.cassandra.service;
 
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.db.WriteResponseMessage;
 import org.apache.cassandra.net.Message;
+import org.apache.log4j.Logger;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */

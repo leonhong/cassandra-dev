@@ -24,13 +24,15 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
+import org.apache.cassandra.continuations.Suspendable;
+
+
 /**
  * An implementation of the DataOutputStream interface. This class is completely thread
  * unsafe.
  * 
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
-
 public class DataOutputBuffer extends DataOutputStream
 {
     /*
@@ -271,7 +273,7 @@ public class DataOutputBuffer extends DataOutputStream
         }
         
     }
-    
+      
     private static class Buffer extends FastByteArrayOutputStream
     {
         public byte[] getData()

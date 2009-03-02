@@ -28,13 +28,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.log4j.Logger;
 
 import org.apache.cassandra.analytics.DBAnalyticsSource;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.dht.BootstrapInitiateMessage;
 import org.apache.cassandra.dht.Range;
-import org.apache.cassandra.io.*;
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.DataOutputBuffer;
+import org.apache.cassandra.io.ICompactSerializer;
+import org.apache.cassandra.io.IFileReader;
+import org.apache.cassandra.io.IFileWriter;
+import org.apache.cassandra.io.SSTable;
+import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.IVerbHandler;
 import org.apache.cassandra.net.Message;
@@ -42,6 +48,13 @@ import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.io.IStreamComplete;
 import org.apache.cassandra.net.io.StreamContextManager;
 import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.BasicUtilities;
+import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.FileUtils;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
+import org.apache.cassandra.io.*;
 import org.apache.cassandra.utils.*;
 import org.apache.cassandra.service.*;
 
@@ -56,7 +69,7 @@ public class Table
      * is basically the column family name and the ID associated with
      * this column family. We use this ID in the Commit Log header to
      * determine when a log file that has been rolled can be deleted.
-    */
+    */    
     public static class TableMetadata
     {
         /* Name of the column family */
@@ -189,11 +202,6 @@ public class Table
             return cfIdMap_.containsKey(cfName);
         }
         
-        BloomFilter.CountingBloomFilter cardinality()
-        {
-            return null;
-        }
-        
         void apply() throws IOException
         {
             String table = DatabaseDescriptor.getTables().get(0);
@@ -285,12 +293,7 @@ public class Table
                 */                
                 SSTable ssTable = new SSTable(streamContext.getTargetFile() );
                 ssTable.close();
-                logger_.debug("Merging the counting bloom filter in the sampler ...");
-                if ( streamContext.getCardinality() != null )
-                {
-                    StorageService.instance().sample(streamContext.getCardinality());                
-                    logger_.debug("Done merging " + streamContext.getCardinality().count() + " keys in the sampler ...");
-                }
+                logger_.debug("Merging the counting bloom filter in the sampler ...");                
                 String[] peices = FBUtilities.strip(fileName, "-");
                 Table.open(peices[0]).getColumnFamilyStore(peices[1]).addToList(streamContext.getTargetFile());                
             }
@@ -449,8 +452,7 @@ public class Table
         }
         return tableInstance;
     }
-
-
+        
     public Set<String> getColumnFamilies()
     {
         return tableMetadata_.getColumnFamilies();
@@ -508,6 +510,8 @@ public class Table
 
     void onStart() throws IOException
     {
+        /* Cache the callouts if any */
+        CalloutManager.instance().onStart();
         Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
         for ( String columnFamily : columnFamilies )
         {
@@ -553,14 +557,53 @@ public class Table
     }
     
     /*
+     * Take a snapshot of the entire set of column families.
+    */
+    public void snapshot( String clientSuppliedName ) throws IOException
+    {
+    	String snapshotDirectory = DatabaseDescriptor.getSnapshotDirectory();
+    	File snapshotDir = new File(snapshotDirectory);
+    	if( !snapshotDir.exists() )
+    		snapshotDir.mkdir();
+
+    	String currentSnapshotDir = null;
+    	if( clientSuppliedName != null && !clientSuppliedName.equals("") )
+    		currentSnapshotDir = snapshotDirectory + System.getProperty("file.separator") + System.currentTimeMillis() + "-" + clientSuppliedName; 
+    	else
+    		currentSnapshotDir = snapshotDirectory + System.getProperty("file.separator") + System.currentTimeMillis();
+
+    	/* First take a snapshot of the commit logs */
+    	CommitLog.open(table_).snapshot( currentSnapshotDir );
+    	/* force roll over the commit log */
+    	CommitLog.open(table_).setForcedRollOver();
+    	/* Now take a snapshot of all columnfamily stores */
+        Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
+        for ( String columnFamily : columnFamilies )
+        {
+            ColumnFamilyStore cfStore = columnFamilyStores_.get( columnFamily );
+            if ( cfStore != null )
+                cfStore.snapshot( currentSnapshotDir );
+        }
+    }
+
+    /*
+     * Clear the existing snapshots in the system
+     */
+    public void clearSnapshot()
+    {
+    	String snapshotDir = DatabaseDescriptor.getSnapshotDirectory();
+    	File snapshot = new File(snapshotDir);
+    	FileUtils.deleteDir(snapshot);
+    }
+    
+    /*
      * This method is invoked only during a bootstrap process. We basically
      * do a complete compaction since we can figure out based on the ranges
      * whether the files need to be split.
     */
-    public BloomFilter.CountingBloomFilter forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
+    public boolean forceCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
     {
-        /* Counting Bloom Filter for the entire table */
-        BloomFilter.CountingBloomFilter cbf = null;
+        boolean result = true;
         Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
         for ( String columnFamily : columnFamilies )
         {
@@ -571,15 +614,10 @@ public class Table
             if ( cfStore != null )
             {
                 /* Counting Bloom Filter for the Column Family */
-                BloomFilter.CountingBloomFilter cbf2 = cfStore.forceCompaction(ranges, target, 0, fileList);
-                if ( cbf2 == null )
-                {
-                    logger_.debug("CBF is NULL for " + cfStore.getColumnFamilyName());
-                }
-                cbf = (cbf == null ) ? cbf2 : cbf.merge(cbf2);
+                cfStore.forceCompaction(ranges, target, 0, fileList);                
             }
         }
-        return cbf;
+        return result;
     }
     
     /*
@@ -656,21 +694,16 @@ public class Table
     {
         return tableMetadata_.getColumnFamilyName(id);
     }
-    
-    public BloomFilter.CountingBloomFilter cardinality()
-    {
-        return tableMetadata_.cardinality();
-    }
 
     boolean isValidColumnFamily(String columnFamily)
     {
         return tableMetadata_.isValidColumnFamily(columnFamily);
     }
 
-    /*
+    /**
      * Selects the row associated with the given key.
     */
-    Row get(String key) throws IOException
+    public Row get(String key) throws IOException
     {        
         Row row = new Row(key);
         Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
@@ -690,8 +723,29 @@ public class Table
         dbAnalyticsSource_.updateReadStatistics(timeTaken);
         return row;
     }
+    
+    public Row getRowFromMemory(String key)
+    {
+        Row row = new Row(key);
+        Set<String> columnFamilies = tableMetadata_.getColumnFamilies();
+        long start = System.currentTimeMillis();
+        for ( String columnFamily : columnFamilies )
+        {
+            ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily);
+            if ( cfStore != null )
+            {    
+                ColumnFamily cf = cfStore.getColumnFamilyFromMemory(key, columnFamily, new IdentityFilter());
+                if ( cf != null )
+                    row.addColumnFamily(cf);
+            }
+        }
+        long timeTaken = System.currentTimeMillis() - start;
+        dbAnalyticsSource_.updateReadStatistics(timeTaken);
+        return row;
+    }
 
-    /*
+
+    /**
      * Selects the specified column family for the specified key.
     */
     public ColumnFamily get(String key, String cf) throws ColumnFamilyNotDefinedException, IOException
@@ -712,7 +766,7 @@ public class Table
         }
     }
 
-    /*
+    /**
      * Selects only the specified column family for the specified key.
     */
     public Row getRow(String key, String cf) throws ColumnFamilyNotDefinedException, IOException
@@ -723,8 +777,8 @@ public class Table
         	row.addColumnFamily(columnFamily);
         return row;
     }
-
-    /* 
+  
+    /**
      * Selects only the specified column family for the specified key.
     */
     public Row getRow(String key, String cf, int start, int count) throws ColumnFamilyNotDefinedException, IOException
@@ -765,7 +819,7 @@ public class Table
             throw new ColumnFamilyNotDefinedException("Column family " + cf + " has not been defined");
     }
 
-    /*
+    /**
      * This method returns the specified columns for the specified
      * column family.
      * 
@@ -781,20 +835,19 @@ public class Table
 
         if ( cfStore != null )
         {
-        	ColumnFamily columnFamily = cfStore.getColumnFamily(key, cf, new NamesFilter(new ArrayList(columns)));
+        	ColumnFamily columnFamily = cfStore.getColumnFamily(key, cf, new NamesFilter(new ArrayList<String>(columns)));
         	if ( columnFamily != null )
         		row.addColumnFamily(columnFamily);
         }
     	return row;
     }
 
-
-    /*
+    /**
      * This method adds the row to the Commit Log associated with this table.
      * Once this happens the data associated with the individual column families
      * is also written to the column family store's memtable.
     */
-    void apply(Row row) throws IOException
+    public void apply(Row row) throws IOException
     {        
         String key = row.key();
         /* Add row to the commit log. */
@@ -886,6 +939,10 @@ public class Table
     	            else if(column.timestamp() == 4)
     	            {
     	            	cfStore.forceCleanup();
+    	            }
+    	            else if(column.timestamp() == 5)
+    	            {
+    	            	cfStore.snapshot( new String(column.value()) );
     	            }
     	            else
     	            {

@@ -29,12 +29,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.config.DatabaseDescriptor;
+
 import org.apache.cassandra.concurrent.DebuggableThreadPoolExecutor;
 import org.apache.cassandra.concurrent.ThreadFactoryImpl;
-import org.apache.cassandra.io.*;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.io.DataOutputBuffer;
+import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.service.IComponentShutdown;
+import org.apache.cassandra.service.PartitionerType;
+import org.apache.cassandra.service.StorageService;
+import org.apache.cassandra.utils.BloomFilter;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.io.*;
 import org.apache.cassandra.utils.*;
 
 /**
@@ -55,8 +62,8 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     	}
     }
 
-    private int threshold_ = 128*1024*1024;
-    private int thresholdCount_ = 1024*1024;
+    private int threshold_ = DatabaseDescriptor.getMemtableSize()*1024*1024;
+    private int thresholdCount_ = DatabaseDescriptor.getMemtableObjectCount()*1024*1024;
     private AtomicInteger currentSize_ = new AtomicInteger(0);
     private AtomicInteger currentObjectCount_ = new AtomicInteger(0);
 
@@ -257,7 +264,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         if(!fRecovery)
         {
 	    	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), flushKey_);
-
 	        try
 	        {
 	            rm.add(cfStore.columnFamily_ + ":Column","0".getBytes());
@@ -420,26 +426,66 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             return;
         }
 
+        PartitionerType pType = StorageService.getPartitionerType();
         String directory = DatabaseDescriptor.getDataFileLocation();
         String filename = cfStore.getNextFileName();
-        /*
-         * Use the SSTable to write the contents of the TreeMap
-         * to disk.
-        */
-        SSTable ssTable = new SSTable(directory, filename);
+        SSTable ssTable = new SSTable(directory, filename, pType);
+        switch (pType) 
+        {
+            case OPHF:
+                flushForOrderPreservingPartitioner(ssTable, cfStore, cLogCtx);
+                break;
+                
+            default:
+                flushForRandomPartitioner(ssTable, cfStore, cLogCtx);
+                break;
+        }
+        
+        columnFamilies_.clear();        
+    }
+    
+    private void flushForRandomPartitioner(SSTable ssTable, ColumnFamilyStore cfStore, CommitLog.CommitLogContext cLogCtx) throws IOException
+    {
+        /* List of primary keys in sorted order */
+        List<PrimaryKey> pKeys = PrimaryKey.create( columnFamilies_.keySet() );
+        DataOutputBuffer buffer = new DataOutputBuffer();
+        /* Use this BloomFilter to decide if a key exists in a SSTable */
+        BloomFilter bf = new BloomFilter(pKeys.size(), 15);
+        for ( PrimaryKey pKey : pKeys )
+        {
+            buffer.reset();
+            ColumnFamily columnFamily = columnFamilies_.get(pKey.key());
+            if ( columnFamily != null )
+            {
+                /* serialize the cf with column indexes */
+                ColumnFamily.serializer2().serialize( columnFamily, buffer );
+                /* Now write the key and value to disk */
+                ssTable.append(pKey.key(), pKey.hash(), buffer);
+                bf.fill(pKey.key());
+                columnFamily.clear();
+            }
+        }
+        ssTable.close(bf);
+        cfStore.onMemtableFlush(cLogCtx);
+        cfStore.storeLocation( ssTable.getDataFileLocation(), bf );
+        buffer.close();
+    }
+    
+    private void flushForOrderPreservingPartitioner(SSTable ssTable, ColumnFamilyStore cfStore, CommitLog.CommitLogContext cLogCtx) throws IOException
+    {
         List<String> keys = new ArrayList<String>( columnFamilies_.keySet() );
         Collections.sort(keys);
         DataOutputBuffer buffer = new DataOutputBuffer();
         /* Use this BloomFilter to decide if a key exists in a SSTable */
-        BloomFilter bf = new BloomFilter(keys.size(), 8);
+        BloomFilter bf = new BloomFilter(keys.size(), 15);
         for ( String key : keys )
         {
             buffer.reset();
             ColumnFamily columnFamily = columnFamilies_.get(key);
             if ( columnFamily != null )
             {
-            	/* serialize the cf with column indexes */
-            	ColumnFamily.serializer2().serialize( columnFamily, buffer );
+                /* serialize the cf with column indexes */
+                ColumnFamily.serializer2().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(key, buffer);
                 bf.fill(key);
@@ -449,7 +495,6 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         ssTable.close(bf);
         cfStore.onMemtableFlush(cLogCtx);
         cfStore.storeLocation( ssTable.getDataFileLocation(), bf );
-        columnFamilies_.clear();
         buffer.close();
     }
 }

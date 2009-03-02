@@ -23,11 +23,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.net.CompactEndPointSerializationHelper;
 import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.utils.Log4jLogger;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.utils.*;
 
 

@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.SSTable;
 
+
 public interface IFilter
 {
 	public boolean isDone();

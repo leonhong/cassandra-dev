@@ -36,13 +36,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.*;
-import org.apache.cassandra.gms.FailureDetector;
-import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.net.*;
 import org.apache.cassandra.utils.*;
+import org.apache.cassandra.config.CFMetaData;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.cql.common.CqlResult;
+import org.apache.cassandra.cql.driver.CqlDriver;
+import org.apache.cassandra.db.ColumnFamily;
+import org.apache.cassandra.db.IColumn;
+import org.apache.cassandra.db.Row;
+import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.db.RowMutationMessage;
+import org.apache.cassandra.gms.FailureDetector;
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.net.Message;
+import org.apache.cassandra.net.MessagingService;
+import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -57,540 +68,112 @@ public class CassandraServer extends FacebookBase implements
 	 * Handle to the storage service to interact with the other machines in the
 	 * cluster.
 	 */
-	StorageService storageService_;
+	protected StorageService storageService;
 
 	protected CassandraServer(String name)
 	{
 		super(name);
+		// Create the instance of the storage service
+		storageService = StorageService.instance();
 	}
+
 	public CassandraServer() throws Throwable
 	{
-		super("Peerstorage");
+		super("CassandraServer");
 		// Create the instance of the storage service
-		storageService_ = StorageService.instance();
+		storageService = StorageService.instance();
 	}
 
 	/*
-	 * The start function initializes the server and start
-	 * 
-	 * 
-	 * 
-	 * 
-	 * s listening on the
-	 * specified port
+	 * The start function initializes the server and start's listening on the
+	 * specified port.
 	 */
 	public void start() throws Throwable
 	{
 		LogUtil.init();
 		//LogUtil.setLogLevel("com.facebook", "DEBUG");
 		// Start the storage service
-		storageService_.start();
+		storageService.start();
 	}
-
-	private Map<EndPoint, Message> createWriteMessages(RowMutationMessage rmMessage, Map<EndPoint, EndPoint> endpointMap) throws IOException
+	
+	private void validateTable(String table) throws CassandraException
 	{
-		Map<EndPoint, Message> messageMap = new HashMap<EndPoint, Message>();
-		Message message = RowMutationMessage.makeRowMutationMessage(rmMessage);
-		
-		Set<EndPoint> targets = endpointMap.keySet();
-		for( EndPoint target : targets )
+		if ( !DatabaseDescriptor.getTables().contains(table) )
 		{
-			EndPoint hint = endpointMap.get(target);
-			if ( !target.equals(hint) )
-			{
-				Message hintedMessage = RowMutationMessage.makeRowMutationMessage(rmMessage);
-				hintedMessage.addHeader(RowMutationMessage.hint_, EndPoint.toBytes(hint) );
-				logger_.debug("Sending the hint of " + target.getHost() + " to " + hint.getHost());
-				messageMap.put(target, hintedMessage);
-			}
-			else
-			{
-				messageMap.put(target, message);
-			}
+			throw new CassandraException("Table " + table + " does not exist in this schema.");
 		}
-		return messageMap;
 	}
-	
-	protected void insert(RowMutation rm)
-	{
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		// 3. SendRR ( to all the nodes above )
-		// 4. Wait for a response from atleast X nodes where X <= N
-		// 5. return success
-
-		try
-		{
-			logger_.debug(" insert");
-			Map<EndPoint, EndPoint> endpointMap = storageService_.getNStorageEndPointMap(rm.key());
-			// TODO: throw a thrift exception if we do not have N nodes
-			RowMutationMessage rmMsg = new RowMutationMessage(rm); 
-			/* Create the write messages to be sent */
-			Map<EndPoint, Message> messageMap = createWriteMessages(rmMsg, endpointMap);
-			Set<EndPoint> endpoints = messageMap.keySet();
-			for(EndPoint endpoint : endpoints)
-			{
-				MessagingService.getMessagingInstance().sendOneWay(messageMap.get(endpoint), endpoint);
-			}
-		}
-		catch (Exception e)
-		{
-			logger_.info( LogUtil.throwableToString(e) );
-		}
-		return;
-	}
-	protected Row doReadProtocol(String key, ReadMessage readMessage) throws IOException,TimeoutException
-	{
-    	EndPoint endPoint = null;
-    	try
-    	{
-    		endPoint = storageService_.findSuitableEndPoint(key);
-    	}
-    	catch( Throwable ex)
-    	{
-    		ex.printStackTrace();
-    	}
-    	if(endPoint != null)
-    	{
-	        Message message = ReadMessage.makeReadMessage(readMessage);
-			IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
-			Object[] result = iar.get(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
-			byte[] body = (byte[])result[0];
-			DataInputBuffer bufIn = new DataInputBuffer();
-			bufIn.reset(body, body.length);
-			ReadResponseMessage responseMessage = ReadResponseMessage.serializer().deserialize(bufIn);
-			return responseMessage.row();
-    	}
-    	else
-    	{
-    		logger_.warn(" Alert : Unable to find a suitable end point for the key : " + key );
-    	}
-    	return null;
-	}
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, List<String> columnNames, StorageService.ConsistencyLevel consistencyLevel) throws Exception
-	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
-		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
-		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, columnNames);
-			return doReadProtocol(key, readMessage);
-		}
-		else
-		{
-			switch ( consistencyLevel )
-			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, columnNames);
-				break;
-			}
-		}
-		return row;
-		
-		
-	}
-	
-
-	
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, int start, int count, StorageService.ConsistencyLevel consistencyLevel) throws Exception
-	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
-		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
-		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, start, count);
-			return doReadProtocol(key, readMessage);
-		}
-		else
-		{
-			switch ( consistencyLevel )
-			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, start, count);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, start, count);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, start, count);
-				break;
-			}
-		}
-		return row;
-	}
-	
-	protected Row readProtocol(String tablename, String key, String columnFamily, long sinceTimestamp, StorageService.ConsistencyLevel consistencyLevel) throws Exception
-	{
-		Row row = null;
-		boolean foundLocal = false;
-		EndPoint[] endpoints = storageService_.getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				foundLocal = true;
-				break;
-			}
-		}	
-		if(!foundLocal && consistencyLevel == StorageService.ConsistencyLevel.WEAK)
-		{
-			ReadMessage readMessage = null;
-			readMessage = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-			return doReadProtocol(key, readMessage);
-		}
-		else
-		{
-			switch ( consistencyLevel )
-			{
-			case WEAK:
-				row = weakReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-				
-			case STRONG:
-				row = strongReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-				
-			default:
-				row = weakReadProtocol(tablename, key, columnFamily, sinceTimestamp);
-				break;
-			}
-		}
-		return row;
-	}
-
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, List<String> columns) throws Exception
-	{		
-        long startTime = System.currentTimeMillis();		
-		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = new ReadMessage(tablename, key, columnFamily, columns);               
-        
-        ReadMessage readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, columns);		
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");		
-		return row;
-	}
-	
-	/*
-	 * This function executes the read protocol.
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		 * 3. Set one of teh messages to get teh data and teh rest to get teh digest
-		// 4. SendRR ( to all the nodes above )
-		// 5. Wait for a response from atleast X nodes where X <= N and teh data node
-		 * 6. If the digest matches return teh data.
-		 * 7. else carry out read repair by getting data from all the nodes.
-		// 5. return success
-	 * 
-	 */
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, int start, int count) throws IOException, TimeoutException
-	{		
-        long startTime = System.currentTimeMillis();		
-		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = null;
-		ReadMessage readMessageDigestOnly = null;
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			readMessage = new ReadMessage(tablename, key, columnFamily, start, count);
-		}
-		else
-		{
-			readMessage = new ReadMessage(tablename, key, columnFamily);
-		}
-        Message message = ReadMessage.makeReadMessage(readMessage);
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, start, count);
-		}
-		else
-		{
-			readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily);
-		}
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-        return row;
-	}
-	
-	protected Row strongReadProtocol(String tablename, String key, String columnFamily, long sinceTimestamp) throws IOException, TimeoutException
-	{		
-        long startTime = System.currentTimeMillis();		
-		// TODO: throw a thrift exception if we do not have N nodes
-		ReadMessage readMessage = null;
-		ReadMessage readMessageDigestOnly = null;
-		readMessage = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-        Message message = ReadMessage.makeReadMessage(readMessage);
-		readMessageDigestOnly = new ReadMessage(tablename, key, columnFamily, sinceTimestamp);
-		readMessageDigestOnly.setIsDigestQuery(true);        
-        Row row = doStrongReadProtocol(key, readMessage, readMessageDigestOnly);
-        logger_.info("readProtocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-        return row;
-	}
-
-	/*
-	 * This method performs the actual read from the replicas.
-	 *  param @ key - key for which the data is required.
-	 *  param @ readMessage - the read message to get the actual data
-	 *  param @ readMessageDigest - the read message to get the digest.
-	*/
-	private Row doStrongReadProtocol(String key, ReadMessage readMessage, ReadMessage readMessageDigest) throws IOException, TimeoutException
-	{
-		Row row = null;
-		Message message = ReadMessage.makeReadMessage(readMessage);
-		Message messageDigestOnly = ReadMessage.makeReadMessage(readMessageDigest);
-		
-		IResponseResolver<Row> readResponseResolver = new ReadResponseResolver();
-		QuorumResponseHandler<Row> quorumResponseHandler = new QuorumResponseHandler<Row>(
-				DatabaseDescriptor.getReplicationFactor(),
-				readResponseResolver);
-		EndPoint dataPoint = storageService_.findSuitableEndPoint(key);
-		List<EndPoint> endpointList = new ArrayList<EndPoint>( Arrays.asList( storageService_.getNStorageEndPoint(key) ) );
-		/* Remove the local storage endpoint from the list. */ 
-		endpointList.remove( dataPoint );
-		EndPoint[] endPoints = new EndPoint[endpointList.size() + 1];
-		Message messages[] = new Message[endpointList.size() + 1];
-		
-		// first message is the data Point 
-		endPoints[0] = dataPoint;
-		messages[0] = message;
-		
-		for(int i=1; i < endPoints.length ; i++)
-		{
-			endPoints[i] = endpointList.get(i-1);
-			messages[i] = messageDigestOnly;
-		}
-		
-		try
-		{
-			MessagingService.getMessagingInstance().sendRR(messages, endPoints,	quorumResponseHandler);
-			
-	        long startTime2 = System.currentTimeMillis();
-			row = quorumResponseHandler.get();
-	        logger_.info("quorumResponseHandler: " + (System.currentTimeMillis() - startTime2)
-	                + " ms.");
-			if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return row;
-			}
-		}
-		catch (DigestMismatchException ex)
-		{
-			IResponseResolver<Row> readResponseResolverRepair = new ReadResponseResolver();
-			QuorumResponseHandler<Row> quorumResponseHandlerRepair = new QuorumResponseHandler<Row>(
-					DatabaseDescriptor.getReplicationFactor(),
-					readResponseResolverRepair);
-			readMessage.setIsDigestQuery(false);
-			logger_.info("DigestMismatchException: " + key);            
-            Message messageRepair = ReadMessage.makeReadMessage(readMessage);
-			MessagingService.getMessagingInstance().sendRR(messageRepair, endPoints,
-					quorumResponseHandlerRepair);
-			try
-			{
-				row = quorumResponseHandlerRepair.get();
-			}
-			catch(DigestMismatchException dex)
-			{
-				logger_.warn(LogUtil.throwableToString(dex));
-			}
-			if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);				
-			}
-		}        
-		return row;
-	}
-	
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, List<String> columns) throws Exception
-	{		
-		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
-		/* Remove the local storage endpoint from the list. */ 
-		endpoints.remove( StorageService.getLocalStorageEndPoint() );
-		// TODO: throw a thrift exception if we do not have N nodes
-		
-		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		Row row = table.getRow(key, columnFamily, columns);
-		
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-		/*
-		 * Do the consistency checks in the background and return the
-		 * non NULL row.
-		 */
-		if ( endpoints.size() > 0 )
-			StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, columns);
-		return row;
-	}
-	
-	/*
-	 * This function executes the read protocol locally and should be used only if consistency is not a concern. 
-	 * Read the data from the local disk and return if the row is NOT NULL. If the data is NULL do the read from
-     * one of the other replicas (in the same data center if possible) till we get the data. In the event we get
-     * the data we perform consistency checks and figure out if any repairs need to be done to the replicas. 
-	 */
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, int start, int count) throws Exception
-	{
-		Row row = null;
-		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
-		/* Remove the local storage endpoint from the list. */ 
-		endpoints.remove( StorageService.getLocalStorageEndPoint() );
-		// TODO: throw a thrift exception if we do not have N nodes
-		
-		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		if( start >= 0 && count < Integer.MAX_VALUE)
-		{
-			row = table.getRow(key, columnFamily, start, count);
-		}
-		else
-		{
-			row = table.getRow(key, columnFamily);
-		}
-		
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-		/*
-		 * Do the consistency checks in the background and return the
-		 * non NULL row.
-		 */
-		StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, start, count);
-		return row;        	
-	}
-	
-	protected Row weakReadProtocol(String tablename, String key, String columnFamily, long sinceTimestamp) throws Exception
-	{
-		Row row = null;
-		long startTime = System.currentTimeMillis();
-		List<EndPoint> endpoints = storageService_.getNLiveStorageEndPoint(key);
-		/* Remove the local storage endpoint from the list. */ 
-		endpoints.remove( StorageService.getLocalStorageEndPoint() );
-		// TODO: throw a thrift exception if we do not have N nodes
-		
-		Table table = Table.open( DatabaseDescriptor.getTables().get(0) );
-		row = table.getRow(key, columnFamily,sinceTimestamp);
-		logger_.info("Local Read Protocol: " + (System.currentTimeMillis() - startTime) + " ms.");
-		/*
-		 * Do the consistency checks in the background and return the
-		 * non NULL row.
-		 */
-		StorageService.instance().doConsistencyCheck(row, endpoints, columnFamily, sinceTimestamp);
-		return row;        	
-	}
-
-	protected ColumnFamily get_cf(String tablename, String key, String columnFamily, List<String> columNames) throws TException
+    
+	protected ColumnFamily get_cf(String tablename, String key, String columnFamily, List<String> columNames) throws CassandraException, TException
 	{
     	ColumnFamily cfamily = null;
 		try
 		{
+			validateTable(tablename);
 	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily);
 	        // check for  values 
 	        if( values.length < 1 )
-	        	return cfamily;
-	        Row row = readProtocol(tablename, key, columnFamily, columNames, StorageService.ConsistencyLevel.WEAK);
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily, columNames, StorageService.ConsistencyLevel.WEAK);
 	        if (row == null)
 			{
-				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return cfamily;
+				throw new CassandraException("No row exists for key " + key);			
 			}
-	        
-			
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
 			if (cfMap == null || cfMap.size() == 0)
-			{
-				logger_	.info("ERROR ColumnFamily " + columnFamily + " map is missing.....: "
-							   + "   key:" + key
-								);
-				// TODO: throw a thrift exception 
-				return cfamily;
+			{				
+				logger_	.info("ERROR ColumnFamily " + columnFamily + " map is missing.....: " + "   key:" + key );
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
 			{
-				logger_.info("ERROR ColumnFamily " + columnFamily + " is missing.....: "
-							+"   key:" + key
-							+ "  ColumnFamily:" + values[0]);
-				return cfamily;
+				logger_.info("ERROR ColumnFamily " + columnFamily + " is missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
+				throw new CassandraException("Either the key " + key + " is not present or the column family " + values[0] +  " is not present.");
 			}
 		}
-		catch (Exception e)
+		catch (Throwable ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
 		return cfamily;
 	}
 
-    public  ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws TException
+    public  ArrayList<column_t> get_columns_since(String tablename, String key, String columnFamily_column, long timeStamp) throws CassandraException,TException
 	{
 		ArrayList<column_t> retlist = new ArrayList<column_t>();
         long startTime = System.currentTimeMillis();
-		
 		try
 		{
+			validateTable(tablename);
 	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 	        // check for  values 
 	        if( values.length < 1 )
-	        	return retlist;
-	        
-	        Row row = readProtocol(tablename, key, columnFamily_column, timeStamp, StorageService.ConsistencyLevel.WEAK);
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_column + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_column, timeStamp, StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return retlist;
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
 			if (cfMap == null || cfMap.size() == 0)
 			{
-				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: "
-							   + "   key:" + key
-								);
-				// TODO: throw a thrift exception 
-				return retlist;
+				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: " + "   key:" + key);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			ColumnFamily cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
 			{
-				logger_.info("ERROR ColumnFamily " + columnFamily_column + " is missing.....: "
-							+"   key:" + key
-							+ "  ColumnFamily:" + values[0]);
-				return retlist;
+				logger_.info("ERROR ColumnFamily " + columnFamily_column + " is missing.....: "+"   key:" + key	+ "  ColumnFamily:" + values[0]);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_column + "are not present.");
 			}
 			Collection<IColumn> columns = null;
 			if( values.length > 1 )
@@ -606,13 +189,9 @@ public class CassandraServer extends FacebookBase implements
 			}
 			if (columns == null || columns.size() == 0)
 			{
-				logger_	.info("ERROR Columns are missing.....: "
-							   + "   key:" + key
-								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return retlist;
+				logger_	.info("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
 			}
-			
 			for(IColumn column : columns)
 			{
 				column_t thrift_column = new column_t();
@@ -622,55 +201,94 @@ public class CassandraServer extends FacebookBase implements
 				retlist.add(thrift_column);
 			}
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
-		
-        logger_.info("get_slice2: " + (System.currentTimeMillis() - startTime)
-                + " ms.");
-		
+        logger_.debug("get_slice2: " + (System.currentTimeMillis() - startTime) + " ms.");
 		return retlist;
 	}
 	
-	
-	
-    public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws TException
+
+    public List<column_t> get_slice_by_names(String tablename, String key, String columnFamily, List<String> columnNames) throws CassandraException, TException
+    {
+		ArrayList<column_t> retlist = new ArrayList<column_t>();
+        long startTime = System.currentTimeMillis();
+		try
+		{
+			validateTable(tablename);
+			ColumnFamily cfamily = get_cf(tablename, key, columnFamily, columnNames);
+			if (cfamily == null)
+			{
+				logger_.info("ERROR ColumnFamily " + columnFamily + " is missing.....: "
+							+"   key:" + key
+							+ "  ColumnFamily:" + columnFamily);
+				throw new CassandraException("Either the key " + key + " is not present or the columnFamily requested" + columnFamily + "is not present.");
+			}
+			Collection<IColumn> columns = null;
+			columns = cfamily.getAllColumns();
+			if (columns == null || columns.size() == 0)
+			{
+				logger_	.info("ERROR Columns are missing.....: "
+							   + "   key:" + key
+								+ "  ColumnFamily:" + columnFamily);
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + columnFamily);
+			}
+			
+			for(IColumn column : columns)
+			{
+				column_t thrift_column = new column_t();
+				thrift_column.columnName = column.name();
+				thrift_column.value = new String(column.value()); // This needs to be Utf8ed
+				thrift_column.timestamp = column.timestamp();
+				retlist.add(thrift_column);
+			}
+		}
+		catch (Exception ex)
+		{
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
+		}
+		
+        logger_.debug("get_slice2: " + (System.currentTimeMillis() - startTime)
+                + " ms.");
+		return retlist;
+    }
+    
+    public ArrayList<column_t> get_slice(String tablename, String key, String columnFamily_column, int start, int count) throws CassandraException,TException
 	{
 		ArrayList<column_t> retlist = new ArrayList<column_t>();
         long startTime = System.currentTimeMillis();
-		
 		try
 		{
+			validateTable(tablename);
 	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 	        // check for  values 
 	        if( values.length < 1 )
-	        	return retlist;
-	        
-	        Row row = readProtocol(tablename, key, columnFamily_column, start, count, StorageService.ConsistencyLevel.WEAK);
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_column + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_column, start, count, StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return retlist;
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
 			if (cfMap == null || cfMap.size() == 0)
 			{
-				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: "
-							   + "   key:" + key
-								);
-				// TODO: throw a thrift exception 
-				return retlist;
+				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: " + "   key:" + key);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			ColumnFamily cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
 			{
-				logger_.info("ERROR ColumnFamily " + columnFamily_column + " is missing.....: "
-							+"   key:" + key
-							+ "  ColumnFamily:" + values[0]);
-				return retlist;
+				logger_.info("ERROR ColumnFamily " + columnFamily_column + " is missing.....: "	+ "   key:" + key + "  ColumnFamily:" + values[0]);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_column + "are not present.");
 			}
 			Collection<IColumn> columns = null;
 			if( values.length > 1 )
@@ -686,13 +304,9 @@ public class CassandraServer extends FacebookBase implements
 			}
 			if (columns == null || columns.size() == 0)
 			{
-				logger_	.info("ERROR Columns are missing.....: "
-							   + "   key:" + key
-								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return retlist;
+				logger_	.info("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
 			}
-			
 			for(IColumn column : columns)
 			{
 				column_t thrift_column = new column_t();
@@ -702,32 +316,34 @@ public class CassandraServer extends FacebookBase implements
 				retlist.add(thrift_column);
 			}
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
-		
-        logger_.info("get_slice2: " + (System.currentTimeMillis() - startTime)
+        logger_.debug("get_slice2: " + (System.currentTimeMillis() - startTime)
                 + " ms.");
-		
 		return retlist;
 	}
     
-    public column_t get_column(String tablename, String key, String columnFamily_column) throws TException
+    public column_t get_column(String tablename, String key, String columnFamily_column) throws CassandraException,TException
     {
 		column_t ret = null;
 		try
 		{
+			validateTable(tablename);
 	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 	        // check for  values 
 	        if( values.length < 2 )
-	        	return ret;
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_column + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return ret;
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 			
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
@@ -736,8 +352,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
 							   + "   key:" + key
 								);
-				// TODO: throw a thrift exception 
-				return ret;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			ColumnFamily cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
@@ -745,7 +360,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_.info("ERROR ColumnFamily  is missing.....: "
 							+"   key:" + key
 							+ "  ColumnFamily:" + values[0]);
-				return ret;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_column + "are not present.");
 			}
 			Collection<IColumn> columns = null;
 			if( values.length > 2 )
@@ -764,8 +379,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR Columns are missing.....: "
 							   + "   key:" + key
 								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return ret;
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
 			}
 			ret = new column_t();
 			for(IColumn column : columns)
@@ -775,30 +389,33 @@ public class CassandraServer extends FacebookBase implements
 				ret.timestamp = column.timestamp();
 			}
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
 		return ret;
-    	
     }
     
 
-    public int get_column_count(String tablename, String key, String columnFamily_column)
+    public int get_column_count(String tablename, String key, String columnFamily_column) throws CassandraException
 	{
     	int count = -1;
 		try
 		{
+			validateTable(tablename);
 	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
 	        // check for  values 
 	        if( values.length < 1 )
-	        	return -1;
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_column + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return count;
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
@@ -807,8 +424,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
 							   + "   key:" + key
 								);
-				// TODO: throw a thrift exception 
-				return count;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			ColumnFamily cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
@@ -816,7 +432,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_.info("ERROR ColumnFamily  is missing.....: "
 							+"   key:" + key
 							+ "  ColumnFamily:" + values[0]);
-				return count;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_column + "are not present.");
 			}
 			Collection<IColumn> columns = null;
 			if( values.length > 1 )
@@ -835,27 +451,27 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR Columns are missing.....: "
 							   + "   key:" + key
 								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return count;
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
 			}
 			count = columns.size();
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
 		return count;
-
 	}
 
     public void insert(String tablename, String key, String columnFamily_column, String cellData, long timestamp)
 	{
-
 		try
 		{
+			validateTable(tablename);
 			RowMutation rm = new RowMutation(tablename, key.trim());
 			rm.add(columnFamily_column, cellData.getBytes(), timestamp);
-			insert(rm);
+			StorageProxy.insert(rm);
 		}
 		catch (Exception e)
 		{
@@ -863,6 +479,7 @@ public class CassandraServer extends FacebookBase implements
 		}
 		return;
 	}
+    
     public boolean batch_insert_blocking(batch_mutation_t batchMutation)
     {
 		// 1. Get the N nodes from storage service where the data needs to be
@@ -875,11 +492,12 @@ public class CassandraServer extends FacebookBase implements
 		try
 		{
 			logger_.warn(" batch_insert_blocking");
+			validateTable(batchMutation.table);
 			IResponseResolver<Boolean> writeResponseResolver = new WriteResponseResolver();
 			QuorumResponseHandler<Boolean> quorumResponseHandler = new QuorumResponseHandler<Boolean>(
 					DatabaseDescriptor.getReplicationFactor(),
 					writeResponseResolver);
-			EndPoint[] endpoints = storageService_.getNStorageEndPoint(batchMutation.key);
+			EndPoint[] endpoints = storageService.getNStorageEndPoint(batchMutation.key);
 			// TODO: throw a thrift exception if we do not have N nodes
 
 			logger_.debug(" Creating the row mutation");
@@ -934,22 +552,40 @@ public class CassandraServer extends FacebookBase implements
 		{
 			logger_.debug(" batch_insert");
 			logger_.debug(" Creating the row mutation");
+			validateTable(batchMutation.table);
 			RowMutation rm = new RowMutation(batchMutation.table,
 					batchMutation.key.trim());
-			Set keys = batchMutation.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
+			if(batchMutation.cfmap != null)
 			{
-				Object key = keyIter.next(); // Get the next key.
-				List<column_t> list = batchMutation.cfmap.get(key);
-				for (column_t columnData : list)
+				Set keys = batchMutation.cfmap.keySet();
+				Iterator keyIter = keys.iterator();
+				while (keyIter.hasNext())
 				{
-					rm.add(key.toString() + ":" + columnData.columnName,
-							columnData.value.getBytes(), columnData.timestamp);
-
+					Object key = keyIter.next(); // Get the next key.
+					List<column_t> list = batchMutation.cfmap.get(key);
+					for (column_t columnData : list)
+					{
+						rm.add(key.toString() + ":" + columnData.columnName,
+								columnData.value.getBytes(), columnData.timestamp);
+	
+					}
 				}
-			}            
-			insert(rm);
+			}
+			if(batchMutation.cfmapdel != null)
+			{
+				Set keys = batchMutation.cfmapdel.keySet();
+				Iterator keyIter = keys.iterator();
+				while (keyIter.hasNext())
+				{
+					Object key = keyIter.next(); // Get the next key.
+					List<column_t> list = batchMutation.cfmapdel.get(key);
+					for (column_t columnData : list)
+					{
+						rm.delete(key.toString() + ":" + columnData.columnName);
+					}
+				}            
+			}
+			StorageProxy.insert(rm);
 		}
 		catch (Exception e)
 		{
@@ -962,9 +598,10 @@ public class CassandraServer extends FacebookBase implements
 	{
 		try
 		{
+			validateTable(tablename);
 			RowMutation rm = new RowMutation(tablename, key.trim());
 			rm.delete(columnFamily_column);
-			insert(rm);
+            StorageProxy.insert(rm);
 		}
 		catch (Exception e)
 		{
@@ -973,48 +610,27 @@ public class CassandraServer extends FacebookBase implements
 		return;
 	}
 
-    public ArrayList<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count)
+    public List<superColumn_t> get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws CassandraException, TException
     {
 		ArrayList<superColumn_t> retlist = new ArrayList<superColumn_t>();
+        long startTime = System.currentTimeMillis();
+		
 		try
 		{
-	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_superColumnName);
-	        // check for  values 
-	        if( values.length < 1 )
-	        	return retlist;
-	        Row row = readProtocol(tablename, key, columnFamily_superColumnName, start, count, StorageService.ConsistencyLevel.WEAK);
-			if (row == null)
-			{
-				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return retlist;
-			}
-
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
-			if (cfMap == null || cfMap.size() == 0)
-			{
-				logger_	.info("ERROR ColumnFamily map is missing.....: "
-							   + "   key:" + key
-								);
-				// TODO: throw a thrift exception 
-				return retlist;
-			}
-			ColumnFamily cfamily = cfMap.get(values[0]);
+			validateTable(tablename);
+			ColumnFamily cfamily = get_cf(tablename, key, columnFamily, superColumnNames);
 			if (cfamily == null)
 			{
-				logger_.info("ERROR ColumnFamily  is missing.....: "
-							+"   key:" + key
-							+ "  ColumnFamily:" + values[0]);
-				return retlist;
+				logger_.info("ERROR ColumnFamily " + columnFamily + " is missing.....: "+"   key:" + key
+							+ "  ColumnFamily:" + columnFamily);
+				throw new CassandraException("Either the key " + key + " is not present or the column family requested" + columnFamily + "is not present.");
 			}
-			Collection<IColumn> columns = cfamily.getAllColumns();
+			Collection<IColumn> columns = null;
+			columns = cfamily.getAllColumns();
 			if (columns == null || columns.size() == 0)
 			{
-				logger_	.info("ERROR Columns are missing.....: "
-							   + "   key:" + key
-								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return retlist;
+				logger_	.info("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + columnFamily);
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + columnFamily);
 			}
 			
 			for(IColumn column : columns)
@@ -1037,30 +653,35 @@ public class CassandraServer extends FacebookBase implements
 				retlist.add(thrift_superColumn);
 			}
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
+        logger_.debug("get_slice2: " + (System.currentTimeMillis() - startTime)
+                + " ms.");
 		return retlist;
-    	
     }
+
     
-    public superColumn_t get_superColumn(String tablename, String key, String columnFamily_column)
+    public ArrayList<superColumn_t> get_slice_super(String tablename, String key, String columnFamily_superColumnName, int start, int count) throws CassandraException
     {
-    	superColumn_t ret = null;
+		ArrayList<superColumn_t> retlist = new ArrayList<superColumn_t>();
 		try
 		{
-	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
+			validateTable(tablename);
+	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_superColumnName);
 	        // check for  values 
-	        if( values.length < 2 )
-	        	return ret;
-
-	        Row row = readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+	        if( values.length < 1 )
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_superColumnName + " is invalid.");	        	
+	        }
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_superColumnName, start, count, StorageService.ConsistencyLevel.WEAK);
 			if (row == null)
 			{
 				logger_.info("ERROR No row for this key .....: " + key);
-				// TODO: throw a thrift exception 
-				return ret;
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
 			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
@@ -1069,8 +690,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
 							   + "   key:" + key
 								);
-				// TODO: throw a thrift exception 
-				return ret;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
 			}
 			ColumnFamily cfamily = cfMap.get(values[0]);
 			if (cfamily == null)
@@ -1078,7 +698,7 @@ public class CassandraServer extends FacebookBase implements
 				logger_.info("ERROR ColumnFamily  is missing.....: "
 							+"   key:" + key
 							+ "  ColumnFamily:" + values[0]);
-				return ret;
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_superColumnName + "are not present.");
 			}
 			Collection<IColumn> columns = cfamily.getAllColumns();
 			if (columns == null || columns.size() == 0)
@@ -1086,8 +706,82 @@ public class CassandraServer extends FacebookBase implements
 				logger_	.info("ERROR Columns are missing.....: "
 							   + "   key:" + key
 								+ "  ColumnFamily:" + values[0]);
-				// TODO: throw a thrift exception 
-				return ret;
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
+			}
+			
+			for(IColumn column : columns)
+			{
+				superColumn_t thrift_superColumn = new superColumn_t();
+				thrift_superColumn.name = column.name();
+				Collection<IColumn> subColumns = column.getSubColumns();
+				if(subColumns.size() != 0 )
+				{
+					thrift_superColumn.columns = new ArrayList<column_t>();
+					for( IColumn subColumn : subColumns )
+					{
+						column_t thrift_column = new column_t();
+						thrift_column.columnName = subColumn.name();
+						thrift_column.value = new String(subColumn.value());
+						thrift_column.timestamp = subColumn.timestamp();
+						thrift_superColumn.columns.add(thrift_column);
+					}
+				}
+				retlist.add(thrift_superColumn);
+			}
+		}
+		catch (Exception ex)
+		{
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
+		}
+		return retlist;
+    	
+    }
+    
+    public superColumn_t get_superColumn(String tablename, String key, String columnFamily_column) throws CassandraException
+    {
+    	superColumn_t ret = null;
+		try
+		{
+			validateTable(tablename);
+	        String[] values = RowMutation.getColumnAndColumnFamily(columnFamily_column);
+	        // check for  values 
+	        if( values.length < 2 )
+	        {
+	        	throw new CassandraException("Column Family " + columnFamily_column + " is invalid.");	        	
+	        }
+
+	        Row row = StorageProxy.readProtocol(tablename, key, columnFamily_column, -1, Integer.MAX_VALUE, StorageService.ConsistencyLevel.WEAK);
+			if (row == null)
+			{
+				logger_.info("ERROR No row for this key .....: " + key);
+	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
+			}
+
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			if (cfMap == null || cfMap.size() == 0)
+			{
+				logger_	.info("ERROR ColumnFamily map is missing.....: "
+							   + "   key:" + key
+								);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested are not present.");
+			}
+			ColumnFamily cfamily = cfMap.get(values[0]);
+			if (cfamily == null)
+			{
+				logger_.info("ERROR ColumnFamily  is missing.....: "
+							+"   key:" + key
+							+ "  ColumnFamily:" + values[0]);
+				throw new CassandraException("Either the key " + key + " is not present or the columns requested" + columnFamily_column + "are not present.");
+			}
+			Collection<IColumn> columns = cfamily.getAllColumns();
+			if (columns == null || columns.size() == 0)
+			{
+				logger_	.info("ERROR Columns are missing.....: "
+							   + "   key:" + key
+								+ "  ColumnFamily:" + values[0]);
+				throw new CassandraException("ERROR Columns are missing.....: " + "   key:" + key + "  ColumnFamily:" + values[0]);
 			}
 			
 			for(IColumn column : columns)
@@ -1109,9 +803,11 @@ public class CassandraServer extends FacebookBase implements
 				}
 			}
 		}
-		catch (Exception e)
+		catch (Exception ex)
 		{
-			logger_.info( LogUtil.throwableToString(e) );
+			String exception = LogUtil.throwableToString(ex);
+			logger_.info( exception );
+			throw new CassandraException(exception);
 		}
 		return ret;
     	
@@ -1124,6 +820,7 @@ public class CassandraServer extends FacebookBase implements
 		{
 			logger_.warn(" batch_insert_SuperColumn_blocking");
 			logger_.debug(" Creating the row mutation");
+			validateTable(batchMutationSuper.table);
 			RowMutation rm = new RowMutation(batchMutationSuper.table,
 					batchMutationSuper.key.trim());
 			Set keys = batchMutationSuper.cfmap.keySet();
@@ -1148,7 +845,7 @@ public class CassandraServer extends FacebookBase implements
 					}
 				}
 			}            
-			insert(rm);
+            StorageProxy.insert(rm);
 		}
 		catch (Exception e)
 		{
@@ -1163,31 +860,59 @@ public class CassandraServer extends FacebookBase implements
 		{
 			logger_.debug(" batch_insert");
 			logger_.debug(" Creating the row mutation");
+			validateTable(batchMutationSuper.table);
 			RowMutation rm = new RowMutation(batchMutationSuper.table,
 					batchMutationSuper.key.trim());
-			Set keys = batchMutationSuper.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
+			if(batchMutationSuper.cfmap != null)
 			{
-				Object key = keyIter.next(); // Get the next key.
-				List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
-				for (superColumn_t superColumnData : list)
+				Set keys = batchMutationSuper.cfmap.keySet();
+				Iterator keyIter = keys.iterator();
+				while (keyIter.hasNext())
 				{
-					if(superColumnData.columns.size() != 0 )
+					Object key = keyIter.next(); // Get the next key.
+					List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
+					for (superColumn_t superColumnData : list)
 					{
-						for (column_t columnData : superColumnData.columns)
+						if(superColumnData.columns.size() != 0 )
 						{
-							rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
-									columnData.value.getBytes(), columnData.timestamp);
+							for (column_t columnData : superColumnData.columns)
+							{
+								rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
+										columnData.value.getBytes(), columnData.timestamp);
+							}
+						}
+						else
+						{
+							rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
 						}
 					}
-					else
+				} 
+			}
+			if(batchMutationSuper.cfmapdel != null)
+			{
+				Set keys = batchMutationSuper.cfmapdel.keySet();
+				Iterator keyIter = keys.iterator();
+				while (keyIter.hasNext())
+				{
+					Object key = keyIter.next(); // Get the next key.
+					List<superColumn_t> list = batchMutationSuper.cfmapdel.get(key);
+					for (superColumn_t superColumnData : list)
 					{
-						rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
+						if(superColumnData.columns.size() != 0 )
+						{
+							for (column_t columnData : superColumnData.columns)
+							{
+								rm.delete(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName);
+							}
+						}
+						else
+						{
+							rm.delete(key.toString() + ":" + superColumnData.name);
+						}
 					}
-				}
-			}            
-			insert(rm);
+				} 
+			}
+            StorageProxy.insert(rm);
 		}
 		catch (Exception e)
 		{
@@ -1195,6 +920,109 @@ public class CassandraServer extends FacebookBase implements
 		}
 		return;
     }
+
+    public String getStringProperty(String propertyName) throws TException
+    {
+        if (propertyName.equals("cluster name"))
+        {
+            return DatabaseDescriptor.getClusterName();
+        }
+        else if (propertyName.equals("config file"))
+        {
+            String filename = DatabaseDescriptor.getConfigFileName();
+            try
+            {
+                StringBuffer fileData = new StringBuffer(8192);
+                BufferedInputStream stream = new BufferedInputStream(new FileInputStream(filename));
+                byte[] buf = new byte[1024];
+                int numRead;
+                while( (numRead = stream.read(buf)) != -1)
+                {
+                    String str = new String(buf, 0, numRead);
+                    fileData.append(str);
+                }
+                stream.close();
+                return fileData.toString();
+            }
+            catch (IOException e)
+            {
+                return "file not found!";
+            }
+        }
+        else if (propertyName.equals("version"))
+        {
+            return getVersion();
+        }
+        else
+        {
+            return "?";
+        }
+    }
+
+    public List<String> getStringListProperty(String propertyName) throws TException
+    {
+        if (propertyName.equals("tables"))
+        {
+            return DatabaseDescriptor.getTables();        
+        }
+        else
+        {
+            return new ArrayList<String>();
+        }
+    }
+
+    public String describeTable(String tableName) throws TException
+    {
+        String desc = "";
+        Map<String, CFMetaData> tableMetaData = DatabaseDescriptor.getTableMetaData(tableName);
+
+        if (tableMetaData == null)
+        {
+            return "Table " + tableName +  " not found.";
+        }
+
+        Iterator iter = tableMetaData.entrySet().iterator();
+        while (iter.hasNext())
+        {
+            Map.Entry<String, CFMetaData> pairs = (Map.Entry<String, CFMetaData>)iter.next();
+            desc = desc + pairs.getValue().pretty() + "-----\n";
+        }
+        return desc;
+    }
+
+    public CqlResult_t executeQuery(String query) throws TException
+    {
+        CqlResult_t result = new CqlResult_t();
+
+        CqlResult cqlResult = CqlDriver.executeQuery(query);
+        
+        // convert CQL result type to Thrift specific return type
+        if (cqlResult != null)
+        {
+            result.errorTxt = cqlResult.errorTxt;
+            result.resultSet = cqlResult.resultSet;
+            result.errorCode = cqlResult.errorCode;
+        }
+        return result;
+    }
+    
+    /*
+     * This method is used to ensure that all keys
+     * prior to the specified key, as dtermined by
+     * the SSTable index bucket it falls in, are in
+     * buffer cache.  
+    */
+    public void touch (String key , boolean fData) 
+    {
+    	try
+    	{
+    		StorageProxy.touchProtocol(DatabaseDescriptor.getTables().get(0), key, fData, StorageService.ConsistencyLevel.WEAK);
+    	}
+    	catch ( Exception e)
+    	{
+			logger_.info( LogUtil.throwableToString(e) );
+    	}
+	}
     
     
 	public String getVersion()

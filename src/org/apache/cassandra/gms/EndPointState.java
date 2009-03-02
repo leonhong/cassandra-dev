@@ -22,13 +22,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
-
-import org.apache.log4j.Logger;
-
-import org.apache.cassandra.utils.*;
 import org.apache.cassandra.io.ICompactSerializer;
 import org.apache.cassandra.io.IFileReader;
 import org.apache.cassandra.io.IFileWriter;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.utils.*;
 
 /**
  * This abstraction represents both the HeartBeatState and the ApplicationState in an EndPointState
@@ -169,11 +167,16 @@ class EndPointStateSerializer implements ICompactSerializer<EndPointState>
     public EndPointState deserialize(DataInputStream dis) throws IOException
     {
         HeartBeatState hbState = HeartBeatState.serializer().deserialize(dis);
-        EndPointState epState = new EndPointState(hbState);
+        EndPointState epState = new EndPointState(hbState);               
 
         int appStateSize = dis.readInt();
         for ( int i = 0; i < appStateSize; ++i )
         {
+            if ( dis.available() == 0 )
+            {
+                break;
+            }
+            
             String key = dis.readUTF();    
             ApplicationState appState = ApplicationState.serializer().deserialize(dis);            
             epState.addApplicationState(key, appState);            

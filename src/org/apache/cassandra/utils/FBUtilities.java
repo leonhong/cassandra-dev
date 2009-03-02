@@ -234,9 +234,9 @@ public class FBUtilities
 
     public static BigInteger hash(String data)
     {
-        byte[] result = hash(HashingSchemes.SHA1, data.getBytes());
+        byte[] result = hash(HashingSchemes.MD5, data.getBytes());
         BigInteger hash = new BigInteger(result);
-        return hash.abs();
+        return hash.abs();        
     }
 
     public static byte[] hash(String type, byte[] data)

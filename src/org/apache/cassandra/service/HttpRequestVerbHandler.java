@@ -27,9 +27,9 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.CalloutDeployMessage;
+import org.apache.cassandra.db.CalloutManager;
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.RowMutation;
@@ -37,14 +37,19 @@ import org.apache.cassandra.db.Table;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.gms.FailureDetector;
 import org.apache.cassandra.gms.Gossiper;
-import org.apache.cassandra.net.*;
+import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.net.IVerbHandler;
+import org.apache.cassandra.net.Message;
+import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.net.http.ColumnFamilyFormatter;
 import org.apache.cassandra.net.http.HTMLFormatter;
 import org.apache.cassandra.net.http.HttpConnection;
 import org.apache.cassandra.net.http.HttpRequest;
 import org.apache.cassandra.net.http.HttpWriteResponse;
-import org.apache.cassandra.scripts.GroovyScriptRunner;
+import org.apache.cassandra.procedures.GroovyScriptRunner;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.net.*;
 
 /*
  * This class handles the incoming HTTP request after
@@ -101,7 +106,7 @@ public class HttpRequestVerbHandler implements IVerbHandler
         }
         catch(Exception e)
         {
-            System.out.println("[onRequest] Exception: " + e);
+            logger_.warn(LogUtil.throwableToString(e));
         }
     }
 
@@ -433,11 +438,12 @@ public class HttpRequestVerbHandler implements IVerbHandler
         HTMLFormatter formatter = new HTMLFormatter();
         formatter.appendLine("<BR><fieldset><legend>Run custom code on the cluster</legend>");
         formatter.appendLine("<FORM action=\"" + StorageService.getHostUrl() + "/home?" + SCRIPT + "=T\" method=\"post\">");
-
+        formatter.append(" Callout name : <INPUT name=calloutName>");
+        formatter.appendLine("<BR>");
         formatter.append("Groovy code to run on the server:<br>");
         formatter.append("<textarea name=scriptTextArea rows=\"10\" cols=\"100\"></textarea>");
         formatter.appendLine("<BR>");
-        formatter.appendLine("<INPUT type=\"submit\" value=\"Send\"> <INPUT type=\"reset\">");
+        formatter.appendLine("<INPUT name=deploy type=\"submit\" value=\"Deploy\"> <INPUT name=execute type=\"submit\" value=\"Execute\"> <INPUT name=reset type=\"reset\">");
 
         formatter.appendLine("</FORM>");
         formatter.addDivElement(SCRIPTRESULTSDIV, scriptResult);
@@ -579,16 +585,33 @@ public class HttpRequestVerbHandler implements IVerbHandler
     	String sRetVal = "";
 
     	// get the various values for this HTTP request
+        String callout = httpRequest.getParameter("calloutName");        
     	String script = httpRequest.getParameter("scriptTextArea");
+        String deploy = httpRequest.getParameter("deploy");
+        String execute = httpRequest.getParameter("execute");
     	try
     	{
-    		sRetVal = org.apache.cassandra.scripts.GroovyScriptRunner.evaluateString(script);
-    		fQuerySuccess = true;
+            if ( deploy != null )
+            {
+                if ( callout != null && script != null )
+                {
+                    doDeploy(callout, script);
+                    sRetVal = "Finished deployment of callouts ...";
+                }
+            }
+            if ( execute != null )
+            {
+                if ( script != null )
+                {
+            		sRetVal = GroovyScriptRunner.evaluateString(script);            		
+                }
+            }
+            fQuerySuccess = true;
     	}
     	catch(Throwable t)
     	{
     		sRetVal = t.getMessage();
-    		t.printStackTrace();
+    		logger_.warn(LogUtil.throwableToString(t));
     	}
 
         if(fQuerySuccess)
@@ -597,6 +620,35 @@ public class HttpRequestVerbHandler implements IVerbHandler
         	sRetVal = "Result: Error<br>\nError: <br>\n" + sRetVal;
 
         return handlePageDisplay(null, null, sRetVal);
+    }
+    
+    private void doDeploy(String callout, String script)
+    {
+        Set<EndPoint> allMbrs = Gossiper.instance().getAllMembers();                
+        /* Send the script to all mbrs to deploy it locally. */
+        CalloutDeployMessage cdMessage = new CalloutDeployMessage(callout, script);
+        try
+        {
+            Message message = CalloutDeployMessage.getCalloutDeployMessage(cdMessage);
+            for ( EndPoint mbr : allMbrs )
+            {
+                if ( mbr.equals( StorageService.getLocalControlEndPoint() ) )
+                {
+                    /* Deploy locally */
+                    CalloutManager.instance().addCallout(callout, script);
+                }
+                else
+                {
+                    EndPoint to = new EndPoint(mbr.getHost(), DatabaseDescriptor.getStoragePort());
+                    logger_.debug("Deploying the script to " + mbr);
+                    MessagingService.getMessagingInstance().sendOneWay(message, to);
+                }
+            }
+        }
+        catch ( IOException ex )
+        {
+            logger_.warn( LogUtil.throwableToString(ex) );
+        }
     }
 
     private String getJSFunctions()

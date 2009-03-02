@@ -40,9 +40,8 @@ import org.apache.commons.javaflow.bytecode.transformation.bcel.BcelClassTransfo
 
 class ContinuationClassTransformer implements ClassFileTransformer
 {
-    private static final String targetAnnotation_ = "Suspendable";
-    private ResourceTransformer transformer_;
-    private Set<String> classes_ = new HashSet<String>();
+    private static final String targetAnnotation_ = "Suspendable"; 
+    private ResourceTransformer transformer_;    
     
     public ContinuationClassTransformer(String agentArguments, ResourceTransformer transformer)
     {
@@ -51,13 +50,13 @@ class ContinuationClassTransformer implements ClassFileTransformer
     }
     
     public byte[] transform(ClassLoader classLoader, String className, Class redefiningClass, ProtectionDomain domain, byte[] bytes) throws IllegalClassFormatException
-    {                       
+    {              
         /*
          * Use the ASM class reader to see which classes support
          * the Suspendable annotation. If they do then those 
          * classes need to have their bytecodes transformed for
          * Continuation support. 
-        */
+        */                
         ClassReader classReader = new ClassReader(bytes);
         ClassNode classNode = new ClassNode();
         classReader.accept(classNode, true);       
@@ -66,12 +65,10 @@ class ContinuationClassTransformer implements ClassFileTransformer
         for( AnnotationNode annotationNode : annotationNodes )
         {            
             if ( annotationNode.desc.indexOf(ContinuationClassTransformer.targetAnnotation_) != -1 )
-            {
-                System.out.println("Transforming class " + className);
+            {                
                 bytes = transformer_.transform(bytes);
             }
-        }
-                
+        }                                
         return bytes;
     }
 }

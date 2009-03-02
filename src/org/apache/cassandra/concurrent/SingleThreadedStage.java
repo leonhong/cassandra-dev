@@ -19,11 +19,11 @@
 package org.apache.cassandra.concurrent;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.cassandra.net.*;
 
 /**
@@ -57,6 +57,12 @@ public class SingleThreadedStage implements IStage
     {
         return name_;
     }
+    
+    public ExecutorService getInternalThreadPool()
+    {
+        return executorService_;
+    }
+    
     public void execute(Runnable runnable)
     {
         executorService_.execute(runnable);

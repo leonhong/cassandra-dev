@@ -26,9 +26,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import org.apache.log4j.Logger;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.net.EndPoint;
+import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
 import org.apache.cassandra.utils.*;
 
 /**
@@ -82,7 +85,7 @@ public class FailureDetector implements IFailureDetector, FailureDetectorMBean
         try
         {
             MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-            mbs.registerMBean(this, new ObjectName("org.apache.cassandra.gms:type=FailureDetector"));
+            mbs.registerMBean(this, new ObjectName("com.facebook.infrastructure.gms:type=FailureDetector"));
         }
         catch (Exception e)
         {

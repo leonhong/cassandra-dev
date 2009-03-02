@@ -22,8 +22,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.locks.*;
 
-import org.apache.log4j.Logger;
-
 import org.apache.cassandra.db.Column;
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.RowMutation;
@@ -38,6 +36,8 @@ import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.ICacheExpungeHook;
 import org.apache.cassandra.utils.ICachetable;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+
 
 
 /*

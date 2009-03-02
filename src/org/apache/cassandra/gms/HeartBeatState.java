@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.cassandra.io.ICompactSerializer;
 
+
 /**
  * HeartBeat State associated with any given endpoint. 
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
