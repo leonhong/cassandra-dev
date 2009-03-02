@@ -66,16 +66,14 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
         try
         {            
             boolean bVal = true;            
-            try
-            {
+            try {
             	if ( !done_.get() )
                 {            		
             		bVal = condition_.await(DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS);
                 }
             }
-            catch ( InterruptedException ex )
-            {
-                logger_.debug( LogUtil.throwableToString(ex) );
+            catch ( InterruptedException ex ) {
+                // cool, we got a reply
             }
             
             if ( !bVal && !done_.get() )
@@ -84,7 +82,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
                 for ( Message message : responses_ )
                 {
                     sb.append(message.getFrom());                    
-                }                
+                }
                 throw new TimeoutException("Operation timed out - received only " +  responses_.size() + " responses from " + sb.toString() + " .");
             }
         }
@@ -96,8 +94,7 @@ public class QuorumResponseHandler<T> implements IAsyncCallback
             	MessagingService.removeRegisteredCallback( response.getMessageId() );
             }
         }
-        logger_.info("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime)
-                + " ms.");
+        logger_.debug("QuorumResponseHandler: " + (System.currentTimeMillis() - startTime) + " ms.");
 
     	return responseResolver_.resolve( responses_);
     }
