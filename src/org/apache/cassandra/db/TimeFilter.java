@@ -21,7 +21,6 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.IndexHelper;
 import org.apache.cassandra.io.SSTable;
@@ -38,10 +37,10 @@ class TimeFilter implements IFilter
 {
 	private long timeLimit_;
 	private boolean isDone_;
-	
+
 	TimeFilter(long timeLimit)
 	{
-		timeLimit_ = timeLimit;		
+		timeLimit_ = timeLimit;
 		isDone_ = false;
 	}
 
@@ -50,15 +49,15 @@ class TimeFilter implements IFilter
     	String[] values = RowMutation.getColumnAndColumnFamily(cf);
 		String cfName = columnFamily.name();
 		ColumnFamily filteredCf = new ColumnFamily(cfName);
-		if( values.length == 1 && !DatabaseDescriptor.getColumnType(cfName).equals("Super"))
+		if( values.length == 1 && !columnFamily.isSuper())
 		{
     		Collection<IColumn> columns = columnFamily.getAllColumns();
-    		int i =0; 
+    		int i =0;
     		for(IColumn column : columns)
     		{
     			if ( column.timestamp() >=  timeLimit_ )
     			{
-    				filteredCf.addColumn(column.name(), column);
+    				filteredCf.addColumn(column);
     				++i;
     			}
     			else
@@ -70,10 +69,10 @@ class TimeFilter implements IFilter
     		{
     			isDone_ = true;
     		}
-		}    	
-    	else if ( values.length == 2 && DatabaseDescriptor.getColumnType(cfName).equals("Super") )
+		}
+    	else if ( values.length == 2 && columnFamily.isSuper() )
     	{
-    		/* 
+    		/*
     		 * TODO : For super columns we need to re-visit this issue.
     		 * For now this fn will set done to true if we are done with
     		 * atleast one super column
@@ -83,7 +82,7 @@ class TimeFilter implements IFilter
     		{
     			SuperColumn superColumn = (SuperColumn)column;
     			SuperColumn filteredSuperColumn = new SuperColumn(superColumn.name());
-				filteredCf.addColumn(filteredSuperColumn.name(), filteredSuperColumn);
+				filteredCf.addColumn(filteredSuperColumn);
         		Collection<IColumn> subColumns = superColumn.getSubColumns();
         		int i = 0;
         		for(IColumn subColumn : subColumns)
@@ -104,18 +103,18 @@ class TimeFilter implements IFilter
         		}
     		}
     	}
-    	else 
+    	else
     	{
     		throw new UnsupportedOperationException();
     	}
 		return filteredCf;
 	}
-    
+
     public IColumn filter(IColumn column, DataInputStream dis) throws IOException
     {
     	long timeStamp = 0;
     	/*
-    	 * If its a column instance we need the timestamp to verify if 
+    	 * If its a column instance we need the timestamp to verify if
     	 * it should be filtered , but at this instance the timestamp is not read
     	 * so we read the timestamp and set the buffer back so that the rest of desrialization
     	 * logic does not change.
@@ -134,8 +133,7 @@ class TimeFilter implements IFilter
     	}
     	return column;
     }
-    
-	
+
 	public boolean isDone()
 	{
 		return isDone_;
@@ -143,6 +141,6 @@ class TimeFilter implements IFilter
 
 	public DataInputBuffer next(String key, String cf, SSTable ssTable) throws IOException
     {
-    	return ssTable.next( key, cf, new IndexHelper.TimeRange( timeLimit_, System.currentTimeMillis() ) );
+    	return ssTable.next(key, cf, new IndexHelper.TimeRange( timeLimit_, System.currentTimeMillis() ) );
     }
 }

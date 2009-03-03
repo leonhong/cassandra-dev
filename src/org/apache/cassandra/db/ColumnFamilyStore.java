@@ -18,19 +18,27 @@
 
 package org.apache.cassandra.db;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.log4j.Logger;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.dht.Range;
@@ -40,16 +48,11 @@ import org.apache.cassandra.io.IndexHelper;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.net.EndPoint;
-import org.apache.cassandra.net.Message;
-import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.FileUtils;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.io.*;
-import org.apache.cassandra.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -402,11 +405,11 @@ public class ColumnFamilyStore
         binaryMemtable_.get().put(key, buffer);
     }
 
-    void forceFlush(boolean fRecovery) throws IOException
+    void forceFlush() throws IOException
     {
         //MemtableManager.instance().submit(getColumnFamilyName(), memtable_.get() , CommitLog.CommitLogContext.NULL);
         //memtable_.get().flush(true, CommitLog.CommitLogContext.NULL);
-        memtable_.get().forceflush(this, fRecovery);
+        memtable_.get().forceflush(this);
     }
 
     void forceFlushBinary() throws IOException
@@ -622,17 +625,6 @@ public class ColumnFamilyStore
     {
         if (!columnFamily.isMarkedForDelete())
             memtable_.get().putOnRecovery(key, columnFamily);
-    }
-
-    /*
-     * Delete doesn't mean we can blindly delete. We need to write this to disk
-     * as being marked for delete. This is to prevent a previous value from
-     * resuscitating a column family that has been deleted.
-     */
-    void delete(String key, ColumnFamily columnFamily)
-            throws IOException
-    {
-        memtable_.get().remove(key, columnFamily);
     }
 
     /*
@@ -1174,7 +1166,7 @@ public class ColumnFamilyStore
 		                    if( columnFamily != null )
 		                    {
 			                	/* serialize the cf with column indexes */
-			                    ColumnFamily.serializer2().serialize(columnFamily, bufOut);
+			                    ColumnFamily.serializerWithIndexes().serialize(columnFamily, bufOut);
 		                    }
 	                    }
 	                    else
@@ -1424,7 +1416,7 @@ public class ColumnFamilyStore
 		                    if( columnFamily != null )
 		                    {
 			                	/* serialize the cf with column indexes */
-			                    ColumnFamily.serializer2().serialize(columnFamily, bufOut);
+			                    ColumnFamily.serializerWithIndexes().serialize(columnFamily, bufOut);
 		                    }
 	                    }
 	                    else
@@ -1552,5 +1544,15 @@ public class ColumnFamilyStore
         {
             lock_.writeLock().unlock();
         }
+    }
+
+    public boolean isSuper()
+    {
+        return DatabaseDescriptor.getColumnType(getColumnFamilyName()).equals("Super");
+    }
+
+    public void flushMemtable() throws IOException
+    {
+        memtable_.get().flushInPlace();
     }
 }

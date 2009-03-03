@@ -112,7 +112,7 @@ public class ColumnRangeQueryRSD extends RowSourceDef
         List<Map<String, String>> rows = new LinkedList<Map<String, String>>();
         if (row != null)
         {
-            Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+            Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
             if (cfMap != null && cfMap.size() > 0)
             {
                 ColumnFamily cfamily = cfMap.get(cfMetaData_.cfName);

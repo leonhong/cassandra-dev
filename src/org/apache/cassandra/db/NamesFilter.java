@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.SSTable;
 
@@ -32,19 +31,15 @@ import org.apache.cassandra.io.SSTable;
 public class NamesFilter implements IFilter
 {
     /* list of column names to filter against. */
-    private List<String> names_ = new ArrayList<String>();  
-    
+    private ArrayList<String> names_ = new ArrayList<String>();
+
     NamesFilter(List<String> names)
     {
-        names_ = names;     
+        names_.addAll(names);
     }
-    
+
     public ColumnFamily filter(String cf, ColumnFamily columnFamily)
     {
-        if ( columnFamily == null )
-        {
-            return columnFamily;
-        }
     	String[] values = RowMutation.getColumnAndColumnFamily(cf);
 		String cfName = columnFamily.name();
 		ColumnFamily filteredCf = new ColumnFamily(cfName);
@@ -55,8 +50,8 @@ public class NamesFilter implements IFilter
 			{
 		        if ( names_.contains(column.name()) )
 		        {
-		            names_.remove(column.name());            
-					filteredCf.addColumn(column.name(), column);
+		            names_.remove(column.name());
+					filteredCf.addColumn(column);
 		        }
 				if( isDone() )
 				{
@@ -64,20 +59,20 @@ public class NamesFilter implements IFilter
 				}
 			}
 		}
-		else if ( values.length == 2 && DatabaseDescriptor.getColumnType(cfName).equals("Super") )
+		else if ( values.length == 2 && columnFamily.isSuper())
 		{
     		Collection<IColumn> columns = columnFamily.getAllColumns();
     		for(IColumn column : columns)
     		{
     			SuperColumn superColumn = (SuperColumn)column;
     			SuperColumn filteredSuperColumn = new SuperColumn(superColumn.name());
-				filteredCf.addColumn(filteredSuperColumn.name(), filteredSuperColumn);
+				filteredCf.addColumn(filteredSuperColumn);
         		Collection<IColumn> subColumns = superColumn.getSubColumns();
         		for(IColumn subColumn : subColumns)
         		{
     		        if ( names_.contains(subColumn.name()) )
     		        {
-    		            names_.remove(subColumn.name());            
+    		            names_.remove(subColumn.name());
     		            filteredSuperColumn.addColumn(subColumn.name(), subColumn);
     		        }
     				if( isDone() )
@@ -87,28 +82,28 @@ public class NamesFilter implements IFilter
     			}
     		}
 		}
-    	else 
+    	else
     	{
     		throw new UnsupportedOperationException();
     	}
 		return filteredCf;
     }
-    
+
     public IColumn filter(IColumn column, DataInputStream dis) throws IOException
-    {       
+    {
         String columnName = column.name();
         if ( names_.contains(columnName) )
         {
-            names_.remove(columnName);            
+            names_.remove(columnName);
         }
         else
         {
             column = null;
         }
-        
+
         return column;
     }
-    
+
     public boolean isDone()
     {
         return names_.isEmpty();

@@ -19,7 +19,12 @@
 package org.apache.cassandra.db;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -30,19 +35,17 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.log4j.Logger;
+
 import org.apache.cassandra.concurrent.DebuggableThreadPoolExecutor;
 import org.apache.cassandra.concurrent.ThreadFactoryImpl;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.SSTable;
-import org.apache.cassandra.service.IComponentShutdown;
 import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.io.*;
-import org.apache.cassandra.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -125,7 +128,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             key_ = key;
             columnFamilyName_ = cfName;
         }
-        
+
         Getter(String key, String cfName, IFilter filter)
         {
             this(key, cfName);
@@ -134,31 +137,13 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
 
         public ColumnFamily call()
         {
-        	ColumnFamily cf = getLocalCopy(key_, columnFamilyName_, filter_);            
+        	ColumnFamily cf = getLocalCopy(key_, columnFamilyName_, filter_);
             return cf;
         }
     }
 
-    class Remover implements Runnable
-    {
-        private String key_;
-        private ColumnFamily columnFamily_;
-
-        Remover(String key, ColumnFamily columnFamily)
-        {
-            key_ = key;
-            columnFamily_ = columnFamily;
-        }
-
-        public void run()
-        {
-        	columnFamily_.delete();
-            columnFamilies_.put(key_, columnFamily_);
-        }
-    }
-
     /**
-     * Compares two Memtable based on creation time. 
+     * Compares two Memtable based on creation time.
      * @param rhs
      * @return
      */
@@ -259,28 +244,29 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     /*
      * This version is used to switch memtable and force flush.
     */
-    void forceflush(ColumnFamilyStore cfStore, boolean fRecovery) throws IOException
+    public void forceflush(ColumnFamilyStore cfStore) throws IOException
     {
-        if(!fRecovery)
+        RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), flushKey_);
+
+        try
         {
-	    	RowMutation rm = new RowMutation(DatabaseDescriptor.getTables().get(0), flushKey_);
-	        try
-	        {
-	            rm.add(cfStore.columnFamily_ + ":Column","0".getBytes());
-	            rm.apply();
-	        }
-	        catch(ColumnFamilyNotDefinedException ex)
-	        {
-	            logger_.debug(LogUtil.throwableToString(ex));
-	        }
+            if (cfStore.isSuper())
+            {
+                rm.add(cfStore.getColumnFamilyName() + ":SC1:Column", "0".getBytes(), 0);
+            } else {
+                rm.add(cfStore.getColumnFamilyName() + ":Column", "0".getBytes(), 0);
+            }
+            rm.apply();
         }
-        else
+        catch(ColumnFamilyNotDefinedException ex)
         {
-        	flush(CommitLog.CommitLogContext.NULL);
+            logger_.debug(LogUtil.throwableToString(ex));
         }
     }
 
-
+    void flushInPlace() throws IOException {
+        flushInPlace(CommitLog.CommitLogContext.NULL);
+    }
 
     private void resolve(String key, ColumnFamily columnFamily)
     {
@@ -294,6 +280,10 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             int newObjectCount = oldCf.getColumnCount();
             resolveSize(oldSize, newSize);
             resolveCount(oldObjectCount, newObjectCount);
+            // TODO we could save compaction some work by removing all known-to-be-deleted columns from memory
+            // (but this is not high priority because chances are if you're deleting a CF or supercolumn,
+            //  it seems that having most of the data still unflushed in the memtable would be uncommon.)
+            oldCf.delete(Math.max(oldCf.getMarkedForDeleteAt(), columnFamily.getMarkedForDeleteAt()));
         }
         else
         {
@@ -314,47 +304,49 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         	resolve(key, columnFamily);
     }
 
-    
-    ColumnFamily getLocalCopy(String key, String cfName, IFilter filter)
+
+    ColumnFamily getLocalCopy(String key, String columnFamilyColumn, IFilter filter)
     {
-    	String[] values = RowMutation.getColumnAndColumnFamily(cfName);
+    	String[] values = RowMutation.getColumnAndColumnFamily(columnFamilyColumn);
     	ColumnFamily columnFamily = null;
         if(values.length == 1 )
         {
-        	columnFamily = columnFamilies_.get(key);        	
+        	columnFamily = columnFamilies_.get(key);
         }
         else
         {
         	ColumnFamily cFamily = columnFamilies_.get(key);
-        	if(cFamily == null)
-        		return null;
-        	IColumn column = null;
-        	if(values.length == 2)
-        	{
-        		column = cFamily.getColumn(values[1]);
-        		if(column != null )
-        		{
-        			columnFamily = new ColumnFamily(cfName_);
-        			columnFamily.addColumn(column.name(), column);
-        		}
+        	if (cFamily == null) return null;
+
+        	if (values.length == 2) {
+                IColumn column = cFamily.getColumn(values[1]); // super or normal column
+                if (column != null )
+                {
+                    columnFamily = new ColumnFamily(cfName_);
+                    columnFamily.addColumn(column);
+                }
         	}
-        	else
-        	{
-        		column = cFamily.getColumn(values[1]);
-        		if(column != null )
-        		{
-        			 
-        			IColumn subColumn = ((SuperColumn)column).getSubColumn(values[2]);
-        			if(subColumn != null)
-        			{
-	        			columnFamily = new ColumnFamily(cfName_);
-	            		columnFamily.createColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp());
-        			}
-        		}
+            else
+            {
+                assert values.length == 3;
+                SuperColumn superColumn = (SuperColumn)cFamily.getColumn(values[1]);
+                if (superColumn != null)
+                {
+                    IColumn subColumn = superColumn.getSubColumn(values[2]);
+                    if (subColumn != null)
+                    {
+                        columnFamily = new ColumnFamily(cfName_);
+                        columnFamily.addColumn(values[1] + ":" + values[2], subColumn.value(), subColumn.timestamp(), subColumn.isMarkedForDelete());
+                    }
+                }
         	}
         }
+
+        if (columnFamily == null) {
+            return null;
+        }
         /* Filter unnecessary data from the column based on the provided filter */
-        return filter.filter(cfName, columnFamily);
+        return filter.filter(columnFamilyColumn, columnFamily);
     }
 
     ColumnFamily get(String key, String cfName)
@@ -376,7 +368,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     	}
     	return cf;
     }
-    
+
     ColumnFamily get(String key, String cfName, IFilter filter)
     {
     	printExecutorStats();
@@ -397,24 +389,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
     	return cf;
     }
 
-    /*
-     * Although the method is named remove() we cannot remove the key
-     * from memtable. We add it to the memtable but mark it as deleted.
-     * The reason for this because we do not want a successive get()
-     * for the same key to scan the ColumnFamilyStore files for this key.
-    */
-    void remove(String key, ColumnFamily columnFamily) throws IOException
-    {
-    	printExecutorStats();
-    	Runnable deleter = new Remover(key, columnFamily);
-    	apartments_.get(cfName_).submit(deleter);
-    }
-
-    /*
-     * param recoveryMode - indicates if this was invoked during
-     *                      recovery.
-    */
-    void flush(CommitLog.CommitLogContext cLogCtx) throws IOException
+    void flushInPlace(CommitLog.CommitLogContext cLogCtx) throws IOException
     {
         ColumnFamilyStore cfStore = Table.open(table_).getColumnFamilyStore(cfName_);
         if ( columnFamilies_.size() == 0 )
@@ -430,20 +405,20 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         String directory = DatabaseDescriptor.getDataFileLocation();
         String filename = cfStore.getNextFileName();
         SSTable ssTable = new SSTable(directory, filename, pType);
-        switch (pType) 
+        switch (pType)
         {
             case OPHF:
                 flushForOrderPreservingPartitioner(ssTable, cfStore, cLogCtx);
                 break;
-                
+
             default:
                 flushForRandomPartitioner(ssTable, cfStore, cLogCtx);
                 break;
         }
-        
-        columnFamilies_.clear();        
+
+        columnFamilies_.clear();
     }
-    
+
     private void flushForRandomPartitioner(SSTable ssTable, ColumnFamilyStore cfStore, CommitLog.CommitLogContext cLogCtx) throws IOException
     {
         /* List of primary keys in sorted order */
@@ -458,7 +433,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             if ( columnFamily != null )
             {
                 /* serialize the cf with column indexes */
-                ColumnFamily.serializer2().serialize( columnFamily, buffer );
+                ColumnFamily.serializerWithIndexes().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(pKey.key(), pKey.hash(), buffer);
                 bf.fill(pKey.key());
@@ -470,7 +445,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
         cfStore.storeLocation( ssTable.getDataFileLocation(), bf );
         buffer.close();
     }
-    
+
     private void flushForOrderPreservingPartitioner(SSTable ssTable, ColumnFamilyStore cfStore, CommitLog.CommitLogContext cLogCtx) throws IOException
     {
         List<String> keys = new ArrayList<String>( columnFamilies_.keySet() );
@@ -485,7 +460,7 @@ public class Memtable implements MemtableMBean, Comparable<Memtable>
             if ( columnFamily != null )
             {
                 /* serialize the cf with column indexes */
-                ColumnFamily.serializer2().serialize( columnFamily, buffer );
+                ColumnFamily.serializerWithIndexes().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(key, buffer);
                 bf.fill(key);

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.PrimaryKey;
@@ -35,7 +34,6 @@ import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.utils.BloomFilter;
-import org.apache.cassandra.utils.FBUtilities;
 
 
 public class SSTableTest
@@ -53,8 +51,8 @@ public class SSTableTest
             ColumnFamily cf = new ColumnFamily("Test", "Standard");
             bufOut.reset();           
             // random.nextBytes(bytes);
-            cf.createColumn("C", "Avinash Lakshman is a good man".getBytes(), i);
-            ColumnFamily.serializer2().serialize(cf, bufOut);
+            cf.addColumn("C", "Avinash Lakshman is a good man".getBytes(), i);
+            ColumnFamily.serializerWithIndexes().serialize(cf, bufOut);
             ssTable.append(key, bufOut);            
             bf.fill(key);
         }
@@ -71,7 +69,7 @@ public class SSTableTest
             String key = Integer.toString(i);
             ColumnFamily cf = new ColumnFamily("Test", "Standard");                      
             // random.nextBytes(bytes);
-            cf.createColumn("C", "Avinash Lakshman is a good man".getBytes(), i);
+            cf.addColumn("C", "Avinash Lakshman is a good man".getBytes(), i);
             columnFamilies.put(key, cf);
         } 
         flushForRandomPartitioner(columnFamilies);
@@ -92,7 +90,7 @@ public class SSTableTest
             if ( columnFamily != null )
             {
                 /* serialize the cf with column indexes */
-                ColumnFamily.serializer2().serialize( columnFamily, buffer );
+                ColumnFamily.serializerWithIndexes().serialize( columnFamily, buffer );
                 /* Now write the key and value to disk */
                 ssTable.append(pKey.key(), pKey.hash(), buffer);
                 bf.fill(pKey.key());                

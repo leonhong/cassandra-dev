@@ -18,27 +18,26 @@
 
 package org.apache.cassandra.service;
 
-import com.facebook.thrift.*;
-import com.facebook.thrift.server.*;
-import com.facebook.thrift.server.TThreadPoolServer.Options;
-import com.facebook.thrift.transport.*;
-import com.facebook.thrift.protocol.*;
-import com.facebook.fb303.FacebookBase;
-import com.facebook.fb303.fb_status;
-import java.io.*;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import org.apache.cassandra.db.*;
-import org.apache.cassandra.net.*;
-import org.apache.cassandra.utils.*;
+
+import org.apache.log4j.Logger;
+
+import com.facebook.fb303.FacebookBase;
+import com.facebook.fb303.fb_status;
+import com.facebook.thrift.TException;
+import com.facebook.thrift.protocol.TBinaryProtocol;
+import com.facebook.thrift.protocol.TProtocolFactory;
+import com.facebook.thrift.server.TThreadPoolServer;
+import com.facebook.thrift.server.TThreadPoolServer.Options;
+import com.facebook.thrift.transport.TServerSocket;
 import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql.common.CqlResult;
@@ -48,13 +47,10 @@ import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.Row;
 import org.apache.cassandra.db.RowMutation;
 import org.apache.cassandra.db.RowMutationMessage;
-import org.apache.cassandra.gms.FailureDetector;
-import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -121,7 +117,7 @@ public class CassandraServer extends FacebookBase implements
 			{
 				throw new CassandraException("No row exists for key " + key);			
 			}
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{				
 				logger_	.info("ERROR ColumnFamily " + columnFamily + " map is missing.....: " + "   key:" + key );
@@ -163,7 +159,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: " + "   key:" + key);
@@ -278,7 +274,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily " + columnFamily_column + " map is missing.....: " + "   key:" + key);
@@ -346,7 +342,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 			
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
@@ -418,7 +414,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
@@ -571,20 +567,7 @@ public class CassandraServer extends FacebookBase implements
 					}
 				}
 			}
-			if(batchMutation.cfmapdel != null)
-			{
-				Set keys = batchMutation.cfmapdel.keySet();
-				Iterator keyIter = keys.iterator();
-				while (keyIter.hasNext())
-				{
-					Object key = keyIter.next(); // Get the next key.
-					List<column_t> list = batchMutation.cfmapdel.get(key);
-					for (column_t columnData : list)
-					{
-						rm.delete(key.toString() + ":" + columnData.columnName);
-					}
-				}            
-			}
+			assert batchMutation.cfmapdel == null;
 			StorageProxy.insert(rm);
 		}
 		catch (Exception e)
@@ -596,18 +579,7 @@ public class CassandraServer extends FacebookBase implements
 
     public void remove(String tablename, String key, String columnFamily_column)
 	{
-		try
-		{
-			validateTable(tablename);
-			RowMutation rm = new RowMutation(tablename, key.trim());
-			rm.delete(columnFamily_column);
-            StorageProxy.insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.debug( LogUtil.throwableToString(e) );
-		}
-		return;
+		throw new UnsupportedOperationException("Remove is coming soon");
 	}
 
     public List<superColumn_t> get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws CassandraException, TException
@@ -684,7 +656,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
@@ -759,7 +731,7 @@ public class CassandraServer extends FacebookBase implements
 	        	throw new CassandraException("ERROR No row for this key .....: " + key);	        	
 			}
 
-			Map<String, ColumnFamily> cfMap = row.getColumnFamilies();
+			Map<String, ColumnFamily> cfMap = row.getColumnFamilyMap();
 			if (cfMap == null || cfMap.size() == 0)
 			{
 				logger_	.info("ERROR ColumnFamily map is missing.....: "
@@ -888,30 +860,7 @@ public class CassandraServer extends FacebookBase implements
 					}
 				} 
 			}
-			if(batchMutationSuper.cfmapdel != null)
-			{
-				Set keys = batchMutationSuper.cfmapdel.keySet();
-				Iterator keyIter = keys.iterator();
-				while (keyIter.hasNext())
-				{
-					Object key = keyIter.next(); // Get the next key.
-					List<superColumn_t> list = batchMutationSuper.cfmapdel.get(key);
-					for (superColumn_t superColumnData : list)
-					{
-						if(superColumnData.columns.size() != 0 )
-						{
-							for (column_t columnData : superColumnData.columns)
-							{
-								rm.delete(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName);
-							}
-						}
-						else
-						{
-							rm.delete(key.toString() + ":" + superColumnData.name);
-						}
-					}
-				} 
-			}
+			assert batchMutationSuper.cfmapdel == null;
             StorageProxy.insert(rm);
 		}
 		catch (Exception e)

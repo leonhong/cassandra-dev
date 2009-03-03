@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.ReadResponseMessage;
 import org.apache.cassandra.db.Row;
@@ -34,7 +36,6 @@ import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
 
 
 /*
@@ -141,13 +142,13 @@ public class ReadResponseResolver implements IResponseResolver<Row>
 				continue;
 			// create the row mutation message based on the diff and schedule a read repair 
 			RowMutation rowMutation = new RowMutation(table, key);            			
-	    	Map<String, ColumnFamily> columnFamilies = diffRow.getColumnFamilies();
+	    	Map<String, ColumnFamily> columnFamilies = diffRow.getColumnFamilyMap();
 	        Set<String> cfNames = columnFamilies.keySet();
 	        
 	        for ( String cfName : cfNames )
 	        {
 	            ColumnFamily cf = columnFamilies.get(cfName);
-	            rowMutation.add(cfName, cf);
+	            rowMutation.add(cf);
 	        }
             RowMutationMessage rowMutationMessage = new RowMutationMessage(rowMutation);
 	        // schedule the read repair

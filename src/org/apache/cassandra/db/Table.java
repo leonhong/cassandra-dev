@@ -18,20 +18,24 @@
 
 package org.apache.cassandra.db;
 
-import java.util.*;
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.File;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.log4j.Logger;
+
 import org.apache.cassandra.analytics.DBAnalyticsSource;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.dht.BootstrapInitiateMessage;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.io.DataInputBuffer;
@@ -52,11 +56,6 @@ import org.apache.cassandra.utils.BasicUtilities;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.FileUtils;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
-
-import org.apache.cassandra.io.*;
-import org.apache.cassandra.utils.*;
-import org.apache.cassandra.service.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -854,7 +853,7 @@ public class Table
         long start = System.currentTimeMillis();
                
         CommitLog.CommitLogContext cLogCtx = CommitLog.open(table_).add(row);
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )
         {
@@ -870,7 +869,7 @@ public class Table
     void applyNow(Row row) throws IOException
     {
         String key = row.key();
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
 
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )
@@ -886,24 +885,11 @@ public class Table
         Set<String> cfNames = columnFamilyStores_.keySet();
         for ( String cfName : cfNames )
         {
-            columnFamilyStores_.get(cfName).forceFlush(fRecovery);
-        }
-    }
-
-    void delete(Row row) throws IOException
-    {
-        String key = row.key();
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
-
-        /* Add row to commit log */
-        CommitLog.open(table_).add(row);
-        Set<String> cNames = columnFamilies.keySet();
-
-        for ( String cName : cNames )
-        {
-        	ColumnFamily columnFamily = columnFamilies.get(cName);
-            ColumnFamilyStore cfStore = columnFamilyStores_.get(columnFamily.name());
-            cfStore.delete( key, columnFamily );
+            if (fRecovery) {
+                columnFamilyStores_.get(cfName).flushMemtable();
+            } else {
+                columnFamilyStores_.get(cfName).forceFlush();
+            }
         }
     }
 
@@ -913,7 +899,7 @@ public class Table
         /* Add row to the commit log. */
         long start = System.currentTimeMillis();
                 
-        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilies();
+        Map<String, ColumnFamily> columnFamilies = row.getColumnFamilyMap();
         Set<String> cNames = columnFamilies.keySet();
         for ( String cName : cNames )
         {
@@ -934,7 +920,7 @@ public class Table
     	            }
     	            else if(column.timestamp() == 3)
     	            {
-    	            	cfStore.forceFlush(false);
+    	            	cfStore.forceFlush();
     	            }
     	            else if(column.timestamp() == 4)
     	            {

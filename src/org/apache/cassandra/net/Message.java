@@ -18,19 +18,15 @@
 
 package org.apache.cassandra.net;
 
-import java.lang.reflect.Array;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.cassandra.io.ICompactSerializer;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.utils.*;
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -70,7 +66,7 @@ public class Message implements java.io.Serializable
         body_ = body;
     }
 
-    public Message(EndPoint from, String messageType, String verb, Object[] body)
+    public Message(EndPoint from, String messageType, String verb, Object... body)
     {
         header_ = new Header(from, messageType, verb);
         body_ = body;

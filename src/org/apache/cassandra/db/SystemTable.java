@@ -18,25 +18,14 @@
 
 package org.apache.cassandra.db;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import org.apache.log4j.Logger;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.IFileReader;
@@ -44,9 +33,6 @@ import org.apache.cassandra.io.IFileWriter;
 import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.LogUtil;
-import org.apache.log4j.Logger;
-import org.apache.cassandra.io.*;
-import org.apache.cassandra.utils.*;
 
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
@@ -167,7 +153,7 @@ public class SystemTable
     {
         if ( systemRow_ != null )
         {
-            Map<String, ColumnFamily> columnFamilies = systemRow_.getColumnFamilies();
+            Map<String, ColumnFamily> columnFamilies = systemRow_.getColumnFamilyMap();
             /* Retrieve the "LocationInfo" column family */
             ColumnFamily columnFamily = columnFamilies.get(SystemTable.cfName_);
             long oldTokenColumnTimestamp = columnFamily.getColumn(SystemTable.token_).timestamp();
@@ -175,7 +161,7 @@ public class SystemTable
             IColumn tokenColumn = new Column(SystemTable.token_, token.toByteArray(), oldTokenColumnTimestamp + 1);
             /* replace the old "Token" column with this new one. */
             logger_.debug("Replacing old token " + new BigInteger( columnFamily.getColumn(SystemTable.token_).value() ).toString() + " with token " + token.toString());
-            columnFamily.addColumn(SystemTable.token_, tokenColumn);
+            columnFamily.addColumn(tokenColumn);
             reset(systemRow_);
         }
     }
