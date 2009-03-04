@@ -304,9 +304,6 @@ public final class ColumnFamily
         markedForDeleteAt = timestamp;
     }
 
-    /* TODO this is tempting to misuse: the goal is to send a timestamp to the nodes w/ the data,
-       saying to delete all applicable columns.  other than that it has no meaning!
-       Thus, this should really be part of the RowMutation message. */
     public boolean isMarkedForDelete()
     {
         return markedForDeleteAt > Long.MIN_VALUE;

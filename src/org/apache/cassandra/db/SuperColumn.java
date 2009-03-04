@@ -335,8 +335,7 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
     public IColumn deserialize(DataInputStream dis) throws IOException
     {
         SuperColumn superColumn = defreezeSuperColumn(dis);
-        if ( !superColumn.isMarkedForDelete() )
-            fillSuperColumn(superColumn, dis);
+        fillSuperColumn(superColumn, dis);
         return superColumn;
     }
 
@@ -352,8 +351,7 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
 
     private void fillSuperColumn(IColumn superColumn, DataInputStream dis) throws IOException
     {
-        if ( dis.available() == 0 )
-            return;
+        assert dis.available() != 0;
 
         /* read the number of columns */
         int size = dis.readInt();
@@ -375,8 +373,7 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
         superColumn = filter.filter(superColumn, dis);
         if(superColumn != null)
         {
-            if ( !superColumn.isMarkedForDelete() )
-                fillSuperColumn(superColumn, dis);
+            fillSuperColumn(superColumn, dis);
             return superColumn;
         }
         else
@@ -405,25 +402,22 @@ class SuperColumnSerializer implements ICompactSerializer2<IColumn>
             IColumn superColumn = defreezeSuperColumn(dis);
             if(name.equals(superColumn.name()))
             {
-                if ( !superColumn.isMarkedForDelete() )
+                /* read the number of columns stored */
+                int size = dis.readInt();
+                /* read the size of all columns */
+                dis.readInt();
+                IColumn column = null;
+                for ( int i = 0; i < size; ++i )
                 {
-                    /* read the number of columns stored */
-                    int size = dis.readInt();
-                    /* read the size of all columns */
-                    dis.readInt();
-                	IColumn column = null;
-                    for ( int i = 0; i < size; ++i )
+                    column = Column.serializer().deserialize(dis, filter);
+                    if(column != null)
                     {
-                    	column = Column.serializer().deserialize(dis, filter);
-                    	if(column != null)
-                    	{
-                            superColumn.addColumn(column.name(), column);
-                    		column = null;
-                    		if(filter.isDone())
-                    		{
-                    			break;
-                    		}
-                    	}
+                        superColumn.addColumn(column.name(), column);
+                        column = null;
+                        if(filter.isDone())
+                        {
+                            break;
+                        }
                     }
                 }
                 return superColumn;

@@ -292,6 +292,52 @@ public class RowMutation implements Serializable
         table.load(row);
     }
 
+    public static RowMutation getRowMutation(batch_mutation_t batchMutation)
+    {
+        RowMutation rm = new RowMutation(batchMutation.table,
+                                         batchMutation.key.trim());
+        for (String cfname : batchMutation.cfmap.keySet())
+        {
+            List<column_t> list = batchMutation.cfmap.get(cfname);
+            for (column_t columnData : list)
+            {
+                rm.add(cfname + ":" + columnData.columnName,
+                       columnData.value.getBytes(), columnData.timestamp);
+
+            }
+        }
+        return rm;
+    }
+
+    public static RowMutation getRowMutation(batch_mutation_super_t batchMutationSuper)
+    {
+        RowMutation rm = new RowMutation(batchMutationSuper.table,
+                                         batchMutationSuper.key.trim());
+        Set keys = batchMutationSuper.cfmap.keySet();
+        Iterator keyIter = keys.iterator();
+        while (keyIter.hasNext())
+        {
+            Object key = keyIter.next(); // Get the next key.
+            List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
+            for (superColumn_t superColumnData : list)
+            {
+                if (superColumnData.columns.size() != 0)
+                {
+                    for (column_t columnData : superColumnData.columns)
+                    {
+                        rm.add(key.toString() + ":" + superColumnData.name + ":" + columnData.columnName,
+                               columnData.value.getBytes(), columnData.timestamp);
+                    }
+                }
+                else
+                {
+                    rm.add(key.toString() + ":" + superColumnData.name, ArrayUtils.EMPTY_BYTE_ARRAY, 0);
+                }
+            }
+        }
+        return rm;
+    }
+
     public String toString()
     {
         return "RowMutation(" +

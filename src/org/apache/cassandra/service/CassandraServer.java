@@ -478,108 +478,34 @@ public class CassandraServer extends FacebookBase implements
     
     public boolean batch_insert_blocking(batch_mutation_t batchMutation)
     {
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		// 3. SendRR ( to all the nodes above )
-		// 4. Wait for a response from atleast X nodes where X <= N
-		// 5. return success
-    	boolean result = false;
-		try
-		{
-			logger_.warn(" batch_insert_blocking");
-			validateTable(batchMutation.table);
-			IResponseResolver<Boolean> writeResponseResolver = new WriteResponseResolver();
-			QuorumResponseHandler<Boolean> quorumResponseHandler = new QuorumResponseHandler<Boolean>(
-					DatabaseDescriptor.getReplicationFactor(),
-					writeResponseResolver);
-			EndPoint[] endpoints = storageService.getNStorageEndPoint(batchMutation.key);
-			// TODO: throw a thrift exception if we do not have N nodes
-
-			logger_.debug(" Creating the row mutation");
-			RowMutation rm = new RowMutation(batchMutation.table,
-					batchMutation.key.trim());
-			Set keys = batchMutation.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<column_t> list = batchMutation.cfmap.get(key);
-				for (column_t columnData : list)
-				{
-					rm.add(key.toString() + ":" + columnData.columnName,
-							columnData.value.getBytes(), columnData.timestamp);
-
-				}
-			}            
-            
-			RowMutationMessage rmMsg = new RowMutationMessage(rm);           
-			Message message = new Message(StorageService.getLocalStorageEndPoint(), 
-                    StorageService.mutationStage_,
-					StorageService.mutationVerbHandler_, 
-                    new Object[]{ rmMsg }
-            );
-			MessagingService.getMessagingInstance().sendRR(message, endpoints,
-					quorumResponseHandler);
-			logger_.debug(" Calling quorum response handler's get");
-			result = quorumResponseHandler.get(); 
-                       
-			// TODO: if the result is false that means the writes to all the
-			// servers failed hence we need to throw an exception or return an
-			// error back to the client so that it can take appropriate action.
-		}
-		catch (Exception e)
-		{
-			logger_.info( LogUtil.throwableToString(e) );
-		}
-		return result;
-    	
+        logger_.debug("batch_insert_blocking");
+        RowMutation rm = RowMutation.getRowMutation(batchMutation);
+        return StorageProxy.insertBlocking(rm);
     }
+
 	public void batch_insert(batch_mutation_t batchMutation)
 	{
-		// 1. Get the N nodes from storage service where the data needs to be
-		// replicated
-		// 2. Construct a message for read\write
-		// 3. SendRR ( to all the nodes above )
-		// 4. Wait for a response from atleast X nodes where X <= N
-		// 5. return success
-
-		try
-		{
-			logger_.debug(" batch_insert");
-			logger_.debug(" Creating the row mutation");
-			validateTable(batchMutation.table);
-			RowMutation rm = new RowMutation(batchMutation.table,
-					batchMutation.key.trim());
-			if(batchMutation.cfmap != null)
-			{
-				Set keys = batchMutation.cfmap.keySet();
-				Iterator keyIter = keys.iterator();
-				while (keyIter.hasNext())
-				{
-					Object key = keyIter.next(); // Get the next key.
-					List<column_t> list = batchMutation.cfmap.get(key);
-					for (column_t columnData : list)
-					{
-						rm.add(key.toString() + ":" + columnData.columnName,
-								columnData.value.getBytes(), columnData.timestamp);
-	
-					}
-				}
-			}
-			assert batchMutation.cfmapdel == null;
-			StorageProxy.insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.info( LogUtil.throwableToString(e) );
-		}
-		return;
+        logger_.debug("batch_insert");
+        RowMutation rm = RowMutation.getRowMutation(batchMutation);
+        StorageProxy.insert(rm);
 	}
 
     public void remove(String tablename, String key, String columnFamily_column)
 	{
 		throw new UnsupportedOperationException("Remove is coming soon");
+	}
+
+    public boolean remove(String tablename, String key, String columnFamily_column, long timestamp, int block_for)
+	{
+        logger_.debug("remove");
+        RowMutation rm = new RowMutation(tablename, key.trim());
+        rm.delete(columnFamily_column, timestamp);
+        if (block_for > 0) {
+            return StorageProxy.insertBlocking(rm);
+        } else {
+            StorageProxy.insert(rm);
+            return true;
+        }
 	}
 
     public List<superColumn_t> get_slice_super_by_names(String tablename, String key, String columnFamily, List<String> superColumnNames) throws CassandraException, TException
@@ -787,87 +713,16 @@ public class CassandraServer extends FacebookBase implements
     
     public boolean batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper)
     {
-    	boolean result = false;
-		try
-		{
-			logger_.warn(" batch_insert_SuperColumn_blocking");
-			logger_.debug(" Creating the row mutation");
-			validateTable(batchMutationSuper.table);
-			RowMutation rm = new RowMutation(batchMutationSuper.table,
-					batchMutationSuper.key.trim());
-			Set keys = batchMutationSuper.cfmap.keySet();
-			Iterator keyIter = keys.iterator();
-			while (keyIter.hasNext())
-			{
-				Object key = keyIter.next(); // Get the next key.
-				List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
-				for (superColumn_t superColumnData : list)
-				{
-					if(superColumnData.columns.size() != 0 )
-					{
-						for (column_t columnData : superColumnData.columns)
-						{
-							rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
-									columnData.value.getBytes(), columnData.timestamp);
-						}
-					}
-					else
-					{
-						rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
-					}
-				}
-			}            
-            StorageProxy.insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.info( LogUtil.throwableToString(e) );
-		}
-		return result;
-    	
+        logger_.debug("batch_insert_SuperColumn_blocking");
+        RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
+        return StorageProxy.insertBlocking(rm);
     }
+
     public void batch_insert_superColumn(batch_mutation_super_t batchMutationSuper)
     {
-		try
-		{
-			logger_.debug(" batch_insert");
-			logger_.debug(" Creating the row mutation");
-			validateTable(batchMutationSuper.table);
-			RowMutation rm = new RowMutation(batchMutationSuper.table,
-					batchMutationSuper.key.trim());
-			if(batchMutationSuper.cfmap != null)
-			{
-				Set keys = batchMutationSuper.cfmap.keySet();
-				Iterator keyIter = keys.iterator();
-				while (keyIter.hasNext())
-				{
-					Object key = keyIter.next(); // Get the next key.
-					List<superColumn_t> list = batchMutationSuper.cfmap.get(key);
-					for (superColumn_t superColumnData : list)
-					{
-						if(superColumnData.columns.size() != 0 )
-						{
-							for (column_t columnData : superColumnData.columns)
-							{
-								rm.add(key.toString() + ":" + superColumnData.name  +":" + columnData.columnName,
-										columnData.value.getBytes(), columnData.timestamp);
-							}
-						}
-						else
-						{
-							rm.add(key.toString() + ":" + superColumnData.name, new byte[0], 0);
-						}
-					}
-				} 
-			}
-			assert batchMutationSuper.cfmapdel == null;
-            StorageProxy.insert(rm);
-		}
-		catch (Exception e)
-		{
-			logger_.info( LogUtil.throwableToString(e) );
-		}
-		return;
+        logger_.debug("batch_insert_SuperColumn");
+        RowMutation rm = RowMutation.getRowMutation(batchMutationSuper);
+        StorageProxy.insert(rm);
     }
 
     public String getStringProperty(String propertyName) throws TException

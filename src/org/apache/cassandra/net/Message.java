@@ -160,7 +160,7 @@ public class Message implements java.io.Serializable
         header_.setMessageId(id);
     }    
 
-    public Message getReply(EndPoint from, Object[] args)
+    public Message getReply(EndPoint from, Object... args)
     {        
         Message response = new Message(getMessageId(),
                                        from,
