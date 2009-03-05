@@ -161,7 +161,7 @@ public class Table
             cfTypeMap_.put(cf, type);
         }
         
-        boolean isEmpty()
+        public boolean isEmpty()
         {
             return cfIdMap_.isEmpty();
         }
@@ -201,7 +201,7 @@ public class Table
             return cfIdMap_.containsKey(cfName);
         }
         
-        void apply() throws IOException
+        public void apply() throws IOException
         {
             String table = DatabaseDescriptor.getTables().get(0);
             DataOutputBuffer bufOut = new DataOutputBuffer();
@@ -940,14 +940,5 @@ public class Table
         row.clear();
         long timeTaken = System.currentTimeMillis() - start;
         dbAnalyticsSource_.updateWriteStatistics(timeTaken);
-    }
-
-    public static void main(String[] args) throws Throwable
-    {
-        StorageService service = StorageService.instance();
-        service.start();
-        Table table = Table.open("Mailbox");
-        Row row = table.get("35300190:1");
-        System.out.println( row.key() );
     }
 }
