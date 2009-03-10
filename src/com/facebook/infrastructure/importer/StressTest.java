@@ -412,11 +412,11 @@ public class StressTest
 				Thread.sleep(0, 1000000000/requestsPerSecond_);
 			else
 				Thread.sleep(1000/requestsPerSecond_);
-			peerstorageClient_.batch_insert(batchMutation, 0);
+			peerstorageClient_.batch_insert(batchMutation);
 		} catch (Exception e) {
 			try {
 				peerstorageClient_ = connect();
-				peerstorageClient_.batch_insert(batchMutation, 0);
+				peerstorageClient_.batch_insert(batchMutation);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
@@ -431,13 +431,13 @@ public class StressTest
 			else
 				Thread.sleep(1000/requestsPerSecond_);
 			long t = System.currentTimeMillis();
-			peerstorageClient_.batch_insert_superColumn(batchMutation, 0);
+			peerstorageClient_.batch_insert_superColumn(batchMutation);
 			logger_.debug("Time taken for thrift..."
 					+ (System.currentTimeMillis() - t));
 		} catch (Exception e) {
 			try {
 				peerstorageClient_ = connect();
-				peerstorageClient_.batch_insert_superColumn(batchMutation, 0);
+				peerstorageClient_.batch_insert_superColumn(batchMutation);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
@@ -649,9 +649,9 @@ public class StressTest
 	    	int key = random.nextInt();
 	    	int threadId = random.nextInt();
 	    	int word = random.nextInt();
-			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxMailList0:" + Integer.toString(threadId),  new String(bytes1), t++, 0);
-			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxThreadList0:" + Integer.toString(word) + ":" + Integer.toString(threadId),  new String(bytes), t++, 0);
-			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxUserList0:"+ Integer.toString(word) + ":" + Integer.toString(threadId),  new String(bytes), t++, 0);
+			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxMailList0:" + Integer.toString(threadId),  new String(bytes1), t++);
+			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxThreadList0:" + Integer.toString(word) + ":" + Integer.toString(threadId),  new String(bytes), t++);
+			peerstorageClient_.insert("Mailbox", Integer.toString(key), "MailboxUserList0:"+ Integer.toString(word) + ":" + Integer.toString(threadId),  new String(bytes), t++);
     	}
 	}
 

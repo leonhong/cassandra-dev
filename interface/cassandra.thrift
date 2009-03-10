@@ -61,12 +61,14 @@ service Cassandra extends fb303.FacebookService
   # range query: returns matching keys
   list<string>	        get_range(string tablename, string startkey) throws (1: InvalidRequestException ire),
 
-  # creating/updating data.  the return value will always be True
-  # when block_for is not positive.
-  bool     	insert(string tablename,string key,string columnFamily_column, string cellData, i64 timestamp, i32 block_for=0),
-  bool         	batch_insert(batch_mutation_t batchMutation, i32 block_for=0),
-  bool         	batch_insert_superColumn(batch_mutation_super_t batchMutationSuper, i32 block_for=0),
+  # creating/updating data
+  async void     	insert(string tablename,string key,string columnFamily_column, string cellData, i64 timestamp),
+  bool     		insert_blocking(string tablename, string key, string columnFamily_column, string cellData, i64 timestamp),
+  async void     	batch_insert(batch_mutation_t batchMutation),
+  bool           	batch_insert_blocking(batch_mutation_t batchMutation),
+  async void          	batch_insert_superColumn(batch_mutation_super_t batchMutationSuper),
+  bool                	batch_insert_superColumn_blocking(batch_mutation_super_t batchMutationSuper),
 
   # removing
-  bool     	remove(string tablename, string key, string columnFamily_column, i64 timestamp, i32 block_for=0),
+  async void     	remove(string tablename, string key, string columnFamily_column, i64 timestamp, i32 block_for=0),
 }

@@ -13,7 +13,7 @@ _SUPER_COLUMNS = [superColumn_t(name='sc1',
                                 columns=[column_t(columnName='c5', value='value5', timestamp=0),
                                          column_t(columnName='c6', value='value6', timestamp=0)])]
 
-def _insert_simple(method=lambda a,b,c,d: client.insert(a, b, c, d, 1)):
+def _insert_simple(method=client.insert_blocking):
     method('Table1', 'key1', 'Standard1:c1', 'value1', 0)
     method('Table1', 'key1', 'Standard1:c2', 'value2', 0)
 
@@ -71,7 +71,7 @@ class TestMutations(CassandraTester):
         _verify_simple()
 
     def test_insert_blocking(self):
-        _insert_simple()
+        _insert_simple(client.insert_blocking)
         _verify_simple()
 
     def test_super_insert(self):
@@ -84,7 +84,7 @@ class TestMutations(CassandraTester):
         _verify_batch()
 
     def test_batch_insert_blocking(self):
-        _insert_batch(lambda a: client.batch_insert(a, 1))
+        _insert_batch(client.batch_insert_blocking)
         _verify_batch()
 
 # does not pass
