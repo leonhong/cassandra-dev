@@ -784,6 +784,9 @@ public class SequenceFile
                     }
                     else
                     {
+                        // TODO this is all kinds of screwed up -- we're basically reproducing the ColumnFamily deserialize/serialize code,
+                        // but in a way that it's easy for things to get de-synched and broken.
+
                     	/* check if we have an index */
                         boolean hasColumnIndexes = file_.readBoolean();
                         int totalBytesRead = 1;
@@ -802,8 +805,8 @@ public class SequenceFile
                         dataSize -= (utfPrefix_ + cfName.length());
 
                         /* read if this cf is marked for delete */
-                        boolean markedForDelete = file_.readBoolean();
-                        dataSize -= 1;
+                        long markedForDeleteAt = file_.readLong();
+                        dataSize -= 8;
 
                         /* read the total number of columns */
                         int totalNumCols = file_.readInt();
@@ -835,7 +838,7 @@ public class SequenceFile
                         /* write the column family name */
                         bufOut.writeUTF(cfName);
                         /* write if this cf is marked for delete */
-                        bufOut.writeBoolean(markedForDelete);
+                        bufOut.writeLong(markedForDeleteAt);
                         /* write number of columns */
                         bufOut.writeInt(numColsReturned);
                         int prevPosition = 0;
