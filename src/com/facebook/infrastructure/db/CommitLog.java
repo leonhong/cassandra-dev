@@ -375,7 +375,8 @@ class CommitLog
                                 row.removeColumnFamily(columnFamily);
                         }
                         if ( !row.isEmpty() )
-                        {                            
+                        {
+                            logger_.debug("recover applying " + row);
                         	table.applyNow(row);
                         }
                     }
