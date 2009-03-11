@@ -48,7 +48,6 @@ import org.apache.cassandra.io.IndexHelper;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.net.EndPoint;
-import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.FileUtils;
@@ -1272,41 +1271,7 @@ public class ColumnFamilyStore
                 + totalBytesWritten + "   Total keys read ..." + totalkeysRead);
         return result;
     }
-    
-    private void doWrite(SSTable ssTable, String key, DataOutputBuffer bufOut) throws IOException
-    {
-    	PartitionerType pType = StorageService.getPartitionerType();    	
-    	switch ( pType )
-    	{
-    		case OPHF:
-    			ssTable.append(key, bufOut);
-    			break;
-    			
-    	    default:
-    	    	String[] peices = key.split(":");
-    	    	key = peices[1];
-    	    	BigInteger hash = new BigInteger(peices[0]);
-    	    	ssTable.append(key, hash, bufOut);
-    	    	break;
-    	}
-    }
-    
-    private void doFill(BloomFilter bf, String key)
-    {
-    	PartitionerType pType = StorageService.getPartitionerType();    	
-    	switch ( pType )
-    	{
-    		case OPHF:
-    			bf.fill(key);
-    			break;
-    			
-    	    default:
-    	    	String[] peices = key.split(":");    	    	
-    	    	bf.fill(peices[1]);
-    	    	break;
-    	}
-    }
-    
+
     /*
      * This function does the actual compaction for files.
      * It maintains a priority queue of with the first key from each file
@@ -1425,14 +1390,13 @@ public class ColumnFamilyStore
 	                    	         
 	                    if ( ssTable == null )
 	                    {
-	                    	PartitionerType pType = StorageService.getPartitionerType();
-	                    	ssTable = new SSTable(compactionFileLocation, mergedFileName, pType);	                    	
+	                    	ssTable = new SSTable(compactionFileLocation, mergedFileName);	                    	
 	                    }
-	                    doWrite(ssTable, lastkey, bufOut);	                 
-	                    
+                        ssTable.append(lastkey, bufOut);
+
                         /* Fill the bloom filter with the key */
-	                    doFill(compactedBloomFilter, lastkey);                        
-	                    totalkeysWritten++;
+                        compactedBloomFilter.fill(lastkey);
+                        totalkeysWritten++;
 	                    for (FileStruct filestruct : lfs)
 	                    {
 	                    	try
