@@ -19,6 +19,7 @@
 package org.apache.cassandra.service;
 
 import java.math.BigInteger;
+import java.util.Comparator;
 
 import org.apache.cassandra.utils.FBUtilities;
 
@@ -31,8 +32,32 @@ import org.apache.cassandra.utils.FBUtilities;
  */
 public class RandomPartitioner implements IPartitioner
 {
-	public BigInteger hash(String key)
+    private static final Comparator<String> comparator = new Comparator<String>() {
+        public int compare(String o1, String o2)
+        {
+            BigInteger i1 = new BigInteger(o1.split(":")[0]);
+            BigInteger i2 = new BigInteger(o2.split(":")[0]);
+            return i2.compareTo(i1);
+        }
+    };
+
+    public BigInteger hash(String key)
 	{
 		return FBUtilities.hash(key);
 	}
+
+    public String decorateKey(String key)
+    {
+        return hash(key).toString() + ":" + key;
+    }
+
+    public String undecorateKey(String decoratedKey)
+    {
+        return decoratedKey.split(":")[1];
+    }
+
+    public Comparator<String> getReverseDecoratedKeyComparator()
+    {
+        return comparator;
+    }
 }

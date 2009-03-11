@@ -1272,39 +1272,10 @@ public class ColumnFamilyStore
                 + totalBytesWritten + "   Total keys read ..." + totalkeysRead);
         return result;
     }
-    
-    private void doWrite(SSTable ssTable, String key, DataOutputBuffer bufOut) throws IOException
+
+    private void doFill(BloomFilter bf, String decoratedKey)
     {
-    	PartitionerType pType = StorageService.getPartitionerType();    	
-    	switch ( pType )
-    	{
-    		case OPHF:
-    			ssTable.append(key, bufOut);
-    			break;
-    			
-    	    default:
-    	    	String[] peices = key.split(":");
-    	    	key = peices[1];
-    	    	BigInteger hash = new BigInteger(peices[0]);
-    	    	ssTable.append(key, hash, bufOut);
-    	    	break;
-    	}
-    }
-    
-    private void doFill(BloomFilter bf, String key)
-    {
-    	PartitionerType pType = StorageService.getPartitionerType();    	
-    	switch ( pType )
-    	{
-    		case OPHF:
-    			bf.fill(key);
-    			break;
-    			
-    	    default:
-    	    	String[] peices = key.split(":");    	    	
-    	    	bf.fill(peices[1]);
-    	    	break;
-    	}
+        bf.fill(StorageService.getPartitioner().undecorateKey(decoratedKey));
     }
     
     /*
@@ -1425,11 +1396,10 @@ public class ColumnFamilyStore
 	                    	         
 	                    if ( ssTable == null )
 	                    {
-	                    	PartitionerType pType = StorageService.getPartitionerType();
-	                    	ssTable = new SSTable(compactionFileLocation, mergedFileName, pType);	                    	
+	                    	ssTable = new SSTable(compactionFileLocation, mergedFileName);	                    	
 	                    }
-	                    doWrite(ssTable, lastkey, bufOut);	                 
-	                    
+                        ssTable.append(lastkey, bufOut);
+
                         /* Fill the bloom filter with the key */
 	                    doFill(compactedBloomFilter, lastkey);                        
 	                    totalkeysWritten++;

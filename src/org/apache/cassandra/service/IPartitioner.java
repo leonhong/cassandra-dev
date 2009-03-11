@@ -19,8 +19,17 @@
 package org.apache.cassandra.service;
 
 import java.math.BigInteger;
+import java.util.Comparator;
 
 public interface IPartitioner
 {
     public BigInteger hash(String key);
+
+    /** transform key to on-disk format s.t. keys are stored in node comparison order.
+     *  this lets bootstrap rip out parts of the sstable sequentially instead of doing random seeks. */
+    public String decorateKey(String key);
+
+    public String undecorateKey(String decoratedKey);
+
+    public Comparator<String> getReverseDecoratedKeyComparator();
 }
