@@ -1097,12 +1097,6 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         doBootstrap(nodes);
     }
     
-    public String getAppropriateToken(int count)
-    {
-        BigInteger token = BootstrapAndLbHelper.getTokenBasedOnPrimaryCount(count);
-        return token.toString();
-    }
-    
     public void doGC()
     {
         List<String> tables = DatabaseDescriptor.getTables();
