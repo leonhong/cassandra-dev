@@ -1,3 +1,5 @@
+# nosetests --tests=test.stress:Stress.ten_million_inserts
+
 from hashlib import md5
 from threading import Thread
 from thread import get_ident
@@ -15,8 +17,8 @@ class Inserter(Thread):
             data = md5(str(i)).hexdigest()
             for j in xrange(0, 1000):
                 key = '%s.%s.%s' % (time.time(), id, j)
-                client.insert('Mytable', key, 'Test:A', data, i)
-                client.insert('Mytable', key, 'Test:B', data, i)
+                client.insert('Table1', key, 'Standard1:A', data, i)
+                client.insert('Table1', key, 'Standard1:B', data, i)
             self.count += 1000
 
 class Stress(CassandraTester):
