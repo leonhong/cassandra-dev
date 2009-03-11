@@ -18,25 +18,24 @@
 
 package org.apache.cassandra.io;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import org.apache.log4j.Logger;
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.channels.FileChannel;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.service.PartitionerType;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BasicUtilities;
 import org.apache.cassandra.utils.BloomFilter;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.FileUtils;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.log4j.Logger;
+import org.apache.cassandra.utils.*;
 
 /**
  * This class is built on top of the SequenceFile. It stores
@@ -139,6 +138,37 @@ public class SSTable
     }
     
     /**
+     * This compares two strings and does it in reverse
+     * order.
+     * 
+     * @author alakshman
+     *
+     */
+    private static class OrderPreservingPartitionerComparator implements Comparator<String>
+    {
+        public int compare(String c1, String c2) 
+        {
+            return c2.compareTo(c1);
+        } 
+    }
+
+    /**
+     * This class compares two BigInteger's passes in
+     * as strings and does so in reverse order.
+     * @author alakshman
+     *
+     */
+    private static class RandomPartitionerComparator implements Comparator<String>
+    {
+        public int compare(String c1, String c2) 
+        {
+            BigInteger b1 = new BigInteger(c1);
+            BigInteger b2 = new BigInteger(c2);
+            return b2.compareTo(b1);
+        } 
+    }
+    
+    /**
      * This is a simple container for the index Key and its corresponding position
      * in the data file. Binary search is performed on a list of these objects
      * to lookup keys within the SSTable data file.
@@ -171,7 +201,20 @@ public class SSTable
 
         public int compareTo(KeyPositionInfo kPosInfo)
         {
-            return key_.compareTo(kPosInfo.key_);
+            int value = 0;
+            PartitionerType pType = StorageService.getPartitionerType();
+            switch( pType )
+            {
+                case OPHF:
+                    value = key_.compareTo(kPosInfo.key_);                    
+                    break;
+                    
+                default:
+                    BigInteger b = new BigInteger(key_);
+                    value = b.compareTo( new BigInteger(kPosInfo.key_) );
+                    break;
+            }
+            return value;
         }
 
         public String toString()
@@ -326,9 +369,9 @@ public class SSTable
     private long firstBlockPosition_ = 0L;    
     private int indexKeysWritten_ = 0;
     /* Holds the keys and their respective positions of the current block index */
-    private SortedMap<String, BlockMetadata> blockIndex_ = new TreeMap<String, BlockMetadata>(Collections.reverseOrder());
+    private SortedMap<String, BlockMetadata> blockIndex_;    
     /* Holds all the block indicies for this SSTable */
-    private List<SortedMap<String, BlockMetadata>> blockIndexes_ = new ArrayList<SortedMap<String, BlockMetadata>>();
+    private List<SortedMap<String, BlockMetadata>> blockIndexes_;
     
     /**
      * This ctor basically gets passed in the full path name
@@ -348,8 +391,44 @@ public class SSTable
     public SSTable(String directory, String filename) throws IOException
     {  
         dataFile_ = directory + System.getProperty("file.separator") + filename + "-Data.db";                
+        blockIndex_ = new TreeMap<String, BlockMetadata>(Collections.reverseOrder());
+        blockIndexes_ = new ArrayList<SortedMap<String, BlockMetadata>>();        
+        // dataWriter_ = SequenceFile.writer(dataFile_);
         dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 4*1024*1024);
         SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition(); 
+    } 
+    
+    private void initBlockIndex()
+    {
+        initBlockIndex(StorageService.getPartitionerType());
+    }
+    
+    private void initBlockIndex(PartitionerType pType)
+    {
+        switch ( pType )
+        {
+            case OPHF: 
+                blockIndex_ = new TreeMap<String, BlockMetadata>( new SSTable.OrderPreservingPartitionerComparator() );                
+               break;
+               
+            default:
+                blockIndex_ = new TreeMap<String, BlockMetadata>( new SSTable.RandomPartitionerComparator() );
+                break;
+        }
+    }
+    
+    /**
+     * This ctor is used for DB writes into the SSTable. Use this
+     * version to write to the SSTable.
+    */
+    public SSTable(String directory, String filename, PartitionerType pType) throws IOException
+    {        
+        dataFile_ = directory + System.getProperty("file.separator") + filename + "-Data.db";  
+        dataWriter_ = SequenceFile.bufferedWriter(dataFile_, 4*1024*1024);        
+        SSTable.positionAfterFirstBlockIndex_ = dataWriter_.getCurrentPosition(); 
+        /* set up the block index based on partition type */
+        initBlockIndex(pType);
+        blockIndexes_ = new ArrayList<SortedMap<String, BlockMetadata>>();
     }
     
     private void loadBloomFilter(IFileReader indexReader, long size) throws IOException
@@ -519,7 +598,7 @@ public class SSTable
         try
         {
         	/* Morph the key */
-            key = key;
+        	key = morphKey(key);
             Coordinate fileCoordinate = getCoordinates(key, dataReader);
             /* Get offset of key from block Index */
             dataReader.seek(fileCoordinate.end_);
@@ -564,6 +643,25 @@ public class SSTable
         return currentPosition;
     }
     
+    private long beforeAppend(BigInteger hash) throws IOException
+    {
+        if(hash == null )
+            throw new IOException("Keys must not be null.");
+        if ( lastWrittenKey_ != null )
+        {
+            BigInteger previousKey = new BigInteger(lastWrittenKey_);
+            if ( hash.compareTo(previousKey) <= 0 )
+            {
+                logger_.info("Last written key : " + previousKey);
+                logger_.info("Current key : " + hash);
+                logger_.info("Writing into file " + dataFile_);
+                throw new IOException("Keys must be written in ascending order.");
+            }
+        }
+        long currentPosition = (lastWrittenKey_ == null) ? SSTable.positionAfterFirstBlockIndex_ : dataWriter_.getCurrentPosition();
+        return currentPosition;
+    }
+
     private void afterAppend(String key, long position, long size) throws IOException
     {
         ++indexKeysWritten_;
@@ -573,6 +671,20 @@ public class SSTable
         {
         	blockIndexes_.add(blockIndex_);
         	blockIndex_ = new TreeMap<String, BlockMetadata>(Collections.reverseOrder());
+            indexKeysWritten_ = 0;
+        }                
+    }
+    
+    private void afterAppend(BigInteger hash, long position, long size) throws IOException
+    {
+        ++indexKeysWritten_;
+        String key = hash.toString();
+        lastWrittenKey_ = key;
+        blockIndex_.put(key, new BlockMetadata(position, size));
+        if ( indexKeysWritten_ == indexInterval_ )
+        {
+            blockIndexes_.add(blockIndex_);
+            initBlockIndex();
             indexKeysWritten_ = 0;
         }                
     }
@@ -650,12 +762,28 @@ public class SSTable
         dataWriter_.append(key, buffer);
         afterAppend(key, currentPosition, buffer.getLength());
     }
+    
+    public void append(String key, BigInteger hash, DataOutputBuffer buffer) throws IOException
+    {
+        long currentPosition = beforeAppend(hash);
+        /* Use as key - hash + ":" + key */
+        dataWriter_.append(hash + ":" + key, buffer);
+        afterAppend(hash, currentPosition, buffer.getLength());
+    }
 
     public void append(String key, byte[] value) throws IOException
     {
         long currentPosition = beforeAppend(key);
         dataWriter_.append(key, value);
         afterAppend(key, currentPosition, value.length );
+    }
+    
+    public void append(String key, BigInteger hash, byte[] value) throws IOException
+    {
+        long currentPosition = beforeAppend(hash);
+        /* Use as key - hash + ":" + key */
+        dataWriter_.append(hash + ":" + key, value);
+        afterAppend(hash, currentPosition, value.length);
     }
 
     private Coordinate getCoordinates(String key, IFileReader dataReader) throws IOException
@@ -715,7 +843,30 @@ public class SSTable
         
         return new Coordinate(start, end);
     }
-
+    
+    /**
+     * Convert the application key into the appropriate application
+     * key based on the partition type.
+     * 
+     * @param key the application key
+     * @return the appropriate key based on partition mechanism
+    */
+    private String morphKey(String key)
+    {
+        String internalKey = key;
+        PartitionerType pType = StorageService.getPartitionerType();
+        switch ( pType )
+        {
+            case OPHF:
+                break;
+                
+            default:
+                internalKey = FBUtilities.hash(key).toString();
+                break;
+        }
+        return internalKey;
+    }
+    
     public DataInputBuffer next(String key, String cf, List<String> cNames) throws IOException
     {
     	DataInputBuffer bufIn = null;        
@@ -723,7 +874,9 @@ public class SSTable
         try
         {
             dataReader = SequenceFile.reader(dataFile_);
-            Coordinate fileCoordinate = getCoordinates(key, dataReader);
+            /* Morph key into actual key based on the partition type. */ 
+            key = morphKey(key);
+            Coordinate fileCoordinate = getCoordinates(key, dataReader);    
             /*
              * we have the position we have to read from in order to get the
              * column family, get the column family and column(s) needed.
@@ -747,6 +900,8 @@ public class SSTable
         try
         {
             dataReader = SequenceFile.reader(dataFile_);
+            /* Morph key into actual key based on the partition type. */ 
+            key = morphKey(key);
             Coordinate fileCoordinate = getCoordinates(key, dataReader);
             /*
              * we have the position we have to read from in order to get the
@@ -771,6 +926,8 @@ public class SSTable
         try
         {
             dataReader = SequenceFile.reader(dataFile_);
+            /* Morph key into actual key based on the partition type. */ 
+            key = morphKey(key);
             Coordinate fileCoordinate = getCoordinates(key, dataReader);
             /*
              * we have the position we have to read from in order to get the

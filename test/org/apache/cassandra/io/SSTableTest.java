@@ -28,6 +28,8 @@ public class SSTableTest extends ServerTest {
         bf.fill(key);
         ssTable.close(bf);
 
+        // TODO append/next are not symmetrical ops anymore
+        
         // verify
         ssTable = new SSTable(f.getPath() + "-Data.db");
         DataInputBuffer bufIn = ssTable.next(key, "Test:C");

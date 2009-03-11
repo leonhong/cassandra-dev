@@ -21,17 +21,25 @@ package org.apache.cassandra.io;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.db.RowMutation;
+import org.apache.cassandra.service.PartitionerType;
+import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
+import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.LogUtil;
 import org.apache.log4j.Logger;
 
@@ -133,6 +141,8 @@ public class SequenceFile
         {
             if ( key == null )
                 throw new IllegalArgumentException("Key cannot be NULL.");
+
+            file_.seek(file_.getFilePointer());
             file_.writeUTF(key);
             int length = buffer.getLength();
             file_.writeInt(length);
@@ -143,6 +153,8 @@ public class SequenceFile
         {
             if ( key == null )
                 throw new IllegalArgumentException("Key cannot be NULL.");
+
+            file_.seek(file_.getFilePointer());
             file_.writeUTF(key);
             file_.writeInt(value.length);
             file_.write(value);
@@ -152,6 +164,8 @@ public class SequenceFile
         {
             if ( key == null )
                 throw new IllegalArgumentException("Key cannot be NULL.");
+
+            file_.seek(file_.getFilePointer());
             file_.writeUTF(key);
             file_.writeLong(value);
         }
@@ -546,7 +560,9 @@ public class SequenceFile
         
         /**
          * Given the application key this method basically figures if
-         * the key is in the block.
+         * the key is in the block. Key comparisons differ based on the
+         * partition function. In OPHF key is stored as is but in the
+         * case of a Random hash key used internally is hash(key):key.
          * @param key which we are looking for
          * @param in DataInput stream into which we are looking for the key.
          * @return true if key is found and false otherwise.
@@ -554,8 +570,20 @@ public class SequenceFile
          */
         protected boolean isKeyInBlock(String key, DataInput in) throws IOException
         {
+            boolean bVal = false;            
             String keyInBlock = in.readUTF();
-            return keyInBlock.equals(key);
+            PartitionerType pType = StorageService.getPartitionerType();
+            switch ( pType )
+            {
+                case OPHF:
+                    bVal = keyInBlock.equals(key);
+                    break;
+                    
+                default:                    
+                    bVal = keyInBlock.split(":")[0].equals(key);
+                    break;
+            }
+            return bVal;
         }
        
         /**
@@ -791,6 +819,33 @@ public class SequenceFile
             }
             return totalBytesRead;
         }
+        
+        /**
+         * This is useful in figuring out the key in system. If an OPHF 
+         * is used then the "key" is the application supplied key. If a random
+         * partitioning mechanism is used then the key is of the form 
+         * hash:key where hash is used internally as the key.
+         * 
+         * @param in the DataInput stream from which the key needs to be read
+         * @return the appropriate key based on partitioning type
+         * @throws IOException
+         */
+        protected String readKeyFromDisk(DataInput in) throws IOException
+        {
+            String keyInDisk = null;
+            PartitionerType pType = StorageService.getPartitionerType();
+            switch( pType )
+            {
+                case OPHF:
+                    keyInDisk = in.readUTF();                  
+                    break;
+                    
+                default:
+                    keyInDisk = in.readUTF().split(":")[0];
+                    break;
+            }
+            return keyInDisk;
+        }
 
         /**
          * This method dumps the next key/value into the DataOuputStream
@@ -815,7 +870,7 @@ public class SequenceFile
             seekTo(key, section);            
             /* note the position where the key starts */
             long startPosition = file_.getFilePointer();
-            String keyInDisk = file_.readUTF();
+            String keyInDisk = readKeyFromDisk(file_);
             if ( keyInDisk != null )
             {
                 /*
@@ -941,7 +996,7 @@ public class SequenceFile
             seekTo(key, section);            
             /* note the position where the key starts */
             long startPosition = file_.getFilePointer();
-            String keyInDisk = file_.readUTF();
+            String keyInDisk = readKeyFromDisk(file_);
             if ( keyInDisk != null )
             {
                 /*
@@ -1053,8 +1108,8 @@ public class SequenceFile
 
             seekTo(key, section);            
             /* note the position where the key starts */
-            long startPosition = file_.getFilePointer();
-            String keyInDisk = file_.readUTF();
+            long startPosition = file_.getFilePointer();            
+            String keyInDisk = readKeyFromDisk(file_);
             if ( keyInDisk != null )
             {
                 /*
@@ -1232,8 +1287,8 @@ public class SequenceFile
                    
             seekTo(key, section);            
             /* note the position where the key starts */
-            long startPosition = file_.getFilePointer();
-            String keyInDisk = file_.readUTF();
+            long startPosition = file_.getFilePointer(); 
+            String keyInDisk = readKeyFromDisk(file_);
             if ( keyInDisk != null )
             {
                 /*
