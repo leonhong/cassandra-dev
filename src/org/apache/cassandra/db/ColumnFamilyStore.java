@@ -20,7 +20,6 @@ package org.apache.cassandra.db;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,7 +47,6 @@ import org.apache.cassandra.io.IndexHelper;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.io.SequenceFile;
 import org.apache.cassandra.net.EndPoint;
-import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.utils.BloomFilter;
 import org.apache.cassandra.utils.FileUtils;
@@ -82,7 +80,7 @@ public class ColumnFamilyStore
     private ReentrantReadWriteLock lock_ = new ReentrantReadWriteLock(true);
 
     /* Flag indicates if a compaction is in process */
-    public AtomicBoolean isCompacting_ = new AtomicBoolean(false);
+    private AtomicBoolean isCompacting_ = new AtomicBoolean(false);
 
     ColumnFamilyStore(String table, String columnFamily) throws IOException
     {
@@ -131,7 +129,7 @@ public class ColumnFamilyStore
             for (File file : files)
             {
                 String filename = file.getName();
-                if(((file.length() == 0) || (filename.indexOf("-" + SSTable.temporaryFile_) != -1) ) && (filename.indexOf(columnFamily_) != -1))
+                if(((file.length() == 0) || (filename.contains("-" + SSTable.temporaryFile_)) ) && (filename.contains(columnFamily_)))
                 {
                 	file.delete();
                 	continue;
@@ -139,7 +137,7 @@ public class ColumnFamilyStore
                 String[] tblCfName = getTableAndColumnFamilyName(filename);
                 if (tblCfName[0].equals(table_)
                         && tblCfName[1].equals(columnFamily_)
-                        && filename.indexOf("-Data.db") != -1)
+                        && filename.contains("-Data.db"))
                 {
                     ssTables.add(file.getAbsoluteFile());
                 }
@@ -177,7 +175,7 @@ public class ColumnFamilyStore
      * disk and the total space oocupied by the data files
      * associated with this Column Family.
     */
-    public String cfStats(String newLineSeparator, java.text.DecimalFormat df)
+    public String cfStats(String newLineSeparator)
     {
         StringBuilder sb = new StringBuilder();
         /*
@@ -260,7 +258,7 @@ public class ColumnFamilyStore
     	if( ranges != null)
     		futurePtr = MinorCompactionManager.instance().submit(ColumnFamilyStore.this, ranges, target, fileList);
     	else
-    		MinorCompactionManager.instance().submitMajor(ColumnFamilyStore.this, ranges, skip);
+    		MinorCompactionManager.instance().submitMajor(ColumnFamilyStore.this, skip);
     	
         boolean result = true;
         try
@@ -333,8 +331,7 @@ public class ColumnFamilyStore
     {
     	// Psuedo increment so that we do not generate consecutive numbers 
     	fileIndexGenerator_.incrementAndGet();
-        String name = table_ + "-" + columnFamily_ + "-" + fileIndexGenerator_.incrementAndGet();
-        return name;
+        return table_ + "-" + columnFamily_ + "-" + fileIndexGenerator_.incrementAndGet();
     }
 
     /*
@@ -344,8 +341,7 @@ public class ColumnFamilyStore
     {
     	// Psuedo increment so that we do not generate consecutive numbers 
     	fileIndexGenerator_.incrementAndGet();
-        String name = table_ + "-" + columnFamily_ + "-" + SSTable.temporaryFile_ + "-" + fileIndexGenerator_.incrementAndGet() ;
-        return name;
+        return table_ + "-" + columnFamily_ + "-" + SSTable.temporaryFile_ + "-" + fileIndexGenerator_.incrementAndGet();
     }
 
     /*
@@ -366,9 +362,8 @@ public class ColumnFamilyStore
     	lowestIndex = getIndexFromFileName(files.get(0));
    		
    		index = lowestIndex + 1 ;
-    	
-        String name = table_ + "-" + columnFamily_ + "-" + SSTable.temporaryFile_ + "-" + index ;
-        return name;
+
+        return table_ + "-" + columnFamily_ + "-" + SSTable.temporaryFile_ + "-" + index;
     }
 
     
@@ -383,14 +378,6 @@ public class ColumnFamilyStore
         memtable_.set( new Memtable(table_, columnFamily_) );
         if(!key.equals(Memtable.flushKey_))
         	memtable_.get().put(key, columnFamily, cLogCtx);
-    }
-
-    /*
-     * This version is used when we forceflush.
-     */
-    void switchMemtable() throws IOException
-    {
-        memtable_.set( new Memtable(table_, columnFamily_) );
     }
 
     /*
@@ -412,7 +399,7 @@ public class ColumnFamilyStore
         memtable_.get().forceflush(this);
     }
 
-    void forceFlushBinary() throws IOException
+    void forceFlushBinary()
     {
         BinaryMemtableManager.instance().submit(getColumnFamilyName(), binaryMemtable_.get());
         //binaryMemtable_.get().flush(true);
@@ -455,7 +442,15 @@ public class ColumnFamilyStore
      */
     List<ColumnFamily> getColumnFamilies(String key, String columnFamilyColumn, IFilter filter) throws IOException
     {
-        List<ColumnFamily> columnFamilies = getMemoryColumnFamilies(key, columnFamilyColumn, filter);
+        List<ColumnFamily> columnFamilies1 = new ArrayList<ColumnFamily>();
+        /* Get the ColumnFamily from Memtable */
+        getColumnFamilyFromCurrentMemtable(key, columnFamilyColumn, filter, columnFamilies1);
+        if (columnFamilies1.size() == 0 || !filter.isDone())
+        {
+            /* Check if MemtableManager has any historical information */
+            MemtableManager.instance().getColumnFamily(key, columnFamily_, columnFamilyColumn, filter, columnFamilies1);
+        }
+        List<ColumnFamily> columnFamilies = columnFamilies1;
         if (columnFamilies.size() == 0 || !filter.isDone())
         {
             long start = System.currentTimeMillis();
@@ -463,24 +458,6 @@ public class ColumnFamilyStore
             logger_.debug("DISK TIME: " + (System.currentTimeMillis() - start) + " ms.");
         }
         return columnFamilies;
-    }
-
-    private List<ColumnFamily> getMemoryColumnFamilies(String key, String columnFamilyColumn, IFilter filter)
-    {
-        List<ColumnFamily> columnFamilies = new ArrayList<ColumnFamily>();
-        /* Get the ColumnFamily from Memtable */
-        getColumnFamilyFromCurrentMemtable(key, columnFamilyColumn, filter, columnFamilies);
-        if (columnFamilies.size() == 0 || !filter.isDone())
-        {
-            /* Check if MemtableManager has any historical information */
-            MemtableManager.instance().getColumnFamily(key, columnFamily_, columnFamilyColumn, filter, columnFamilies);
-        }
-        return columnFamilies;
-    }
-
-    public ColumnFamily getColumnFamilyFromMemory(String key, String columnFamilyColumn, IFilter filter)
-    {
-        return resolveAndRemoveDeleted(getMemoryColumnFamilies(key, columnFamilyColumn, filter));
     }
 
     /**
@@ -650,7 +627,7 @@ public class ColumnFamilyStore
      * param @ filename - filename just flushed to disk
      * param @ bf - bloom filter which indicates the keys that are in this file.
     */
-    void storeLocation(String filename, BloomFilter bf) throws IOException
+    void storeLocation(String filename, BloomFilter bf)
     {
         boolean doCompaction = false;
         int ssTableSize = 0;
@@ -685,7 +662,7 @@ public class ColumnFamilyStore
         }
     }
 
-    PriorityQueue<FileStruct> initializePriorityQueue(List<String> files, List<Range> ranges, int minBufferSize) throws IOException
+    PriorityQueue<FileStruct> initializePriorityQueue(List<String> files, List<Range> ranges, int minBufferSize)
     {
         PriorityQueue<FileStruct> pq = new PriorityQueue<FileStruct>();
         if (files.size() > 1 || (ranges != null &&  files.size() > 0))
@@ -720,8 +697,7 @@ public class ColumnFamilyStore
             		{
             			logger_.warn("Unable to close file :" + file);
             		}
-                    continue;
-            	}
+                }
             }
         }
         return pq;
@@ -776,7 +752,7 @@ public class ColumnFamilyStore
     /*
      * Break the files into buckets and then compact.
      */
-    void doCompaction()  throws IOException
+    void doCompaction()
     {
         isCompacting_.set(true);
         List<String> files = new ArrayList<String>(ssTables_);
@@ -818,7 +794,6 @@ public class ColumnFamilyStore
         {
         	isCompacting_.set(false);
         }
-        return;
     }
 
     void doMajorCompaction(long skip)  throws IOException
@@ -826,17 +801,13 @@ public class ColumnFamilyStore
     	doMajorCompactionInternal( skip );
     }
 
-    void doMajorCompaction()  throws IOException
-    {
-    	doMajorCompactionInternal( 0 );
-    }
     /*
      * Compact all the files irrespective of the size.
      * skip : is the ammount in Gb of the files to be skipped
      * all files greater than skip GB are skipped for this compaction.
      * Except if skip is 0 , in that case this is ignored and all files are taken.
      */
-    void doMajorCompactionInternal(long skip)  throws IOException
+    void doMajorCompactionInternal(long skip)
     {
         isCompacting_.set(true);
         List<String> filesInternal = new ArrayList<String>(ssTables_);
@@ -869,7 +840,6 @@ public class ColumnFamilyStore
         {
         	isCompacting_.set(false);
         }
-        return ;
     }
 
     /*
@@ -909,41 +879,14 @@ public class ColumnFamilyStore
     }
 
 
-    Range getMaxRange( List<Range> ranges )
-    {
-    	Range maxRange = new Range( BigInteger.ZERO, BigInteger.ZERO );
-    	for( Range range : ranges)
-    	{
-    		if( range.left().compareTo(maxRange.left()) > 0 )
-    		{
-    			maxRange = range;
-    		}
-    	}
-    	return maxRange;
-    }
-
-    boolean isLoopAround ( List<Range> ranges )
-    {
-    	boolean isLoop = false;
-    	for( Range range : ranges)
-    	{
-    		if( range.left().compareTo(range.right()) > 0 )
-    		{
-    			isLoop = true;
-    			break;
-    		}
-    	}
-    	return isLoop;
-    }
-
-    boolean doAntiCompaction(List<Range> ranges, EndPoint target, List<String> fileList) throws IOException
+    boolean doAntiCompaction(List<Range> ranges, EndPoint target, List<String> fileList)
     {
         isCompacting_.set(true);
         List<String> files = new ArrayList<String>(ssTables_);
         boolean result = true;
         try
         {
-        	 result = doFileAntiCompaction(files, ranges, target, bufSize_, fileList, null);
+        	 result = doFileAntiCompaction(files, ranges, target, fileList, null);
         }
         catch ( Exception ex)
         {
@@ -999,7 +942,7 @@ public class ColumnFamilyStore
      * and only keeps keys that this node is responsible for.
      * @throws IOException
      */
-    void doCleanupCompaction() throws IOException
+    void doCleanupCompaction()
     {
         isCompacting_.set(true);
         List<String> files = new ArrayList<String>(ssTables_);
@@ -1033,7 +976,7 @@ public class ColumnFamilyStore
     	Map<EndPoint, List<Range>> endPointtoRangeMap = StorageService.instance().constructEndPointToRangesMap();
     	myRanges = endPointtoRangeMap.get(StorageService.getLocalStorageEndPoint());
     	List<BloomFilter> compactedBloomFilters = new ArrayList<BloomFilter>();
-        doFileAntiCompaction(files, myRanges, null, bufSize_, newFiles, compactedBloomFilters);
+        doFileAntiCompaction(files, myRanges, null, newFiles, compactedBloomFilters);
         logger_.debug("Original file : " + file + " of size " + new File(file).length());
         lock_.writeLock().lock();
         try
@@ -1064,12 +1007,11 @@ public class ColumnFamilyStore
      * @param files
      * @param ranges
      * @param target
-     * @param minBufferSize
      * @param fileList
      * @return
      * @throws IOException
      */
-    boolean doFileAntiCompaction(List<String> files, List<Range> ranges, EndPoint target, int minBufferSize, List<String> fileList, List<BloomFilter> compactedBloomFilters) throws IOException
+    boolean doFileAntiCompaction(List<String> files, List<Range> ranges, EndPoint target, List<String> fileList, List<BloomFilter> compactedBloomFilters)
     {
     	boolean result = false;
         long startTime = System.currentTimeMillis();
@@ -1095,7 +1037,7 @@ public class ColumnFamilyStore
 	                    + expectedRangeFileSize + "   is greater than the safe limit of the disk space available.");
 	            return result;
 	        }
-	        PriorityQueue<FileStruct> pq = initializePriorityQueue(files, ranges, minBufferSize);
+	        PriorityQueue<FileStruct> pq = initializePriorityQueue(files, ranges, ColumnFamilyStore.bufSize_);
 	        if (pq.size() > 0)
 	        {
 	            mergedFileName = getTempFileName();
@@ -1152,8 +1094,7 @@ public class ColumnFamilyStore
 		                    	catch ( Exception ex)
 		                    	{
                                     logger_.warn(LogUtil.throwableToString(ex));
-		                            continue;
-		                    	}
+                                }
 		                    }
 		                    // Now after merging all crap append to the sstable
 		                    columnFamily = resolveAndRemoveDeleted(columnFamilies);
@@ -1238,8 +1179,7 @@ public class ColumnFamilyStore
 	                    		// and it will be deleted after compaction.
                                 logger_.warn(LogUtil.throwableToString(ex));
 	                            filestruct.reader_.close();
-	                            continue;
-	                    	}
+                            }
 	                    }
 	                    lfs.clear();
 	                    lastkey = null;
@@ -1289,7 +1229,7 @@ public class ColumnFamilyStore
      * to get the latest data.
      *
      */
-    void  doFileCompaction(List<String> files,  int minBufferSize) throws IOException
+    void  doFileCompaction(List<String> files,  int minBufferSize)
     {
     	String newfile = null;
         long startTime = System.currentTimeMillis();
@@ -1364,9 +1304,9 @@ public class ColumnFamilyStore
 			                        columnFamilies.add(ColumnFamily.serializer().deserialize(filestruct.bufIn_));
 		                    	}
 		                    	catch ( Exception ex)
-		                    	{                                    		                    		
-		                            continue;
-		                    	}
+		                    	{
+                                    logger_.warn("error in filecompaction", ex);
+                                }
 		                    }
 		                    // Now after merging all crap append to the sstable
 		                    columnFamily = resolveAndRemoveDeleted(columnFamilies);
@@ -1421,8 +1361,7 @@ public class ColumnFamilyStore
 	                    		// in any case we have read as far as possible from it
 	                    		// and it will be deleted after compaction.
 	                            filestruct.reader_.close();
-	                            continue;
-	                    	}
+                            }
 	                    }
 	                    lfs.clear();
 	                    lastkey = null;
@@ -1473,7 +1412,6 @@ public class ColumnFamilyStore
         logger_.debug("Total bytes Read for compaction  ..." + totalBytesRead);
         logger_.debug("Total bytes written for compaction  ..."
                 + totalBytesWritten + "   Total keys read ..." + totalkeysRead);
-        return;
     }
     
     /*

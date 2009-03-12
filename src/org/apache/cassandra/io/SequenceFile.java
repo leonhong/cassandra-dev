@@ -204,13 +204,11 @@ public class SequenceFile
     }
 
     public static class BufferWriter extends Writer
-    {        
-        private int size_;
+    {
 
         BufferWriter(String filename, int size) throws IOException
         {
             super(filename, size);
-            size_ = size;
         }
         
         @Override
@@ -230,172 +228,7 @@ public class SequenceFile
             }
         }
     }
-    
-    public static class AIOWriter extends Writer
-    {        
-        private int size_;
-        private boolean bContinuations_ = false;
-        private long position_ = 0L;
 
-        AIOWriter(String filename, int size) throws IOException
-        {
-            this(filename, size, false);
-        }
-        
-        AIOWriter(String filename, int size, boolean bContinuations) throws IOException
-        {
-            super(filename);
-            size_ = size;
-            bContinuations_ = bContinuations;
-            init(filename);
-        }
-        
-        @Override
-        protected void init(String filename) throws IOException
-        {            
-            file_ = new AIORandomAccessFile(filename, size_, bContinuations_);            
-        }
-    }
-
-    public static class ConcurrentWriter extends AbstractWriter
-    {
-        private FileChannel fc_;
-
-        public ConcurrentWriter(String filename) throws IOException
-        {
-            super(filename);
-            RandomAccessFile raf = new RandomAccessFile(filename, "rw");
-            fc_ = raf.getChannel();
-        }
-
-        public long getCurrentPosition() throws IOException
-        {
-            return fc_.position();
-        }
-
-        public void seek(long position) throws IOException
-        {
-            fc_.position(position);
-        }
-
-        public void append(DataOutputBuffer buffer) throws IOException
-        {
-            int length = buffer.getLength();
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(length);
-            byteBuffer.put(buffer.getData(), 0, length);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-        
-        public void append(DataOutputBuffer keyBuffer, DataOutputBuffer buffer) throws IOException
-        {
-            int keyBufLength = keyBuffer.getLength();
-            if ( keyBuffer == null || keyBufLength == 0 )
-                throw new IllegalArgumentException("Key cannot be NULL or of zero length.");
-
-            /* Size allocated "int" for key length + key + "int" for data length + data */
-            int length = buffer.getLength();
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect( 4 + keyBufLength + 4 + length );
-            byteBuffer.putInt(keyBufLength);
-            byteBuffer.put(keyBuffer.getData(), 0, keyBufLength);
-            byteBuffer.putInt(length);
-            byteBuffer.put(buffer.getData(), 0, length);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-
-        public void append(String key, DataOutputBuffer buffer) throws IOException
-        {
-            if ( key == null )
-                throw new IllegalArgumentException("Key cannot be NULL.");
-
-            int length = buffer.getLength();
-            /* Size allocated : utfPrefix_ + key length + "int" for data size + data */
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect( SequenceFile.utfPrefix_ + key.length() + 4 + length);
-            SequenceFile.writeUTF(byteBuffer, key);
-            byteBuffer.putInt(length);
-            byteBuffer.put(buffer.getData(), 0, length);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-
-        public void append(String key, byte[] value) throws IOException
-        {
-            if ( key == null )
-                throw new IllegalArgumentException("Key cannot be NULL.");
-
-            /* Size allocated key length + "int" for data size + data */
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(utfPrefix_ + key.length() + 4 + value.length);
-            SequenceFile.writeUTF(byteBuffer, key);
-            byteBuffer.putInt(value.length);
-            byteBuffer.put(value);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-
-        public void append(String key, long value) throws IOException
-        {
-            if ( key == null )
-                throw new IllegalArgumentException("Key cannot be NULL.");
-
-            /* Size allocated key length + a long */
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(SequenceFile.utfPrefix_ + key.length() + 8);
-            SequenceFile.writeUTF(byteBuffer, key);
-            byteBuffer.putLong(value);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-
-        /*
-         * Be extremely careful while using this API. This currently
-         * used to write the commit log header in the commit logs.
-         * If not used carefully it could completely screw up reads
-         * of other key/value pairs that are written.
-        */
-        public long writeDirect(byte[] bytes) throws IOException
-        {
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(bytes.length);
-            byteBuffer.put(bytes);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-            return fc_.position();
-        }
-        
-        public void writeLong(long value) throws IOException
-        {
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(8);
-            byteBuffer.putLong(value);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);
-        }
-
-        public void close() throws IOException
-        {
-            fc_.close();
-        }
-
-        public void close(byte[] footer, int size) throws IOException
-        {
-            /* Size is marker length + "int" for size + footer data */
-            ByteBuffer byteBuffer = ByteBuffer.allocateDirect( utfPrefix_ + SequenceFile.marker_.length() + 4 + footer.length);
-            SequenceFile.writeUTF(byteBuffer, SequenceFile.marker_);
-            byteBuffer.putInt(size);
-            byteBuffer.put(footer);
-            byteBuffer.flip();
-            fc_.write(byteBuffer);            
-        }
-
-        public String getFileName()
-        {
-            return filename_;
-        }
-
-        public long getFileSize() throws IOException
-        {
-            return fc_.size();
-        }
-    }
-    
     public static class FastConcurrentWriter extends AbstractWriter
     {
         private FileChannel fc_;
@@ -1059,30 +892,6 @@ public class SequenceFile
         }
     }
     
-    public static class AIOReader extends Reader
-    {                  
-        private int size_;
-        private boolean bContinuations_;
-
-        AIOReader(String filename, int size) throws IOException
-        {
-            this(filename, size, false);
-        }
-        
-        AIOReader(String filename, int size, boolean bContinuations) throws IOException
-        {
-            super(filename);
-            size_ = size;
-            bContinuations_ = bContinuations;
-            init(filename);
-        }
-        
-        protected void init(String filename) throws IOException
-        {
-            file_ = new AIORandomAccessFile(filename, size_, bContinuations_);
-        }                 
-    }
-        
     private static Logger logger_ = Logger.getLogger( SequenceFile.class ) ;
     public static final short utfPrefix_ = 2;
     static final String marker_ = "Bloom-Filter";
@@ -1096,17 +905,7 @@ public class SequenceFile
     {
         return new BufferWriter(filename, size);
     }
-    
-    public static IFileWriter aioWriter(String filename, int size) throws IOException
-    {
-        return new AIOWriter(filename, size);
-    }
 
-    public static IFileWriter concurrentWriter(String filename) throws IOException
-    {
-        return new ConcurrentWriter(filename);
-    }
-    
     public static IFileWriter fastWriter(String filename, int size) throws IOException
     {
         return new FastConcurrentWriter(filename, size);
@@ -1120,21 +919,6 @@ public class SequenceFile
     public static IFileReader bufferedReader(String filename, int size) throws IOException
     {
         return new BufferReader(filename, size);
-    }
-    
-    public static IFileReader aioReader(String filename, int size) throws IOException
-    {
-        return new AIOReader(filename, size);
-    }
-    
-    public static IFileReader aioReader(String filename, int size, boolean bContinuations) throws IOException
-    {
-        return new AIOReader(filename, size, bContinuations);
-    }
-
-    public static boolean readBoolean(ByteBuffer buffer)
-    {
-        return ( buffer.get() == 1 ? true : false );
     }
 
     /**
@@ -1205,86 +989,6 @@ public class SequenceFile
         buffer.put(bytearr, 0, utflen + 2);
     }
 
-    /**
-     * Read a UTF8 string from a serialized buffer.
-     * @param buffer buffer from which a UTF8 string is read
-     * @return a Java String
-    */
-    protected static String readUTF(ByteBuffer in) throws IOException
-    {
-        int utflen = in.getShort();
-        byte[] bytearr = new byte[utflen];
-        char[] chararr = new char[utflen];
-
-        int c, char2, char3;
-        int count = 0;
-        int chararr_count = 0;
-
-        in.get(bytearr, 0, utflen);
-
-        while (count < utflen)
-        {
-            c = (int) bytearr[count] & 0xff;
-            if (c > 127)
-                break;
-            count++;
-            chararr[chararr_count++] = (char) c;
-        }
-
-        while (count < utflen)
-        {
-            c = (int) bytearr[count] & 0xff;
-            switch (c >> 4)
-            {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-                /* 0xxxxxxx */
-                count++;
-                chararr[chararr_count++] = (char) c;
-                break;
-            case 12:
-            case 13:
-                /* 110x xxxx 10xx xxxx */
-                count += 2;
-                if (count > utflen)
-                    throw new UTFDataFormatException(
-                    "malformed input: partial character at end");
-                char2 = (int) bytearr[count - 1];
-                if ((char2 & 0xC0) != 0x80)
-                    throw new UTFDataFormatException(
-                            "malformed input around byte " + count);
-                chararr[chararr_count++] = (char) (((c & 0x1F) << 6) | (char2 & 0x3F));
-                break;
-            case 14:
-                /* 1110 xxxx 10xx xxxx 10xx xxxx */
-                count += 3;
-                if (count > utflen)
-                    throw new UTFDataFormatException(
-                    "malformed input: partial character at end");
-                char2 = (int) bytearr[count - 2];
-                char3 = (int) bytearr[count - 1];
-                if (((char2 & 0xC0) != 0x80) || ((char3 & 0xC0) != 0x80))
-                    throw new UTFDataFormatException(
-                            "malformed input around byte " + (count - 1));
-                chararr[chararr_count++] = (char) (((c & 0x0F) << 12)
-                        | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
-                break;
-            default:
-                /* 10xx xxxx, 1111 xxxx */
-                throw new UTFDataFormatException("malformed input around byte "
-                        + count);
-            }
-        }
-        // The number of chars produced may be less than utflen
-        return new String(chararr, 0, chararr_count);
-    }
-    
     public static short getFileId(String file)
     {
         String[] peices = file.split("-");
