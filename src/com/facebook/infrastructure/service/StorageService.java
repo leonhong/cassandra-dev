@@ -34,12 +34,15 @@ import com.facebook.infrastructure.net.io.StreamContextManager;
 import com.facebook.infrastructure.tools.MembershipCleanerVerbHandler;
 import com.facebook.infrastructure.tools.TokenUpdateVerbHandler;
 import com.facebook.infrastructure.utils.LogUtil;
-import com.yahoo.zookeeper.KeeperException;
-import com.yahoo.zookeeper.Watcher;
-import com.yahoo.zookeeper.ZooDefs.Ids;
-import com.yahoo.zookeeper.ZooKeeper;
-import com.yahoo.zookeeper.data.Stat;
-import com.yahoo.zookeeper.proto.WatcherEvent;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.WatchedEvent;
 import org.apache.commons.math.linear.RealMatrix;
 import org.apache.commons.math.linear.RealMatrixImpl;
 import org.apache.commons.lang.ArrayUtils;
@@ -91,10 +94,10 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
     public static enum ConsistencyLevel
     {
-    	WEAK,
-    	STRONG
+        WEAK,
+        STRONG
     };
-    
+
     private static StorageService instance_;
     /* Used to lock the factory for creation of StorageService instance */
     private static Lock createLock_ = new ReentrantLock();
@@ -138,13 +141,13 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
         return h;
     }
-    
+
     public static enum BootstrapMode
     {
         HINT,
         FULL
     };
-    
+
     public static class BootstrapInitiateDoneVerbHandler implements IVerbHandler<byte[]>
     {
         private static Logger logger_ = Logger.getLogger( BootstrapInitiateDoneVerbHandler.class );
@@ -153,16 +156,16 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         {
             logger_.debug("Received a bootstrap initiate done message ...");
             /* Let the Stream Manager do his thing. */
-            StreamManager.instance(message.getFrom()).start();            
+            StreamManager.instance(message.getFrom()).start();
         }
     }
 
     private class ShutdownTimerTask extends TimerTask
     {
-    	public void run()
-    	{
-    		StorageService.instance().shutdown();
-    	}
+        public void run()
+        {
+                StorageService.instance().shutdown();
+        }
     }
 
     /*
@@ -233,7 +236,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             Integer.MAX_VALUE, TimeUnit.SECONDS,
             new LinkedBlockingQueue<Runnable>(), new ThreadFactoryImpl(
                     "BOOT-STRAPPER"));
-    
+
     /* This thread pool does consistency checks when the client doesn't care about consistency */
     private ExecutorService consistencyManager_;
 
@@ -243,7 +246,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     private IReplicaPlacementStrategy nodePicker_;
     /* Handle to a ZooKeeper instance */
     private ZooKeeper zk_;
-    
+
     /*
      * Registers with Management Server
      */
@@ -268,7 +271,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         uptime_ = System.currentTimeMillis();
         storageLoadBalancer_ = new StorageLoadBalancer(this);
         endPointSnitch_ = new EndPointSnitch();
-        
+
         /* register the verb handlers */
         MessagingService.getMessagingInstance().registerVerbHandlers(StorageService.tokenVerbHandler_, new TokenUpdateVerbHandler());
         MessagingService.getMessagingInstance().registerVerbHandlers(StorageService.binaryVerbHandler_, new BinaryVerbHandler());
@@ -284,15 +287,15 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         MessagingService.getMessagingInstance().registerVerbHandlers(StorageService.tokenInfoVerbHandler_, new TokenInfoVerbHandler() );
         MessagingService.getMessagingInstance().registerVerbHandlers(StorageService.mbrshipCleanerVerbHandler_, new MembershipCleanerVerbHandler() );
         MessagingService.getMessagingInstance().registerVerbHandlers(StorageService.bsMetadataVerbHandler_, new BootstrapMetadataVerbHandler() );
-        
+
         /* register the stage for the mutations */
         int threadCount = DatabaseDescriptor.getThreadsPerPool();
         consistencyManager_ = new DebuggableThreadPoolExecutor(threadCount,
-        		threadCount,
+                        threadCount,
                 Integer.MAX_VALUE, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<Runnable>(), new ThreadFactoryImpl(
                         "CONSISTENCY-MANAGER"));
-        
+
         StageManager.registerStage(StorageService.mutationStage_, new MultiThreadedStage("ROW-MUTATION", threadCount));
         StageManager.registerStage(StorageService.readStage_, new MultiThreadedStage("ROW-READ", threadCount));
         /* Stage for handling the HTTP messages. */
@@ -303,26 +306,26 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         else
             nodePicker_ = new RackUnawareStrategy(tokenMetadata_);
     }
-    
+
     private void reportToZookeeper() throws Throwable
     {
         try
         {
             zk_ = new ZooKeeper(DatabaseDescriptor.getZkAddress(), DatabaseDescriptor.getZkSessionTimeout(), new Watcher()
                 {
-                    public void process(WatcherEvent we)
-                    {                    
+                    public void process(WatchedEvent we)
+                    {
                         String path = "/Cassandra/" + DatabaseDescriptor.getClusterName() + "/Leader";
                         String eventPath = we.getPath();
                         logger_.debug("PROCESS EVENT : " + eventPath);
                         if ( eventPath != null && (eventPath.indexOf(path) != -1) )
-                        {                                                           
+                        {
                             logger_.debug("Signalling the leader instance ...");
-                            LeaderElector.instance().signal();                                        
-                        }                                                  
+                            LeaderElector.instance().signal();
+                        }
                     }
                 });
-            
+
             Stat stat = zk_.exists("/", false);
             if ( stat != null )
             {
@@ -330,37 +333,37 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 if ( stat == null )
                 {
                     logger_.debug("Creating the Cassandra znode ...");
-                    zk_.create("/Cassandra", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create("/Cassandra", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
-                
+
                 String path = "/Cassandra/" + DatabaseDescriptor.getClusterName();
                 stat = zk_.exists(path, false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the cluster znode " + path);
-                    zk_.create(path, ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
-                
+
                 /* Create the Leader, Locks and Misc znode */
                 stat = zk_.exists(path + "/Leader", false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the leader znode " + path);
-                    zk_.create(path + "/Leader", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Leader", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
-                
+
                 stat = zk_.exists(path + "/Locks", false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the locks znode " + path);
-                    zk_.create(path + "/Locks", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Locks", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
-                                
+
                 stat = zk_.exists(path + "/Misc", false);
                 if ( stat == null )
                 {
                     logger_.debug("Creating the misc znode " + path);
-                    zk_.create(path + "/Misc", ArrayUtils.EMPTY_BYTE_ARRAY, Ids.OPEN_ACL_UNSAFE, 0);
+                    zk_.create(path + "/Misc", new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 }
             }
         }
@@ -371,18 +374,18 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             reportToZookeeper();
         }
     }
-    
+
     protected ZooKeeper getZooKeeperHandle()
     {
         return zk_;
     }
-    
+
     public boolean isLeader(EndPoint endpoint)
     {
         EndPoint leader = getLeader();
         return leader.equals(endpoint);
     }
-    
+
     public EndPoint getLeader()
     {
         return LeaderElector.instance().getLeader();
@@ -390,17 +393,17 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
     public void registerComponentForShutdown(IComponentShutdown component)
     {
-    	components_.add(component);
+        components_.add(component);
     }
-    
+
     public void registerExternalVerbHandler(String verb, IVerbHandler verbHandler)
     {
-    	MessagingService.getMessagingInstance().registerVerbHandlers(verb, verbHandler);
+        MessagingService.getMessagingInstance().registerVerbHandlers(verb, verbHandler);
     }
 
     public void start() throws IOException {
         storageMetadata_ = DBManager.instance().start();
-                      
+
         /* Set up TCP endpoint */
         tcpAddr_ = new EndPoint(DatabaseDescriptor.getStoragePort());
         /* Set up UDP endpoint */
@@ -414,7 +417,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         /* start the analytics context package */
         AnalyticsContext.instance().start();
         /* report our existence to ZooKeeper instance and start the leader election service */
-        // reportToZookeeper();         
+        // reportToZookeeper();
         // LeaderElector.instance().start();
         /* Start the storage load balancer */
         storageLoadBalancer_.start();
@@ -433,10 +436,10 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     public void killMe() throws Throwable
     {
         isShutdown_.set(true);
-        /* 
+        /*
          * Shutdown the Gossiper to stop responding/sending Gossip messages.
          * This causes other nodes to detect you as dead and starting hinting
-         * data for the local endpoint. 
+         * data for the local endpoint.
         */
         Gossiper.instance().shutdown();
         final long nodeDeadDetectionTime = 25000L;
@@ -452,7 +455,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
     public boolean isShutdown()
     {
-    	return isShutdown_.get();
+        return isShutdown_.get();
     }
 
     public void shutdown()
@@ -470,7 +473,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         /* shut down all registered components */
         for ( IComponentShutdown component : components_ )
         {
-        	component.shutdown();
+                component.shutdown();
         }
     }
 
@@ -487,9 +490,9 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
 
     public IEndPointSnitch getEndPointSnitch()
     {
-    	return endPointSnitch_;
+        return endPointSnitch_;
     }
-    
+
     /*
      * Given an EndPoint this method will report if the
      * endpoint is in the same data center as the local
@@ -499,18 +502,18 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         return endPointSnitch_.isInSameDataCenter(StorageService.tcpAddr_, endpoint);
     }
-    
+
     /*
      * This method performs the requisite operations to make
      * sure that the N replicas are in sync. We do this in the
      * background when we do not care much about consistency.
      */
     public void doConsistencyCheck(Row row, List<EndPoint> endpoints, ReadParameters message)
-	{
-		Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, message.columnFamily_column,
+        {
+                Runnable consistencySentinel = new ConsistencyManager(row.cloneMe(), endpoints, message.columnFamily_column,
                                                               message.start, message.count, message.sinceTimestamp, message.getColumnNames());
-		consistencyManager_.submit(consistencySentinel);
-	}
+                consistencyManager_.submit(consistencySentinel);
+        }
 
     /*
      * This method displays all the ranges and the replicas
@@ -561,8 +564,8 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     }
 
     /**
-     * Construct the range to endpoint mapping based on the true view 
-     * of the world. 
+     * Construct the range to endpoint mapping based on the true view
+     * of the world.
      * @param ranges
      * @return mapping of ranges to the replicas responsible for them.
     */
@@ -578,10 +581,10 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         logger_.debug("Done constructing range to endpoint map ...");
         return rangeToEndPointMap;
     }
-    
+
     /**
      * Construct the range to endpoint mapping based on the view as dictated
-     * by the mapping of token to endpoints passed in. 
+     * by the mapping of token to endpoints passed in.
      * @param ranges
      * @param tokenToEndPointMap mapping of token to endpoints.
      * @return mapping of ranges to the replicas responsible for them.
@@ -598,7 +601,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         logger_.debug("Done constructing range to endpoint map ...");
         return rangeToEndPointMap;
     }
-    
+
     /**
      * Construct a mapping from endpoint to ranges that endpoint is
      * responsible for.
@@ -616,7 +619,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         }
         return endPointToRangesMap;
     }
-    
+
     /**
      * Get the estimated disk space of the target endpoint in its
      * primary range.
@@ -641,20 +644,20 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         /* Get the endpoint to range map */
         Map<EndPoint, List<Range>> endPointToRangesMap = constructEndPointToRangesMap();
         Set<EndPoint> eps = endPointToRangesMap.keySet();
-        
+
         for ( EndPoint ep : eps )
         {
             List<Range> ranges = endPointToRangesMap.get(ep);
             double[] equation = new double[allRanges.length];
             for ( Range range : ranges )
-            {                
+            {
                 int index = rangeIndex.get(range);
                 equation[index] = 1;
             }
             equations.add(equation);
         }
         double[][] coefficients = equations.toArray( new double[0][0] );
-        
+
         /* Get the constants which are the aggregate disk space for each endpoint */
         double[] constants = new double[allRanges.length];
         int index = 0;
@@ -665,19 +668,19 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             String lInfo = null;
             if ( ep.equals(StorageService.udpAddr_) )
                 lInfo = getLoadInfo();
-            else                
+            else
                 lInfo = getLoadInfo(ep);
             LoadInfo li = new LoadInfo(lInfo);
             constants[index++] = FileUtils.stringToFileSize(li.diskSpace());
         }
-        
+
         RealMatrix matrix = new RealMatrixImpl(coefficients);
         double[] solutions = matrix.solve(constants);
         Range primaryRange = getPrimaryRangeForEndPoint(target);
         primaryDiskSpace = solutions[rangeIndex.get(primaryRange)];
         return primaryDiskSpace;
     }
-    
+
     /**
      * This is very dangerous. This is used only on the client
      * side to set up the client library. This is then used to
@@ -715,7 +718,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
                 if ( !oldToken.equals(newToken) )
                 {
                     logger_.debug("Relocation for endpoint " + ep);
-                    tokenMetadata_.update(newToken, ep);                    
+                    tokenMetadata_.update(newToken, ep);
                 }
                 else
                 {
@@ -767,7 +770,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         long diskSpace = FileUtils.getUsedDiskSpace();
         LoadInfo li = new LoadInfo(0, diskSpace);
-    	return li.toString();
+        return li.toString();
     }
 
     /**
@@ -780,7 +783,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         LoadInfo li = storageLoadBalancer_.getLoad(ep);
         return ( li == null ) ? "N/A" : li.toString();
     }
-    
+
     /**
      * Get the endpoint that has the largest primary count.
      * @return
@@ -790,7 +793,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         Set<EndPoint> allMbrs = Gossiper.instance().getAllMembers();
         Map<LoadInfo, EndPoint> loadInfoToEndPointMap = new HashMap<LoadInfo, EndPoint>();
         List<LoadInfo> lInfos = new ArrayList<LoadInfo>();
-        
+
         for ( EndPoint mbr : allMbrs )
         {
             mbr.setPort(DatabaseDescriptor.getStoragePort());
@@ -807,7 +810,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             }
             loadInfoToEndPointMap.put(li, mbr);
         }
-        
+
         Collections.sort(lInfos, new LoadInfo.PrimaryCountComparator());
         return loadInfoToEndPointMap.get( lInfos.get(lInfos.size() - 1) );
     }
@@ -828,21 +831,21 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         /* Gossip this new token for the local storage instance */
         Gossiper.instance().addApplicationState(StorageService.nodeId_, new ApplicationState(token.toString()));
     }
-    
+
     /*
      * This method removes the state associated with this endpoint
      * from the TokenMetadata instance.
-     * 
-     *  param@ endpoint remove the token state associated with this 
+     *
+     *  param@ endpoint remove the token state associated with this
      *         endpoint.
      */
-    public void removeTokenState(EndPoint endpoint) 
+    public void removeTokenState(EndPoint endpoint)
     {
         tokenMetadata_.remove(endpoint);
         /* Remove the state from the Gossiper */
         Gossiper.instance().removeFromMembership(endpoint);
     }
-    
+
     /*
      * This method is invoked by the Loader process to force the
      * node to move from its current position on the token ring, to
@@ -855,18 +858,18 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     */
     public void relocate(String[] keys) throws IOException
     {
-    	if ( keys.length > 0 )
-    	{
-	        isLoadState_ = true;
-	        BigInteger token = tokenMetadata_.getToken(StorageService.tcpAddr_);
-	        Map<BigInteger, EndPoint> tokenToEndPointMap = tokenMetadata_.cloneTokenEndPointMap();
-	        BigInteger[] tokens = tokenToEndPointMap.keySet().toArray( new BigInteger[0] );
-	        Arrays.sort(tokens);
-	        int index = Arrays.binarySearch(tokens, token) * (keys.length/tokens.length);
-	        BigInteger newToken = hash( keys[index] );
-	        /* update the token */
-	        updateToken(newToken);
-    	}
+        if ( keys.length > 0 )
+        {
+                isLoadState_ = true;
+                BigInteger token = tokenMetadata_.getToken(StorageService.tcpAddr_);
+                Map<BigInteger, EndPoint> tokenToEndPointMap = tokenMetadata_.cloneTokenEndPointMap();
+                BigInteger[] tokens = tokenToEndPointMap.keySet().toArray( new BigInteger[0] );
+                Arrays.sort(tokens);
+                int index = Arrays.binarySearch(tokens, token) * (keys.length/tokens.length);
+                BigInteger newToken = hash( keys[index] );
+                /* update the token */
+                updateToken(newToken);
+        }
     }
 
     /*
@@ -877,20 +880,20 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         isLoadState_ = false;
     }
-    
+
     /**
      * This method takes a colon separated string of nodes that need
-     * to be bootstrapped. It is also used to filter some source of 
+     * to be bootstrapped. It is also used to filter some source of
      * data. Suppose the nodes to be bootstrapped are A, B and C. Then
      * <i>allNodes</i> must be specified as A:B:C.
-     * 
+     *
     */
     private void doBootstrap(String nodes)
     {
         String[] allNodesAndFilter = nodes.split("-");
         String nodesToLoad = null;
         String filterSources = null;
-        
+
         if ( allNodesAndFilter.length == 2 )
         {
             nodesToLoad = allNodesAndFilter[0];
@@ -899,17 +902,17 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         else
         {
             nodesToLoad = allNodesAndFilter[0];
-        }        
+        }
         String[] allNodes = nodesToLoad.split(":");
         EndPoint[] endpoints = new EndPoint[allNodes.length];
         BigInteger[] tokens = new BigInteger[allNodes.length];
-        
+
         for ( int i = 0; i < allNodes.length; ++i )
         {
             endpoints[i] = new EndPoint( allNodes[i].trim(), DatabaseDescriptor.getStoragePort() );
             tokens[i] = tokenMetadata_.getToken(endpoints[i]);
         }
-        
+
         /* Start the bootstrap algorithm */
         if ( filterSources == null )
         bootStrapper_.submit( new BootStrapper(endpoints, tokens) );
@@ -970,7 +973,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         return tokenMetadata_.getToken(StorageService.tcpAddr_).toString();
     }
-    
+
     public void updateToken(String token)
     {
         try
@@ -1006,17 +1009,17 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     }
 
     public void loadAll(String nodes)
-    {        
+    {
         // Gossiper.instance().addApplicationState(StorageService.loadAll_, new ApplicationState(nodes));
         doBootstrap(nodes);
     }
-    
+
     public String getAppropriateToken(int count)
     {
         BigInteger token = BootstrapAndLbHelper.getTokenBasedOnPrimaryCount(count);
         return token.toString();
     }
-    
+
     public void doGC()
     {
         List<String> tables = DatabaseDescriptor.getTables();
@@ -1026,17 +1029,17 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             table.doGC();
         }
     }
-    
+
     public void forceHandoff(String directories, String host) throws IOException
-    {       
+    {
         List<File> filesList = new ArrayList<File>();
         String[] sources = directories.split(":");
         for (String source : sources)
         {
             File directory = new File(source);
-            Collections.addAll(filesList, directory.listFiles());            
+            Collections.addAll(filesList, directory.listFiles());
         }
-        
+
         File[] files = filesList.toArray(new File[0]);
         StreamContextManager.StreamContext[] streamContexts = new StreamContextManager.StreamContext[files.length];
         int i = 0;
@@ -1046,7 +1049,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             logger_.debug("Stream context metadata " + streamContexts[i]);
             ++i;
         }
-        
+
         if ( files.length > 0 )
     {
             EndPoint target = new EndPoint(host, DatabaseDescriptor.getStoragePort());
@@ -1056,10 +1059,10 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             BootstrapInitiateMessage biMessage = new BootstrapInitiateMessage(streamContexts);
             Message message = BootstrapInitiateMessage.makeBootstrapInitiateMessage(biMessage);
             logger_.debug("Sending a bootstrap initiate message to " + target + " ...");
-            MessagingService.getMessagingInstance().sendOneWay(message, target);                
+            MessagingService.getMessagingInstance().sendOneWay(message, target);
             logger_.debug("Waiting for transfer to " + target + " to complete");
             StreamManager.instance(target).waitForStreamCompletion();
-            logger_.debug("Done with transfer to " + target);  
+            logger_.debug("Done with transfer to " + target);
         }
     }
 
@@ -1113,7 +1116,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         BigInteger lhs = (index == 0) ? allTokens.get(allTokens.size() - 1) : allTokens.get( index - 1);
         return new Range( lhs, myToken );
     }
-    
+
     /**
      * Get the primary range for the specified endpoint.
      * @param ep endpoint we are interested in.
@@ -1126,7 +1129,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         BigInteger left = tokenMetadata_.getToken(predecessor);
         return new Range(left, right);
     }
-    
+
     /**
      * Get all ranges an endpoint is responsible for.
      * @param ep endpoint we are interested in.
@@ -1136,7 +1139,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         List<Range> ranges = new ArrayList<Range>();
         ranges.add( getPrimaryRangeForEndPoint(ep) );
-        
+
         EndPoint predecessor = ep;
         int count = DatabaseDescriptor.getReplicationFactor() - 1;
         for ( int i = 0; i < count; ++i )
@@ -1144,13 +1147,13 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             predecessor = getPredecessor(predecessor);
             ranges.add( getPrimaryRangeForEndPoint(predecessor) );
         }
-        
+
         return ranges;
     }
-    
+
     /**
      * Get all ranges that span the ring given a set
-     * of tokens. All ranges are in sorted order of 
+     * of tokens. All ranges are in sorted order of
      * ranges.
     */
     public Range[] getAllRanges(Set<BigInteger> tokens)
@@ -1182,7 +1185,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         }
         return allRanges.toArray(new Range[0]);
     }
-    
+
     /**
      * This method returns the endpoint that is responsible for storing the
      * specified key.
@@ -1231,12 +1234,12 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         EndPoint endpoint = getPrimary(key);
         return StorageService.tcpAddr_.equals(endpoint);
     }
-    
+
     /**
      * This method determines whether the target endpoint is the
      * primary for the given key.
      * @param key
-     * @param target the target enpoint 
+     * @param target the target enpoint
      * @return true if the local endpoint is the primary replica.
     */
     public boolean isPrimary(String key, EndPoint target)
@@ -1244,7 +1247,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         EndPoint endpoint = getPrimary(key);
         return target.equals(endpoint);
     }
-    
+
     /**
      * This method determines whether the local endpoint is the
      * seondary replica for the given key.
@@ -1258,7 +1261,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             return false;
         return topN[1].equals(StorageService.tcpAddr_);
     }
-    
+
     /**
      * This method determines whether the local endpoint is the
      * seondary replica for the given key.
@@ -1272,14 +1275,14 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
             return false;
         return topN[2].equals(StorageService.tcpAddr_);
     }
-    
+
     /**
      * This method determines if the local endpoint is
      * in the topN of N nodes passed in.
     */
     public boolean isInTopN(String key)
     {
-    	EndPoint[] topN = getNStorageEndPoint(key);
+        EndPoint[] topN = getNStorageEndPoint(key);
         for ( EndPoint ep : topN )
         {
             if ( ep.equals( StorageService.tcpAddr_ ) )
@@ -1287,7 +1290,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         }
         return false;
     }
-    
+
     /**
      * This method returns the N endpoints that are responsible for storing the
      * specified key i.e for replication.
@@ -1300,8 +1303,8 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         BigInteger token = hash(key);
         return nodePicker_.getStorageEndPoints(token);
     }
-    
-    
+
+
     /**
      * This method attempts to return N endpoints that are responsible for storing the
      * specified key i.e for replication.
@@ -1311,16 +1314,16 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
      */
     public List<EndPoint> getNLiveStorageEndPoint(String key)
     {
-    	List<EndPoint> liveEps = new ArrayList<EndPoint>();
-    	EndPoint[] endpoints = getNStorageEndPoint(key);
-    	
-    	for ( EndPoint endpoint : endpoints )
-    	{
-    		if ( FailureDetector.instance().isAlive(endpoint) )
-    			liveEps.add(endpoint);
-    	}
-    	
-    	return liveEps;
+        List<EndPoint> liveEps = new ArrayList<EndPoint>();
+        EndPoint[] endpoints = getNStorageEndPoint(key);
+
+        for ( EndPoint endpoint : endpoints )
+        {
+                if ( FailureDetector.instance().isAlive(endpoint) )
+                        liveEps.add(endpoint);
+        }
+
+        return liveEps;
     }
 
     /**
@@ -1361,10 +1364,10 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         return nodePicker_.getStorageEndPoints(token);
     }
-    
+
     /**
      * This method returns the N endpoints that are responsible for storing the
-     * specified token i.e for replication and are based on the token to endpoint 
+     * specified token i.e for replication and are based on the token to endpoint
      * mapping that is passed in.
      *
      * param @ token - position on the ring
@@ -1387,42 +1390,42 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
     {
         return nodePicker_.getHintedStorageEndPoints(token);
     }
-    
+
     /**
      * This function finds the most suitable endpoint given a key.
      * It checks for loclity and alive test.
      */
-	protected EndPoint findSuitableEndPoint(String key) throws IOException
-	{
-		EndPoint[] endpoints = getNStorageEndPoint(key);
-		for(EndPoint endPoint: endpoints)
-		{
-			if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
-			{
-				return endPoint;
-			}
-		}
-		int j = 0;
-		for ( ; j < endpoints.length; ++j )
-		{
-			if ( StorageService.instance().isInSameDataCenter(endpoints[j]) && FailureDetector.instance().isAlive(endpoints[j]) )
-			{
-				logger_.trace("EndPoint " + endpoints[j] + " is in the same data center as local storage endpoint.");
-				return endpoints[j];
-			}
-		}
-		// We have tried to be really nice but looks like theer are no servers
-		// in the local data center that are alive and can service this request so
-		// just send it to teh first alive guy and see if we get anything.
-		j = 0;
-		for ( ; j < endpoints.length; ++j )
-		{
-			if ( FailureDetector.instance().isAlive(endpoints[j]) )
-			{
-				logger_.trace("No local endpoints alive.  EndPoint " + endpoints[j] + " is alive so get data from it.");
-				return endpoints[j];
-			}
-		}
-		return null;
-	}
+        protected EndPoint findSuitableEndPoint(String key) throws IOException
+        {
+                EndPoint[] endpoints = getNStorageEndPoint(key);
+                for(EndPoint endPoint: endpoints)
+                {
+                        if(endPoint.equals(StorageService.getLocalStorageEndPoint()))
+                        {
+                                return endPoint;
+                        }
+                }
+                int j = 0;
+                for ( ; j < endpoints.length; ++j )
+                {
+                        if ( StorageService.instance().isInSameDataCenter(endpoints[j]) && FailureDetector.instance().isAlive(endpoints[j]) )
+                        {
+                                logger_.trace("EndPoint " + endpoints[j] + " is in the same data center as local storage endpoint.");
+                                return endpoints[j];
+                        }
+                }
+                // We have tried to be really nice but looks like theer are no servers
+                // in the local data center that are alive and can service this request so
+                // just send it to teh first alive guy and see if we get anything.
+                j = 0;
+                for ( ; j < endpoints.length; ++j )
+                {
+                        if ( FailureDetector.instance().isAlive(endpoints[j]) )
+                        {
+                                logger_.trace("No local endpoints alive.  EndPoint " + endpoints[j] + " is alive so get data from it.");
+                                return endpoints[j];
+                        }
+                }
+                return null;
+        }
 }

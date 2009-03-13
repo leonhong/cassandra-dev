@@ -42,11 +42,11 @@ import com.facebook.infrastructure.gms.Gossiper;
 import com.facebook.infrastructure.gms.IEndPointStateChangeSubscriber;
 import com.facebook.infrastructure.net.EndPoint;
 import com.facebook.infrastructure.utils.LogUtil;
-import com.yahoo.zookeeper.KeeperException;
-import com.yahoo.zookeeper.ZooKeeper;
-import com.yahoo.zookeeper.ZooDefs.CreateFlags;
-import com.yahoo.zookeeper.ZooDefs.Ids;
-import com.yahoo.zookeeper.data.Stat;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.Stat;
 
 class LeaderElector implements IEndPointStateChangeSubscriber
 {
@@ -54,7 +54,7 @@ class LeaderElector implements IEndPointStateChangeSubscriber
     protected static final String leaderState_ = "LEADER";
     private static LeaderElector instance_ = null;
     private static Lock createLock_ = new ReentrantLock();
-    
+
     /*
      * Factory method that gets an instance of the StorageService
      * class.
@@ -78,7 +78,7 @@ class LeaderElector implements IEndPointStateChangeSubscriber
         }
         return instance_;
     }
-    
+
     /* The elected leader. */
     private AtomicReference<EndPoint> leader_;
     private Condition condition_;
@@ -89,23 +89,23 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             new LinkedBlockingQueue<Runnable>(),
             new ThreadFactoryImpl("LEADER-ELECTOR")
             );
-    
+
     private class LeaderDeathMonitor implements Runnable
     {
         private String pathCreated_;
-        
+
         LeaderDeathMonitor(String pathCreated)
         {
             pathCreated_ = pathCreated;
         }
-        
+
         public void run()
-        {            
+        {
             ZooKeeper zk = StorageService.instance().getZooKeeperHandle();
             String path = "/Cassandra/" + DatabaseDescriptor.getClusterName() + "/Leader";
             try
             {
-                String createPath = path + "/L-";                                
+                String createPath = path + "/L-";
                 LeaderElector.createLock_.lock();
                 while( true )
                 {
@@ -114,9 +114,9 @@ class LeaderElector implements IEndPointStateChangeSubscriber
                     SortedMap<Integer, String> suffixToZnode = getSuffixToZnodeMapping(values);
                     String value = suffixToZnode.get( suffixToZnode.firstKey() );
                     /*
-                     * Get the first znode and if it is the 
+                     * Get the first znode and if it is the
                      * pathCreated created above then the data
-                     * in that znode is the leader's identity. 
+                     * in that znode is the leader's identity.
                     */
                     if ( leader_ == null )
                     {
@@ -128,9 +128,9 @@ class LeaderElector implements IEndPointStateChangeSubscriber
                         /* Disseminate the state as to who the leader is. */
                         onLeaderElection();
                     }
-                    logger_.debug("Elected leader is " + leader_ + " @ znode " + ( path + "/" + value ) );                                     
+                    logger_.debug("Elected leader is " + leader_ + " @ znode " + ( path + "/" + value ) );
                     /* We need only the last portion of this znode */
-                    int index = getLocalSuffix();                   
+                    int index = getLocalSuffix();
                     if ( index > suffixToZnode.firstKey() )
                     {
                         String pathToCheck = path + "/" + getImmediatelyPrecedingZnode(suffixToZnode, index);
@@ -161,7 +161,7 @@ class LeaderElector implements IEndPointStateChangeSubscriber
                 LeaderElector.createLock_.unlock();
             }
         }
-        
+
         private SortedMap<Integer, String> getSuffixToZnodeMapping(List<String> values)
         {
             SortedMap<Integer, String> suffixZNodeMap = new TreeMap<Integer, String>();
@@ -172,15 +172,15 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             }
             return suffixZNodeMap;
         }
-        
+
         private String getImmediatelyPrecedingZnode(SortedMap<Integer, String> suffixToZnode, int index)
         {
-            List<Integer> suffixes = new ArrayList<Integer>( suffixToZnode.keySet() );            
+            List<Integer> suffixes = new ArrayList<Integer>( suffixToZnode.keySet() );
             Collections.sort(suffixes);
             int position = Collections.binarySearch(suffixes, index);
             return suffixToZnode.get( suffixes.get( position - 1 ) );
         }
-        
+
         /**
          * If the local node's leader related znode is L-3
          * this method will return 3.
@@ -194,21 +194,21 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             return Integer.parseInt( leaderPeices[1] );
         }
     }
-    
+
     private LeaderElector()
     {
         condition_ = LeaderElector.createLock_.newCondition();
     }
-    
+
     /**
      * Use to inform interested parties about the change in the state
      * for specified endpoint
-     * 
+     *
      * @param endpoint endpoint for which the state change occured.
      * @param epState state that actually changed for the above endpoint.
      */
     public void onChange(EndPoint endpoint, EndPointState epState)
-    {        
+    {
         /* node identifier for this endpoint on the identifier space */
         ApplicationState leaderState = epState.getApplicationState(LeaderElector.leaderState_);
         if (leaderState != null && !leader_.equals(endpoint))
@@ -218,7 +218,7 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             leader_.set(endpoint);
         }
     }
-    
+
     void start() throws Throwable
     {
         /* Register with the Gossiper for EndPointState notifications */
@@ -227,14 +227,14 @@ class LeaderElector implements IEndPointStateChangeSubscriber
         ZooKeeper zk = StorageService.instance().getZooKeeperHandle();
         String path = "/Cassandra/" + DatabaseDescriptor.getClusterName() + "/Leader";
         String createPath = path + "/L-";
-        
-        /* Create the znodes under the Leader znode */       
+
+        /* Create the znodes under the Leader znode */
         logger_.debug("Attempting to create znode " + createPath);
-        String pathCreated = zk.create(createPath, EndPoint.toBytes( StorageService.getLocalControlEndPoint() ), Ids.OPEN_ACL_UNSAFE, (CreateFlags.SEQUENCE  | CreateFlags.EPHEMERAL) );             
-        logger_.debug("Created znode under leader znode " + pathCreated);            
+        String pathCreated = zk.create(createPath, EndPoint.toBytes( StorageService.getLocalControlEndPoint() ), Ids.OPEN_ACL_UNSAFE, (CreateMode.EPHEMERAL_SEQUENTIAL) );
+        logger_.debug("Created znode under leader znode " + pathCreated);
         leaderElectionService_.submit(new LeaderDeathMonitor(pathCreated));
     }
-    
+
     void signal()
     {
         logger_.debug("Signalling others to check on leader ...");
@@ -248,12 +248,12 @@ class LeaderElector implements IEndPointStateChangeSubscriber
             LeaderElector.createLock_.unlock();
         }
     }
-    
+
     EndPoint getLeader()
     {
         return (leader_ != null ) ? leader_.get() : StorageService.getLocalStorageEndPoint();
     }
-    
+
     private void onLeaderElection()
     {
         if ( StorageService.instance().isLeader(leader_.get()) )
