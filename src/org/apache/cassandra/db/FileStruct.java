@@ -19,15 +19,12 @@
 package org.apache.cassandra.db;
 
 import java.io.IOException;
-import java.math.BigInteger;
 
-import org.apache.cassandra.continuations.Suspendable;
 import org.apache.cassandra.io.DataInputBuffer;
 import org.apache.cassandra.io.DataOutputBuffer;
 import org.apache.cassandra.io.IFileReader;
 import org.apache.cassandra.io.SSTable;
 import org.apache.cassandra.io.SequenceFile;
-import org.apache.cassandra.service.PartitionerType;
 import org.apache.cassandra.service.StorageService;
 
 

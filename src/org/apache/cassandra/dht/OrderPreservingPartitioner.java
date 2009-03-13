@@ -16,38 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.service;
+package org.apache.cassandra.dht;
 
-import java.math.BigInteger;
+import java.io.UnsupportedEncodingException;
 import java.util.Comparator;
-import java.text.Collator;
 
-public class OrderPreservingHashPartitioner implements IPartitioner
+public class OrderPreservingPartitioner implements IPartitioner
 {
-    private final static int maxKeyHashLength_ = 24;
-    private static final BigInteger prime_ = BigInteger.valueOf(31);
     private static final Comparator<String> comparator = new Comparator<String>() {
         public int compare(String o1, String o2)
         {
             return o2.compareTo(o1);
         }
     };
-
-
-    public BigInteger hash(String key)
-    {
-        BigInteger h = BigInteger.ZERO;
-        char val[] = key.toCharArray();
-        
-        for (int i = 0; i < OrderPreservingHashPartitioner.maxKeyHashLength_; i++)
-        {
-            if( i < val.length )
-                h = OrderPreservingHashPartitioner.prime_.multiply(h).add( BigInteger.valueOf(val[i]) );
-            else
-                h = OrderPreservingHashPartitioner.prime_.multiply(h).add( OrderPreservingHashPartitioner.prime_ );
-        }
-        return h;
-    }
 
     public String decorateKey(String key)
     {
@@ -62,5 +43,51 @@ public class OrderPreservingHashPartitioner implements IPartitioner
     public Comparator<String> getReverseDecoratedKeyComparator()
     {
         return comparator;
+    }
+
+    public StringToken getDefaultToken()
+    {
+        return new StringToken("foo"); // TODO!
+    }
+
+    private final Token.TokenFactory<String> tokenFactory = new Token.TokenFactory<String>() {
+        public byte[] toByteArray(Token<String> stringToken)
+        {
+            try
+            {
+                return stringToken.token.getBytes("UTF-8");
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public Token<String> fromByteArray(byte[] bytes)
+        {
+            try
+            {
+                return new StringToken(new String(bytes, "UTF-8"));
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public Token<String> fromString(String string)
+        {
+            return new StringToken(string);
+        }
+    };
+
+    public Token.TokenFactory<String> getTokenFactory()
+    {
+        return tokenFactory;
+    }
+
+    public Token getTokenForKey(String key)
+    {
+        return new StringToken(key);
     }
 }
