@@ -340,7 +340,7 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
     }
     
     /*
-     * Write at most "len" bytes to "b" starting at position "off", and return
+     * Write at most "len" bytes from "b" starting at position "off", and return
      * the number of bytes written.
      */
     private int writeAtMost(byte[] b, int off, int len) throws IOException
@@ -367,6 +367,7 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
         int buffOff = (int) (this.curr_ - this.lo_);
         System.arraycopy(b, off, this.buff_, buffOff, len);
         this.curr_ += len;
+        this.dirty_ = true;
         return len;
     }
 }
