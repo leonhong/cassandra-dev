@@ -437,7 +437,7 @@ public final class StorageService implements IEndPointStateChangeSubscriber, Sto
         if (DatabaseDescriptor.ophf_.equalsIgnoreCase(hashingStrategy))
         {
             partitioner_ = new OrderPreservingPartitioner();
-        }        
+        }
         else
         {
             partitioner_ = new RandomPartitioner();

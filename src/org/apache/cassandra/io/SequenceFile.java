@@ -633,9 +633,9 @@ public class SequenceFile
         */
         public long next(String key, DataOutputBuffer bufOut, String columnFamilyName, List<String> columnNames, IndexHelper.TimeRange timeRange, Coordinate section) throws IOException
         {
-            assert timeRange == null || columnNames == null; // both may be null, but both may not be true
-
-            List<String> cNames = new ArrayList<String>(columnNames);
+            assert timeRange == null || columnNames == null; // at most one may be non-null
+            
+            List<String> cNames = columnNames == null ? null : new ArrayList<String>(columnNames);
 
             long bytesRead = -1L;
             if ( isEOF() )
