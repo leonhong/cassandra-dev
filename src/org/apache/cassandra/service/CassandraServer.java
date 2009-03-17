@@ -27,6 +27,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Arrays;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -50,7 +53,11 @@ import org.apache.cassandra.db.RowMutationMessage;
 import org.apache.cassandra.net.EndPoint;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
+import org.apache.cassandra.net.IAsyncResult;
 import org.apache.cassandra.utils.LogUtil;
+import org.apache.cassandra.io.DataInputBuffer;
+import org.apache.cassandra.io.DataOutputBuffer;
+
 /**
  * Author : Avinash Lakshman ( alakshman@facebook.com) & Prashant Malik ( pmalik@facebook.com )
  */
@@ -73,7 +80,7 @@ public class CassandraServer extends FacebookBase implements
 		storageService = StorageService.instance();
 	}
 
-	public CassandraServer() throws Throwable
+	public CassandraServer()
 	{
 		super("CassandraServer");
 		// Create the instance of the storage service
@@ -85,7 +92,7 @@ public class CassandraServer extends FacebookBase implements
 	 * specified port.
 	 */
 	public void start() throws Throwable
-	{
+    {
 		LogUtil.init();
 		//LogUtil.setLogLevel("com.facebook", "DEBUG");
 		// Start the storage service
@@ -809,7 +816,72 @@ public class CassandraServer extends FacebookBase implements
         }
         return result;
     }
-    
+
+    public List<String> get_range(String tablename, final String startkey) throws CassandraException
+    {
+        logger_.debug("get_range");
+
+        // send request
+        Message message;
+        DataOutputBuffer dob = new DataOutputBuffer();
+        try
+        {
+            dob.writeUTF(startkey);
+        }
+        catch (IOException e)
+        {
+            logger_.error("unable to write startkey", e);
+            throw new RuntimeException(e);
+        }
+        byte[] messageBody = Arrays.copyOf(dob.getData(), dob.getLength());
+        message = new Message(StorageService.getLocalStorageEndPoint(),
+                              StorageService.readStage_,
+                              StorageService.rangeVerbHandler_,
+                              messageBody);
+        EndPoint endPoint;
+        try
+        {
+            endPoint = StorageService.instance().findSuitableEndPoint(startkey);
+        }
+        catch (Exception e)
+        {
+            throw new CassandraException("Unable to find endpoint for " + startkey);
+        }
+        IAsyncResult iar = MessagingService.getMessagingInstance().sendRR(message, endPoint);
+
+        // read response
+        // TODO send more requests if we need to span multiple nodes (or can we just let client worry about that,
+        // since they have to handle multiple requests anyway?)
+        byte[] responseBody;
+        try
+        {
+            responseBody = (byte[]) iar.get(2 * DatabaseDescriptor.getRpcTimeout(), TimeUnit.MILLISECONDS)[0];
+        }
+        catch (TimeoutException e)
+        {
+            throw new RuntimeException(e);
+        }
+        DataInputBuffer bufIn = new DataInputBuffer();
+        bufIn.reset(responseBody, responseBody.length);
+
+        // turn into List
+        List<String> keys = new ArrayList<String>();
+        while (bufIn.getPosition() < responseBody.length)
+        {
+            try
+            {
+                keys.add(bufIn.readUTF());
+            }
+            catch (IOException e)
+            {
+                logger_.error("bad utf", e);
+                throw new RuntimeException(e);
+            }
+        }
+
+        return keys;
+    }
+
     /*
      * This method is used to ensure that all keys
      * prior to the specified key, as dtermined by
