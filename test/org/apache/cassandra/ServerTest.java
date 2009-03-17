@@ -14,6 +14,9 @@ public class ServerTest {
         // under /var/cassandra.
         for (String dirname : new String[] {"bootstrap", "commitlog", "data", "staging", "system"}) {
             File dir = new File("/var/cassandra", dirname);
+            if (!dir.exists()) {
+                throw new RuntimeException("Please create directory " + dir.getAbsolutePath());
+            }
             for (File f : dir.listFiles()) {
                 f.delete();
             }
